@@ -1,2 +1,3 @@
-# EnterpriseTechTool
-A powershell-based tool for basic enterprise service tasks
+# Enterprise Tech Tool
+
+A GUI environment for simple technical tasks on a Windows and Enterprise-managed machine.
