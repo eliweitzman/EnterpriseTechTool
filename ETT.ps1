@@ -111,6 +111,16 @@ $Heading.location = New-Object System.Drawing.Point(40, 47)
 $Heading.Font = New-Object System.Drawing.Font('Segoe UI', 25, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
 $Heading.ForeColor = $TextColor
 
+#Create Toast Notification Stack
+$ToastStack = New-Object System.Windows.Forms.NotifyIcon
+$Path = (Get-Process -id $pid).Path
+$ToastStack.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($path)
+$ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
+$ToastStack.BalloonTipTitle = "Eli's Enterprise Tech Tool"
+$ToastStack.BalloonTipText = "Welcome to Eli's Enterprise Tech Tool!"
+$ToastStack.Visible = $true
+$ToastStack.ShowBalloonTip(5000)
+
 #Button placeholder for clearing last login
 $ClearLastLogin = New-Object system.Windows.Forms.Button
 $ClearLastLogin.text = "Clear Last Login"
@@ -123,12 +133,12 @@ $ClearLastLogin.BackColor = $BoxColor
 
 $ClearLastLogin_Action = {
     
-    New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnSAMUser -Value "" -Force
-    New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnUser -Value ""  -Force
-    New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnUserSID -Value "" -Force
-
-    $wshell = New-Object -ComObject Wscript.Shell
-    $wshell.Popup("Last Login Cleared", 0, "Done", 64)
+    Start-Process powershell.exe -Verb runAs -ArgumentList '-Command', 'New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnSAMUser -Value "" -Force; New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnUser -Value ""  -Force; New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnUserSID -Value "" -Force' -Wait
+    $ToastStack.BalloonTipText = "Last Login Cleared!"
+    $ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
+    $ToastStack.BalloonTipTitle = "Login Status"
+    $ToastStack.ShowBalloonTip(5000)
+    $ToastStack.Visible = $true
 
 }
 $ClearLastLogin.Add_Click($ClearLastLogin_Action)
@@ -377,6 +387,7 @@ $launchDriverUpdaterGUI = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuSFCScan = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuSuspendBitlocker = New-Object System.Windows.Forms.ToolStripMenuItem
 #$menuRenameComputer = New-Object System.Windows.Forms.ToolStripMenuItem - Commented out until I can figure out how to make it work
+$menuTestNet = New-Object System.Windows.Forms.ToolStripMenuItem
 
 #One-Off Tabs
 $menuFeatures = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -409,6 +420,8 @@ $menuWhoami.Add_Click({
     })
 
 $menuWhoami.ToolTipText = "Current username for session." + "`nClick to copy username to clipboard."
+$menuWhoami.BackColor = $BGcolor
+$menuWhoami.ForeColor = $TextColor
 $outputsuppressed = $menuInfo.DropDownItems.Add($menuWhoami)
 
 #Hostname Display
@@ -419,6 +432,8 @@ $menuHostname.Add_Click({
         $wshell.Popup("Hostname copied to clipboard", 0, "Hostname Copied", 64)
     })
 $menuHostname.ToolTipText = "Current device hostname." + "`nClick to copy hostname to clipboard."
+$menuHostname.BackColor = $BGcolor
+$menuHostname.ForeColor = $TextColor
 $outputsuppressed = $menuInfo.DropDownItems.Add($menuHostname)
 
 #Windows Version Display
@@ -428,7 +443,8 @@ $windowsVersion.Add_Click({
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("Windows Version copied to clipboard", 0, "Windows Version Copied", 64)
     })
-
+$windowsVersion.BackColor = $BGcolor
+$windowsVersion.ForeColor = $TextColor
 $windowsVersion.ToolTipText = "Current Windows version." + "`nClick to copy Windows version to clipboard."
 $outputsuppressed = $menuInfo.DropDownItems.Add($windowsVersion)
 
@@ -439,7 +455,8 @@ $manufacturerInfo.Add_Click({
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("Manufacturer copied to clipboard", 0, "Manufacturer Copied", 64)
     })
-
+$manufacturerInfo.BackColor = $BGcolor
+$manufacturerInfo.ForeColor = $TextColor
 $manufacturerInfo.ToolTipText = "Current device manufacturer." + "`nClick to copy manufacturer to clipboard."
 $outputsuppressed = $menuInfo.DropDownItems.Add($manufacturerInfo)
 
@@ -451,6 +468,8 @@ $modelInfo.Add_Click({
         $wshell.Popup("Model copied to clipboard", 0, "Model Copied", 64)
     })
 $modelInfo.ToolTipText = "Current device model." + "`nClick to copy model to clipboard."
+$modelInfo.BackColor = $BGcolor
+$modelInfo.ForeColor = $TextColor
 $outputsuppressed = $menuInfo.DropDownItems.Add($modelInfo)
 
 #Domain Info Display
@@ -461,6 +480,8 @@ $domainInfo.Add_Click({
         $wshell.Popup("Domain copied to clipboard", 0, "Domain Copied", 64)
     })
 $domainInfo.ToolTipText = "Current device domain." + "`nClick to copy domain to clipboard."
+$domainInfo.BackColor = $BGcolor
+$domainInfo.ForeColor = $TextColor
 $outputsuppressed = $menuInfo.DropDownItems.Add($domainInfo)
 
 #Storage Info Display
@@ -470,6 +491,8 @@ $storageInfo.Add_Click({
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("Storage copied to clipboard", 0, "Storage Copied", 64)
     })
+$storageInfo.BackColor = $BGcolor
+$storageInfo.ForeColor = $TextColor
 $storageInfo.ToolTipText = "Current device storage availability." + "`nClick to copy storage to clipboard."
 $outputsuppressed = $menuInfo.DropDownItems.Add($storageInfo)
 
@@ -480,6 +503,8 @@ $ramInfo.Add_Click({
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("RAM copied to clipboard", 0, "RAM Copied", 64)
     })
+$ramInfo.BackColor = $BGcolor
+$ramInfo.ForeColor = $TextColor
 $ramInfo.ToolTipText = "Current device RAM." + "`nClick to copy RAM to clipboard."
 $outputsuppressed = $menuInfo.DropDownItems.Add($ramInfo)
 
@@ -490,6 +515,8 @@ $cpuInfo.Add_Click({
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("CPU copied to clipboard", 0, "CPU Copied", 64)
     })
+$cpuInfo.BackColor = $BGcolor
+$cpuInfo.ForeColor = $TextColor
 $cpuInfo.ToolTipText = "Current device CPU." + "`nClick to copy CPU to clipboard."
 $outputsuppressed = $menuInfo.DropDownItems.Add($cpuInfo)
 
@@ -500,6 +527,8 @@ $deviceInfoPrint.Add_Click({
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("Device Info printed to C:\Temp\DeviceInfo.txt", 0, "Device Info Printed", 64)
     })
+$deviceInfoPrint.BackColor = $BGcolor
+$deviceInfoPrint.ForeColor = $TextColor
 $deviceInfoPrint.ToolTipText = "Prints device info to a text file in C:\Temp." + "`nClick to print device info to text file."
 $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoPrint)
 
@@ -509,6 +538,8 @@ $deviceInfoClipboard.Add_Click({
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("Device Info copied to clipboard", 0, "Device Info Copied", 64)
     })
+$deviceInfoClipboard.BackColor = $BGcolor
+$deviceInfoClipboard.ForeColor = $TextColor
 $deviceInfoClipboard.ToolTipText = "Copies device info to clipboard." + "`nClick to copy device info to clipboard."
 $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoClipboard)
 
@@ -522,6 +553,8 @@ $menuAbout.Add_Click({
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("This script was created by the Eli Weitzman to assist in simplifying technical tasks.", 0, "About", 64)
     })
+$menuAbout.BackColor = $BGcolor
+$menuAbout.ForeColor = $TextColor
 $outputsuppressed = $menuHelp.DropDownItems.Add($menuAbout)
 
 #Fun Button - It's fun (lol)
@@ -531,6 +564,8 @@ $menuFun.Add_Click({
         #Open a web browser to a fun website
         Start-Process https://www.youtube.com/watch?v=a3Z7zEc7AXQ
     })
+$menuFun.BackColor = $BGcolor
+$menuFun.ForeColor = $TextColor
 $outputsuppressed = $menuHelp.DropDownItems.Add($menuFun)
 
 #Licenses Button - Displays basic license information
@@ -539,14 +574,18 @@ $menuLicenses.Add_Click({
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("This application uses code under MIT Open License by Eli Weitzman. For more information, visit our GitHub Repository", 0, "About", 64)
     })
+$menuLicenses.BackColor = $BGcolor
+$menuLicenses.ForeColor = $TextColor
 $outputsuppressed = $menuHelp.DropDownItems.Add($menuLicenses)
 
 #Bug Report Button
 $menuBugReport.Text = "Bug Report"
 $menuBugReport.Add_Click({
         #Open a web browser to a bug report website
-        Start-Process https://github.com/eliweitzman/EliEnterpriseKit/issues
+        Start-Process https://github.com/eliweitzman/EnterpriseTechTool/issues
     })
+$menuBugReport.BackColor = $BGcolor
+$menuBugReport.ForeColor = $TextColor
 $outputsuppressed = $menuHelp.DropDownItems.Add($menuBugReport)
 
 #Functions Tab
@@ -570,6 +609,8 @@ $launchDriverUpdater.Add_Click({
             $wshell.Popup("Driver Updater not found for this manufacturer", 0, "Driver Updater", 64)
         }
     })
+$launchDriverUpdater.BackColor = $BGcolor
+$launchDriverUpdater.ForeColor = $TextColor
 $outputsuppressed = $menuFunctions.DropDownItems.Add($launchDriverUpdater)
 
 #Launch Driver Updater GUI Button - Launches driver update GUI based on manufacturer - Currently only supports Dell and Lenovo
@@ -587,6 +628,8 @@ $launchDriverUpdaterGUI.Add_Click({
             $wshell.Popup("Driver Updater not found for this manufacturer", 0, "Driver Updater", 64)
         }
     })
+$launchDriverUpdaterGUI.BackColor = $BGcolor
+$launchDriverUpdaterGUI.ForeColor = $TextColor
 $outputsuppressed = $menuFunctions.DropDownItems.Add($launchDriverUpdaterGUI)
 
 #SFC Scan Button - Runs SFC Scan on the computer
@@ -595,6 +638,8 @@ $menuSFCScan.Add_Click({
         #SFC Scan
         Start-Process powershell.exe -ArgumentList "-command sfc /scannow" -PassThru -Verb RunAs
     })
+$menuSFCScan.BackColor = $BGcolor
+$menuSFCScan.ForeColor = $TextColor
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuSFCScan)
 
 #Suspend BitLocker Button - Suspends BitLocker for one reboot
@@ -605,7 +650,19 @@ $menuSuspendBitLocker.Add_Click({
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("BitLocker suspended for one reboot.", 0, "BitLocker", 64)
     })
+$menuSuspendBitLocker.BackColor = $BGcolor
+$menuSuspendBitLocker.ForeColor = $TextColor
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuSuspendBitLocker)
+
+#Test Network Button - Tests network connectivity
+$menuTestNet.Text = "Test Network"
+$menuTestNet.Add_Click({
+        #Test Network
+        Start-Process powershell.exe -ArgumentList "-command Test-NetConnection -ComputerName google.com" -PassThru -Wait
+    })
+$menuTestNet.BackColor = $BGcolor
+$menuTestNet.ForeColor = $TextColor
+$outputsuppressed = $menuFunctions.DropDownItems.Add($menuTestNet)
 
 <#
 #Rename Computer Button
@@ -632,8 +689,6 @@ $menuFeatures.Add_Click({
     - Force GPUpdate and Intune Sync", 0, "Functions", 64)
     })
 $outputsuppressed = $menu.Items.Add($menuFeatures)
-
-
 
 #Exit Button
 $menuExit.Text = "Exit"
