@@ -403,7 +403,29 @@ $deviceInfoPrint.ShortcutKeyDisplayString = "CTRL + P"
 $deviceInfoClipboard.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::C
 $deviceInfoClipboard.ShortcutKeyDisplayString = "CTRL + C"
 
-#f1
+#CTRL + D to run launchDriverUpdaterGUI
+$launchDriverUpdaterGUI.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::D
+$launchDriverUpdaterGUI.ShortcutKeyDisplayString = "CTRL + D"
+
+#CTRL + F to run launchDriverUpdater
+$launchDriverUpdater.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::F
+$launchDriverUpdater.ShortcutKeyDisplayString = "CTRL + F"
+
+#CTRL + S to run menuSFCScan
+$menuSFCScan.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::S
+$menuSFCScan.ShortcutKeyDisplayString = "CTRL + S"
+
+#CTRL + Shift +  B to run menuSuspendBitlocker
+$menuSuspendBitlocker.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::B
+$menuSuspendBitlocker.ShortcutKeyDisplayString = "CTRL + SHIFT + B"
+
+#CTRL + Shift + T to run menuTestNet
+$menuTestNet.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::T
+$menuTestNet.ShortcutKeyDisplayString = "CTRL + SHIFT + T"
+
+#CTRL + Shift + R to run menuRenameComputer
+#$menuRenameComputer.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::R
+#$menuRenameComputer.ShortcutKeyDisplayString = "CTRL + SHIFT + R"
 
 #Assigning tab menu items
 
@@ -658,7 +680,7 @@ $outputsuppressed = $menuFunctions.DropDownItems.Add($menuSuspendBitLocker)
 $menuTestNet.Text = "Test Network"
 $menuTestNet.Add_Click({
         #Test Network
-        Start-Process powershell.exe -ArgumentList "-command Test-NetConnection -ComputerName google.com" -PassThru -Wait
+        Start-Process powershell.exe -ArgumentList "-command Test-NetConnection -ComputerName google.com; pause" -PassThru -Wait
     })
 $menuTestNet.BackColor = $BGcolor
 $menuTestNet.ForeColor = $TextColor
