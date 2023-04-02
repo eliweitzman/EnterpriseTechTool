@@ -33,6 +33,22 @@ if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 }
 #>
 
+#Set Branding Colors - CHANGE THIS TO MATCH YOUR COLOR PREFERENCE
+$BrandColor = 'SlateGray'
+
+#Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
+#RAM Check
+$ramCheckActive = $false
+$ramMinimum = 8 #SET MINIMUM RAM IN GB
+
+#Drivespace Check
+$drivespaceCheckActive = $false
+$drivespaceMinimum = 20 #SET MINIMUM DRIVESPACE IN GB
+
+#Windows Version Check
+$winverCheckActive = $false
+$winverTarget = '22h2' #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
+
 #Capture Machine Info
 $username = whoami.exe
 $hostname = HOSTNAME.EXE
@@ -44,6 +60,56 @@ $drivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | W
 $ramCheck = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
 $cpuCheck = Get-WmiObject -Class Win32_Processor | Select-Object -ExpandProperty Name
 $drivetype =  Get-PhysicalDisk | Where-Object DeviceID -eq 0 | Select-Object -ExpandProperty MediaType
+$complianceFlag = $false
+
+#Device Compliance Checks
+#RAM Check
+if ($ramCheckActive -eq $true) {
+    if ($ramCheck -ge $ramMinimum) {
+        $complianceStatus = 'Compliant'
+        $ramCompliant = $true
+    }
+    else {
+        $complianceStatus = 'Non-Compliant'
+        $ramCompliant = $false
+        $complianceFlag = $true
+    }
+}
+else {
+    $ramCompliant = $true
+}
+
+#Drivespace Check
+if ($drivespaceCheckActive -eq $true) {
+    if ($drivespace -ge $drivespaceMinimum) {
+        $complianceStatus = 'Compliant'
+        $drivespaceCompliant = $true
+    }
+    else {
+        $complianceStatus = 'Non-Compliant'
+        $drivespaceCompliant = $false
+        $complianceFlag = $true
+    }
+}
+else {
+    $drivespaceCompliant = $true
+}
+
+#Windows Version Check
+if ($winverCheckActive -eq $true) {
+    if ($winver -eq $winverTarget) {
+        $complianceStatus = 'Compliant'
+        $winverCompliant = $true
+    }
+    else {
+        $complianceStatus = 'Non-Compliant'
+        $winverCompliant = $false
+        $complianceFlag = $true
+    }
+}
+else {
+    $winverCompliant = $true
+}
 
 #Create Device Info Dump
 $deviceInfo = @"
@@ -70,13 +136,13 @@ if ($theme -eq 0) {
     #DARK MODE
     $BGcolor = 'Black'
     $TextColor = 'White'
-    $BoxColor = 'SlateGray'
+    $BoxColor = $BrandColor
 }
 else {
     #LIGHT MODE
     $BGcolor = 'WhiteSmoke'
     $TextColor = 'Black'
-    $BoxColor = 'White'
+    $BoxColor = $BrandColor
 }
 
 #Import Winforms API for GUI
@@ -120,6 +186,15 @@ $ToastStack.BalloonTipTitle = "Eli's Enterprise Tech Tool"
 $ToastStack.BalloonTipText = "Welcome to Eli's Enterprise Tech Tool!"
 $ToastStack.Visible = $true
 $ToastStack.ShowBalloonTip(5000)
+
+#IF Compliance Flag is true, add a flyout notification
+if ($complianceFlag -eq $true) {
+    $ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Error
+    $ToastStack.BalloonTipTitle = "Eli's Enterprise Tech Tool"
+    $ToastStack.BalloonTipText = "This device is non-compliant!"
+    $ToastStack.Visible = $true
+    $ToastStack.ShowBalloonTip(5000)
+}
 
 #Button placeholder for clearing last login
 $ClearLastLogin = New-Object system.Windows.Forms.Button
@@ -432,6 +507,12 @@ $menuTestNet.ShortcutKeyDisplayString = "CTRL + SHIFT + T"
 #Info Tab
 $menuInfo.Text = "Info"
 $outputsuppressed = $menu.Items.Add($menuInfo)
+#Set tab color to red if compliance is not met
+if ($compliance -eq "Compliant") {
+    $menuInfo.BackColor = $BGcolor
+} elseif ($compliance -eq "Non-Compliant") {
+    $menuInfo.BackColor = 'Red'
+}
 
 #Whoami Display
 $menuWhoami.Text = "Username: " + $username
@@ -465,8 +546,14 @@ $windowsVersion.Add_Click({
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("Windows Version copied to clipboard", 0, "Windows Version Copied", 64)
     })
-$windowsVersion.BackColor = $BGcolor
-$windowsVersion.ForeColor = $TextColor
+if ($winverCompliant -eq $false) {
+    $windowsVersion.BackColor = 'Red'
+    $windowsVersion.ForeColor = 'White'
+}
+else {
+    $windowsVersion.BackColor = $BGcolor
+    $windowsVersion.ForeColor = $TextColor
+}
 $windowsVersion.ToolTipText = "Current Windows version." + "`nClick to copy Windows version to clipboard."
 $outputsuppressed = $menuInfo.DropDownItems.Add($windowsVersion)
 
@@ -513,8 +600,15 @@ $storageInfo.Add_Click({
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("Storage copied to clipboard", 0, "Storage Copied", 64)
     })
-$storageInfo.BackColor = $BGcolor
-$storageInfo.ForeColor = $TextColor
+
+if ($drivespaceCompliant -eq $false) {
+    #Set color to red if storage check fails
+    $storageInfo.BackColor = 'Red'
+    $storageInfo.ForeColor = 'White'
+}else{
+    $storageInfo.BackColor = $BGcolor
+    $storageInfo.ForeColor = $TextColor
+}
 $storageInfo.ToolTipText = "Current device storage availability." + "`nClick to copy storage to clipboard."
 $outputsuppressed = $menuInfo.DropDownItems.Add($storageInfo)
 
@@ -525,8 +619,15 @@ $ramInfo.Add_Click({
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("RAM copied to clipboard", 0, "RAM Copied", 64)
     })
-$ramInfo.BackColor = $BGcolor
-$ramInfo.ForeColor = $TextColor
+if ($ramCompliant -eq $false) {
+    #Set color to red if RAM check fails
+    $ramInfo.BackColor = 'Red'
+    $ramInfo.ForeColor = 'White'
+}else{
+    $ramInfo.BackColor = $BGcolor
+    $ramInfo.ForeColor = $TextColor
+}
+
 $ramInfo.ToolTipText = "Current device RAM." + "`nClick to copy RAM to clipboard."
 $outputsuppressed = $menuInfo.DropDownItems.Add($ramInfo)
 
