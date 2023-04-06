@@ -33,7 +33,7 @@ if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 }
 #>
 
-#Set Branding Colors - CHANGE THIS TO MATCH YOUR COLOR PREFERENCE
+#Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
 $BrandColor = 'SlateGray'
 
 #Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
@@ -809,7 +809,7 @@ $menuFeatures.Add_Click({
     - Clear last Windows login
     - Check for app updates thru WinGet
     - Retreive Local Admin Passwords thru LAPS
-    - Force GPUpdate and Intune Sync", 0, "Functions", 64)
+    - Force Policy Sync", 0, "Functions", 64)
     })
 $outputsuppressed = $menu.Items.Add($menuFeatures)
 
