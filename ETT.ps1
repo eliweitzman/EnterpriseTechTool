@@ -62,6 +62,21 @@ $cpuCheck = Get-WmiObject -Class Win32_Processor | Select-Object -ExpandProperty
 $drivetype =  Get-PhysicalDisk | Where-Object DeviceID -eq 0 | Select-Object -ExpandProperty MediaType
 $complianceFlag = $false
 
+<#EXPERIMENTAL NEW INFO METHOD
+# Capture machine info
+$computerInfo = Get-ComputerInfo
+$username = $computerInfo.CSUserName
+$hostname = $computerInfo.CSName
+$winver = $computerInfo.WindowsVersion
+$manufacturer = $computerInfo.CSManufacturer
+$model = $computerInfo.Model
+$domain = $computerInfo.Domain
+$drivespace = Get-Volume -DriveLetter C | Select-Object -Property DriveLetter, @{Name='TotalSizeGB';Expression={[math]::Round($_.Size/1GB, 2)}}, @{Name='FreeSpaceGB';Expression={[math]::Round($_.SizeRemaining/1GB, 2)}} | Format-Table -HideTableHeaders | Out-String
+$ramCheck = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
+$cpuCheck = (Get-Process -Id $PID).ProcessorName
+$drivetype = (Get-PhysicalDisk | Where-Object DeviceID -eq 0).MediaType
+$complianceFlag = $false#>
+
 #Device Compliance Checks
 #RAM Check
 if ($ramCheckActive -eq $true) {
@@ -165,7 +180,7 @@ $Logo = New-Object system.Windows.Forms.PictureBox
 $Logo.width = 126
 $Logo.height = 73
 $Logo.location = New-Object System.Drawing.Point(377, 29)
-$Logo.imageLocation = "https://github.com/eliweitzman/EliEnterpriseKit/blob/main/Eli's%20Enterprise%20(1).png?raw=true"
+$Logo.imageLocation = "https://static.wikia.nocookie.net/memory-gamma/images/3/30/Starfleet_Command_logo_2409.png/revision/latest/thumbnail/width/360/height/360?cb=20170604045520"
 $Logo.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::zoom
 
 $Heading = New-Object system.Windows.Forms.Label
@@ -179,7 +194,7 @@ $Heading.ForeColor = $TextColor
 
 #Create Toast Notification Stack
 $ToastStack = New-Object System.Windows.Forms.NotifyIcon
-$Path = (Get-Process -id $pid).Path
+$Path = 'C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe'
 $ToastStack.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($path)
 $ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
 $ToastStack.BalloonTipTitle = "Eli's Enterprise Tech Tool"
