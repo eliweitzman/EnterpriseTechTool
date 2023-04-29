@@ -172,7 +172,9 @@ $Form.StartPosition = 'CenterScreen'
 $Form.MaximizeBox = $false
 $Form.MaximumSize = $Form.Size
 $Form.MinimumSize = $Form.Size
+$Form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($PSHOME + "\powershell.exe")
 $Form.TopMost = $false
+$Form.FormBorderStyle = 'FixedSingle'
 $Form.BackColor = $BGcolor
 
 #Import and load in logo icon
