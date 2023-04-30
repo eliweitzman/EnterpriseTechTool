@@ -165,17 +165,17 @@ Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
-$Form = New-Object System.Windows.Forms.Form
-$Form.ClientSize = New-Object System.Drawing.Point(519, 330)
-$Form.text = "Eli's Enterprise Tech Tool V1.0"
-$Form.StartPosition = 'CenterScreen'
-$Form.MaximizeBox = $false
-$Form.MaximumSize = $Form.Size
-$Form.MinimumSize = $Form.Size
-$Form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($PSHOME + "\powershell.exe")
-$Form.TopMost = $false
-$Form.FormBorderStyle = 'FixedSingle'
-$Form.BackColor = $BGcolor
+$ETT = New-Object System.Windows.Forms.Form
+$ETT.ClientSize = New-Object System.Drawing.Point(519, 330)
+$ETT.text = "Eli's Enterprise Tech Tool V1.0"
+$ETT.StartPosition = 'CenterScreen'
+$ETT.MaximizeBox = $false
+$ETT.MaximumSize = $ETT.Size
+$ETT.MinimumSize = $ETT.Size
+$ETT.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($PSHOME + "\powershell.exe")
+$ETT.TopMost = $false
+$ETT.FormBorderStyle = 'FixedSingle'
+$ETT.BackColor = $BGcolor
 
 #Import and load in logo icon
 $Logo = New-Object system.Windows.Forms.PictureBox
@@ -832,16 +832,16 @@ $outputsuppressed = $menu.Items.Add($menuFeatures)
 
 #Exit Button
 $menuExit.Text = "Exit"
-$menuExit.Add_Click({ $Form.Close() })
+$menuExit.Add_Click({ $ETT.Close() })
 $outputsuppressed = $menu.Items.Add($menuExit)
 
 #Add all buttons and functions to the GUI menu
-$Form.controls.AddRange(@($Logo, $Heading, $ClearLastLogin, $Lapspw, $appUpdate, $PolicyPatch, $menu))
+$ETT.controls.AddRange(@($Logo, $Heading, $ClearLastLogin, $Lapspw, $appUpdate, $PolicyPatch, $menu))
 
 #region Logic 
 
 #endregion
 
-[void]$Form.ShowDialog()
+[void]$ETT.ShowDialog()
 
 $outputsuppressed
