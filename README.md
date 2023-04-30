@@ -1,6 +1,6 @@
 ![Logo](https://github.com/eliweitzman/EnterpriseTechTool/blob/main/Eli's%20Enterprise.png)
 
-Welcoem to Eli's Enterprise Tech Tool (ETT, for short lol). In this project, I hope to combine a bunch of useful sysadmin/helpdesk solutions that could be potentially helpful in general field work. Most of these projects are made from ideas I've had while at work, but hopefully some new functions come about soon!
+Welcome to Eli's Enterprise Tech Tool (ETT, for short). In this project, I hope to combine a bunch of useful sysadmin/helpdesk solutions that could be potentially helpful in general field work. Most of these projects are made from ideas I've had while at work, but hopefully some new functions come about soon!
 
 ## Recommended Experience before deployment
 
