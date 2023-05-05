@@ -110,6 +110,21 @@ $usernameInput.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
 #Lock input box until alternate credentials is checked
 $usernameInput.Text = $domain + "\" + $env:USERNAME
 $usernameInput.Enabled = $false
+
+#Logic to enable/disable username input box
+$altCreds.Add_CheckStateChanged({
+       if ($altCreds.Checked -eq $true) {
+              $usernameInput.Enabled = $true
+       }
+       else {
+              $usernameInput.Enabled = $false
+       }
+})
+
+#Logic to update the username input box when the domain input box is updated
+$domainInput.Add_TextChanged({
+       $usernameInput.Text = $domainInput.Text + "\" + $env:USERNAME
+})
     
 #Start button that closes window to run
 $lapsStart = New-Object system.Windows.Forms.Button
@@ -180,7 +195,7 @@ $lapsStart.Add_Click({
 })
     
 #Print the above GUI applets in the box
-$LapsForm.controls.AddRange(@($Lapslogo, $domainInput, $domainLabel, $titleTag, $hostnameLabel, $hostnameInput, $usernameInfo, $usernameInput, $lapsStart))
+$LapsForm.controls.AddRange(@($Lapslogo, $domainInput, $domainLabel, $titleTag, $hostnameLabel, $hostnameInput, $usernameInfo, $usernameInput, $lapsStart, $windowsLaps, $altCreds))
 
 #SHOW ME THE MONEY
 [void]$LapsForm.ShowDialog()
