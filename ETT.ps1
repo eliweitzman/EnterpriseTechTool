@@ -17,7 +17,7 @@
 .NOTES
     Version:        1.0
     Creation Date:  12-26-22
-    Last Updated:   3-28-23
+    Last Updated:   5-6-23
     Purpose/Change: Updates, and trickledown feature integration
 #>
 
@@ -60,7 +60,7 @@ $domain = Get-WmiObject -Class Win32_ComputerSystem -Property Domain | Select-Ob
 $drivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
 $ramCheck = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
 $cpuCheck = Get-WmiObject -Class Win32_Processor | Select-Object -ExpandProperty Name
-$drivetype =  Get-PhysicalDisk | Where-Object DeviceID -eq 0 | Select-Object -ExpandProperty MediaType
+$drivetype = Get-PhysicalDisk | Where-Object DeviceID -eq 0 | Select-Object -ExpandProperty MediaType
 $complianceFlag = $false
 
 <#EXPERIMENTAL NEW INFO METHOD
@@ -298,6 +298,234 @@ function ADUserlookup {
     $ADUserSearchForm.ShowDialog()
 }
 
+#Function for AD Computer Lookup
+function ADComputerLookup {
+    #Set up the form
+    Add-Type -AssemblyName System.Windows.Forms
+    [System.Windows.Forms.Application]::EnableVisualStyles()
+
+    #Create the form
+    $ADComputerSearchForm = New-Object system.Windows.Forms.Form
+    $ADComputerSearchForm.Text = "AD Computer Search"
+    $ADComputerSearchForm.Size = New-Object System.Drawing.Size(500, 500)
+    $ADComputerSearchForm.StartPosition = "CenterScreen"
+    $ADComputerSearchForm.FormBorderStyle = 'FixedDialog'
+    $ADComputerSearchForm.MaximizeBox = $false
+    $ADComputerSearchForm.MinimizeBox = $false
+    $ADComputerSearchForm.Topmost = $true
+    $ADComputerSearchForm.BackColor = $BGcolor
+    $ADComputerSearchForm.ForeColor = $TextColor
+
+    #Create the username label
+    $ADComputerSearchLabel = New-Object system.Windows.Forms.Label
+    $ADComputerSearchLabel.Text = "Enter a hostname for search:"
+    $ADComputerSearchLabel.AutoSize = $true
+    $ADComputerSearchLabel.Location = New-Object System.Drawing.Size(10, 10)
+    $ADComputerSearchLabel.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $ADComputerSearchLabel.BackColor = $BGcolor
+    $ADComputerSearchLabel.ForeColor = $TextColor
+    $ADComputerSearchForm.Controls.Add($ADComputerSearchLabel)
+
+    #Create the text box
+    $ADComputerSearchTextBox = New-Object system.Windows.Forms.TextBox
+    $ADComputerSearchTextBox.Location = New-Object System.Drawing.Size(10, 30)
+    $ADComputerSearchTextBox.Size = New-Object System.Drawing.Size(465, 20)
+    $ADComputerSearchTextBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
+    $ADComputerSearchTextBox.BackColor = $BGcolor
+    $ADComputerSearchTextBox.ForeColor = $TextColor
+    $ADComputerSearchForm.Controls.Add($ADComputerSearchTextBox)
+
+    #Create a domain label
+    $ADComputerSearchDomainLabel = New-Object system.Windows.Forms.Label
+    $ADComputerSearchDomainLabel.Text = "Enter a domain:"
+    $ADComputerSearchDomainLabel.AutoSize = $true
+    $ADComputerSearchDomainLabel.Location = New-Object System.Drawing.Size(10, 60)
+    $ADComputerSearchDomainLabel.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $ADComputerSearchDomainLabel.BackColor = $BGcolor
+    $ADComputerSearchDomainLabel.ForeColor = $TextColor
+    $ADComputerSearchForm.Controls.Add($ADComputerSearchDomainLabel)
+
+    #Create the domain text box
+    $ADComputerSearchDomainTextBox = New-Object system.Windows.Forms.TextBox
+    $ADComputerSearchDomainTextBox.Location = New-Object System.Drawing.Size(10, 80)
+    $ADComputerSearchDomainTextBox.Size = New-Object System.Drawing.Size(465, 20)
+    $ADComputerSearchDomainTextBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
+    $ADComputerSearchDomainTextBox.BackColor = $BGcolor
+    $ADComputerSearchDomainTextBox.ForeColor = $TextColor
+    $ADComputerSearchForm.Controls.Add($ADComputerSearchDomainTextBox)
+
+    #Add a checkbox for adding additional authentication
+    $ADComputerSearchAuthCheckBox = New-Object system.Windows.Forms.CheckBox
+    $ADComputerSearchAuthCheckBox.Text = "Use alternate credentials"
+    $ADComputerSearchAuthCheckBox.AutoSize = $true
+    $ADComputerSearchAuthCheckBox.Location = New-Object System.Drawing.Size(10, 110)
+    $ADComputerSearchAuthCheckBox.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $ADComputerSearchAuthCheckBox.BackColor = $BGcolor
+    $ADComputerSearchAuthCheckBox.ForeColor = $TextColor
+    $ADComputerSearchForm.Controls.Add($ADComputerSearchAuthCheckBox)
+
+    #Search button
+    $ADComputerSearchButton = New-Object system.Windows.Forms.Button
+    $ADComputerSearchButton.Text = "Search"
+    $ADComputerSearchButton.Location = New-Object System.Drawing.Size(10, 140)
+    $ADComputerSearchButton.Size = New-Object System.Drawing.Size(465, 30)
+    $ADComputerSearchButton.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $ADComputerSearchButton.BackColor = $BrandColor
+    $ADComputerSearchButton.ForeColor = $TextColor
+
+    #Search button click event
+    $ADComputerSearchButton.Add_Click({
+            #Check if the domain text box is empty
+            if ($ADComputerSearchDomainTextBox.Text -eq "") {
+                #If it is, use the default domain
+                $ADComputerSearchDomain = $env:USERDOMAIN
+
+                #Check if the alternate credentials checkbox is checked
+                if ($ADComputerSearchAuthCheckBox.Checked -eq $true) {
+                    #If it is, prompt for credentials
+                    $ADComputerSearchCred = Get-Credential
+
+                    #Run the search
+                    $ADComputerSearchResults = Get-ADComputer -Filter { Name -like $ADComputerSearchTextBox.Text } -Server $ADComputerSearchDomain -Credential $ADComputerSearchCred
+
+                    #Check if the search returned any results
+                    if ($ADComputerSearchResults -eq $null) {
+                        #If it didn't, display a message box
+                        $Wshell = New-Object -ComObject Wscript.Shell
+                        $Wshell.Popup("No results found.", 0, "No results found", 0x0)
+                    }
+                    else {
+                        #If it did, output the results to the listbox
+                        #Name
+                        $ADComputerSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
+                        #CanonicalName
+                        $ADComputerSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
+                        #DistinguishedName
+                        $ADComputerSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
+                        #Updated
+                        $ADComputerSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
+                        #Description
+                        $ADComputerSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
+                        #OperatingSystem
+                        $ADComputerSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
+                        #OperatingSystemVersion
+                        $ADComputerSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
+                    }
+                }
+                else {
+                    #If it isn't, use the current user's credentials, and run the search
+                    $ADComputerSearchResults = Get-ADComputer -Filter { Name -like $ADComputerSearchTextBox.Text } -Server $ADComputerSearchDomain
+
+                    #Check if the search returned any results
+                    if ($ADComputerSearchResults -eq $null) {
+                        #If it didn't, display a message box
+                        $Wshell = New-Object -ComObject Wscript.Shell
+                        $Wshell.Popup("No results found.", 0, "No results found", 0x0)
+                    }
+                    else {
+                        #If it did, output the results to the listbox
+                        #Name
+                        $ADComputerSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
+                        #CanonicalName
+                        $ADComputerSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
+                        #DistinguishedName
+                        $ADComputerSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
+                        #Updated
+                        $ADComputerSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
+                        #Description
+                        $ADComputerSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
+                        #OperatingSystem
+                        $ADComputerSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
+                        #OperatingSystemVersion
+                        $ADComputerSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
+                    }
+                }
+                else {
+                    #If it isn't, use the domain from the text box
+                    $ADComputerSearchDomain = $ADComputerSearchDomainTextBox.Text
+
+                    #Check if the alternate credentials checkbox is checked
+                    if ($ADComputerSearchAuthCheckBox.Checked -eq $true) {
+                        #If it is, prompt for credentials
+                        $ADComputerSearchCred = Get-Credential
+
+                        #Run the search
+                        $ADComputerSearchResults = Get-ADComputer -Filter { Name -like $ADComputerSearchTextBox.Text } -Server $ADComputerSearchDomain -Credential $ADComputerSearchCred
+            
+                        #Check if the search returned any results
+                        if ($ADComputerSearchResults -eq $null) {
+                            #If it didn't, display a message box
+                            $Wshell = New-Object -ComObject Wscript.Shell
+                            $Wshell.Popup("No results found.", 0, "No results found", 0x0)
+                        }
+                        else {
+                            #If it did, output the results to the listbox
+                            #Name
+                            $ADComputerSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
+                            #CanonicalName
+                            $ADComputerSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
+                            #DistinguishedName
+                            $ADComputerSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
+                            #Updated
+                            $ADComputerSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
+                            #Description
+                            $ADComputerSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
+                            #OperatingSystem
+                            $ADComputerSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
+                            #OperatingSystemVersion
+                            $ADComputerSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
+                        }
+                    }
+                    else {
+                        #If it isn't, use the current user's credentials
+                        $ADComputerSearchResults = Get-ADComputer -Filter { Name -like $ADComputerSearchTextBox.Text } -Server $ADComputerSearchDomain
+
+                        #Check if the search returned any results
+                        if ($ADComputerSearchResults -eq $null) {
+                            #If it didn't, display a message box
+                            $Wshell = New-Object -ComObject Wscript.Shell
+                            $Wshell.Popup("No results found.", 0, "No results found", 0x0)
+                        }
+                        else {
+                            #If it did, output the results to the listbox
+                            #Name
+                            $ADComputerSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
+                            #CanonicalName
+                            $ADComputerSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
+                            #DistinguishedName
+                            $ADComputerSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
+                            #Updated
+                            $ADComputerSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
+                            #Description
+                            $ADComputerSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
+                            #OperatingSystem
+                            $ADComputerSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
+                            #OperatingSystemVersion
+                            $ADComputerSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
+                        }
+            
+                    }
+                }
+            }
+        })
+
+    $ADComputerSearchForm.Controls.Add($ADComputerSearchButton)
+
+    #Listbox for results
+    $ADComputerSearchListBox = New-Object system.Windows.Forms.ListBox
+    $ADComputerSearchListBox.Location = New-Object System.Drawing.Size(10, 180)
+    $ADComputerSearchListBox.Size = New-Object System.Drawing.Size(465, 265)
+    $ADComputerSearchListBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
+    $ADComputerSearchListBox.BackColor = $BGcolor
+    $ADComputerSearchListBox.ForeColor = $TextColor
+    $ADComputerSearchListBox.SelectionMode = 'MultiExtended'
+    $ADComputerSearchForm.Controls.Add($ADComputerSearchListBox)
+
+    #Show the form
+    $ADComputerSearchForm.ShowDialog()
+    
+}
+
 #Device Compliance Checks
 #RAM Check
 if ($ramCheckActive -eq $true) {
@@ -476,10 +704,13 @@ $Lapspw_Action = {
     
     #Create box
     $LapsForm = New-Object system.Windows.Forms.Form
-    $LapsForm.ClientSize = New-Object System.Drawing.Point(500, 301)
+    $LapsForm.ClientSize = New-Object System.Drawing.Point(450, 301)
     $LapsForm.text = "LAPS GUI"
     $LapsForm.TopMost = $true
     $LapsForm.BackColor = $BGcolor
+    $LapsForm.ForeColor = $TextColor
+    $LapsForm.FormBorderStyle = 'FixedDialog'
+    $LapsForm.StartPosition = 'CenterScreen'
     
     #Title for box
     $titleTag = New-Object system.Windows.Forms.Label
@@ -487,7 +718,7 @@ $Lapspw_Action = {
     $titleTag.AutoSize = $true
     $titleTag.width = 25
     $titleTag.height = 10
-    $titleTag.location = New-Object System.Drawing.Point(88, 45)
+    $titleTag.location = New-Object System.Drawing.Point(88, 20)
     $titleTag.Font = New-Object System.Drawing.Font('Segoe UI', 16, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
     $titleTag.ForeColor = $TextColor
     
@@ -498,7 +729,23 @@ $Lapspw_Action = {
     $Lapslogo.location = New-Object System.Drawing.Point(313, 17)
     $Lapslogo.imageLocation = "https://community.chocolatey.org/content/packageimages/laps.6.2.0.20210403.png"
     $Lapslogo.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::zoom
-    
+
+    #Checkbox for using Windows LAPS
+    $windowsLaps = New-Object system.Windows.Forms.CheckBox
+    $windowsLaps.text = "Use Windows LAPS"
+    $windowsLaps.AutoSize = $true
+    $windowsLaps.width = 25
+    $windowsLaps.height = 10
+    $windowsLaps.location = New-Object System.Drawing.Point(17, 60)
+
+    #Checkbox for using alternate credentials
+    $altCreds = New-Object system.Windows.Forms.CheckBox
+    $altCreds.text = "Use Alternate Credentials"
+    $altCreds.AutoSize = $true
+    $altCreds.width = 25
+    $altCreds.height = 10
+    $altCreds.location = New-Object System.Drawing.Point(17, 80)
+
     #Label for domain info
     $domainLabel = New-Object system.Windows.Forms.Label
     $domainLabel.text = "Domain:"
@@ -512,10 +759,10 @@ $Lapspw_Action = {
     #Domain input box
     $domainInput = New-Object system.Windows.Forms.TextBox
     $domainInput.multiline = $false
-    $domainInput.width = 184
+    $domainInput.width = 300
     $domainInput.height = 20
     $domainInput.Anchor = 'top'
-    $domainInput.location = New-Object System.Drawing.Point(239, 114)
+    $domainInput.location = New-Object System.Drawing.Point(80, 114)
     $domainInput.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
     
     #Hostname information label
@@ -538,7 +785,7 @@ $Lapspw_Action = {
     
     #Username information label
     $usernameInfo = New-Object system.Windows.Forms.Label
-    $usernameInfo.text = "Your Username with Domain prefix (DOMAIN\username)"
+    $usernameInfo.text = "Your Username:"
     $usernameInfo.AutoSize = $true
     $usernameInfo.width = 25
     $usernameInfo.height = 10
@@ -553,6 +800,24 @@ $Lapspw_Action = {
     $usernameInput.height = 20
     $usernameInput.location = New-Object System.Drawing.Point(17, 216)
     $usernameInput.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
+    #Lock input box until alternate credentials is checked
+    $usernameInput.Text = $domain + "\" + $env:USERNAME
+    $usernameInput.Enabled = $false
+
+    #Logic to enable/disable username input box
+    $altCreds.Add_CheckStateChanged({
+            if ($altCreds.Checked -eq $true) {
+                $usernameInput.Enabled = $true
+            }
+            else {
+                $usernameInput.Enabled = $false
+            }
+        })
+
+    #Logic to update the username input box when the domain input box is updated
+    $domainInput.Add_TextChanged({
+            $usernameInput.Text = $domainInput.Text + "\" + $env:USERNAME
+        })
     
     #Start button that closes window to run
     $lapsStart = New-Object system.Windows.Forms.Button
@@ -562,33 +827,76 @@ $Lapspw_Action = {
     $lapsStart.location = New-Object System.Drawing.Point(154, 251)
     $lapsStart.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
     $lapsStart.BackColor = $BoxColor
-    $lapsStart.Add_Click({ $form.Add_FormClosing({ $_.Cancel = $false }); $Lapsform.Close() })
+    $lapsStart.Add_Click({ 
+            #First, check if Windows LAPS is checked
+            if ($windowsLaps.Checked -eq $false) {
+                #Next, check if alternate credentials is checked
+                if ($altCreds.Checked -eq $true) {
+                
+                    #IF Windows LAPS is off, alternate credentials is on, run the command with alternate credentials
+                    $output = Get-ADComputer $hostname -Properties * -Server $domain -Credential (Get-Credential -Credential $usernameInput.Text) | Select-Object -ExpandProperty ms-Mcs-AdmPwd
+                
+                    #If the output is null, the computer is not in AD
+                    if ($output -eq $null) {
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
+                    }
+                    else {
+                        #If the output is not null, the computer is in AD and the password is returned
+                        $output | clip
+
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
+                    }
+                }
+                else {
+                    #If Windows LAPS is off, and alternate credentials is off, run the command with current credentials
+                    $output = Get-ADComputer $hostname -Properties * -Server $domain | Select-Object -ExpandProperty ms-Mcs-AdmPwd
+                
+                    #If the output is null, the computer is not in AD
+                    if ($output -eq $null) {
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
+                    }
+                    else {
+                        #If the output is not null, the computer is in AD and the password is returned
+                        $output | clip
+
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
+                    }
+                }       
+            }
+            elseif ($windowsLaps.Checked -eq $false) {
+                #Next, check if alternate credentials is checked
+                if ($altCreds.Checked -eq $true) {
+                    #IF Windows LAPS is on, alternate credentials is on, run the command with alternate credentials
+                    $output = Get-LapsADPassword -ComputerName $hostname -Credential (Get-Credential -Credential $usernameInput.Text) -AsPlainText | Select-Object -ExpandProperty Password
+                        
+                    #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
+                    if ($output -eq $null) {
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
+                    }
+                }
+                else {
+                    #If Windows LAPS is on, and alternate credentials is off, run the command with current credentials
+                    $output = Get-LapsADPassword -ComputerName $hostname -AsPlainText | Select-Object -ExpandProperty Password
+                        
+                    #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
+                    if ($output -eq $null) {
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
+                    }
+                }
+            }
+        })
     
     #Print the above GUI applets in the box
-    $LapsForm.controls.AddRange(@($Lapslogo, $domainInput, $domainLabel, $titleTag, $hostnameLabel, $hostnameInput, $usernameInfo, $usernameInput, $lapsStart))
-    
-    #region Logic 
-    
-    #endregion
-    
+    $LapsForm.controls.AddRange(@($Lapslogo, $domainInput, $domainLabel, $titleTag, $hostnameLabel, $hostnameInput, $usernameInfo, $usernameInput, $lapsStart, $windowsLaps, $altCreds))
+
     #SHOW ME THE MONEY
     [void]$LapsForm.ShowDialog()
-    
-    #RUN LAPS OPERATION
-    
-    #Converting input from prior box into a LAPS run
-    $hostname = $hostnameInput.Text
-    $domain = $domainInput.Text
-    $username = $usernameInput.Text
-
-    #Run LAPS in new powershell window
-    $output = Get-ADComputer $hostname -Properties * -Server $domain -Credential $username | Select-Object -ExpandProperty ms-Mcs-AdmPwd
-
-    #Add password to the clipboard
-    Set-Clipboard -Value $output
-    
-    $wshell = New-Object -ComObject Wscript.Shell
-    $wshell.Popup("Password: " + $output + "`r`n(Result has as well been copied to clipboard)", 0, "LAPS Result", 64)
 }
 
 #Enable clicking to run the action above
@@ -706,7 +1014,6 @@ $menuTestNet = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuAD = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuADUserInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuADComputerInfo = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuADGroupInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 
 #One-Off Tabs
 $menuFeatures = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -754,7 +1061,8 @@ $outputsuppressed = $menu.Items.Add($menuInfo)
 #Set tab color to red if compliance is not met
 if ($compliance -eq "Compliant") {
     $menuInfo.BackColor = $BGcolor
-} elseif ($compliance -eq "Non-Compliant") {
+}
+elseif ($compliance -eq "Non-Compliant") {
     $menuInfo.BackColor = 'Red'
 }
 
@@ -849,7 +1157,8 @@ if ($drivespaceCompliant -eq $false) {
     #Set color to red if storage check fails
     $storageInfo.BackColor = 'Red'
     $storageInfo.ForeColor = 'White'
-}else{
+}
+else {
     $storageInfo.BackColor = $BGcolor
     $storageInfo.ForeColor = $TextColor
 }
@@ -867,7 +1176,8 @@ if ($ramCompliant -eq $false) {
     #Set color to red if RAM check fails
     $ramInfo.BackColor = 'Red'
     $ramInfo.ForeColor = 'White'
-}else{
+}
+else {
     $ramInfo.BackColor = $BGcolor
     $ramInfo.ForeColor = $TextColor
 }
@@ -1053,12 +1363,22 @@ $outputsuppressed = $menu.Items.Add($menuAD)
 #AD User Search Button - Searches AD for a user
 $menuADUserInfo.Text = "AD User Info"
 $menuADUserInfo.Add_Click({
-    #AD User Search - Use the function to search
-    ADUserlookup
-})
+        #AD User Search - Use the function to search
+        ADUserlookup
+    })
 $menuADUserInfo.BackColor = $BGcolor
 $menuADUserInfo.ForeColor = $TextColor
 $outputsuppressed = $menuAD.DropDownItems.Add($menuADUserInfo)
+
+#AD Computer Search Button - Searches AD for a computer
+$menuADComputerInfo.Text = "AD Computer Info"
+$menuADComputerInfo.Add_Click({
+        #AD Computer Search - Use the function to search
+        ADComputerlookup
+    })
+$menuADComputerInfo.BackColor = $BGcolor
+$menuADComputerInfo.ForeColor = $TextColor
+$outputsuppressed = $menuAD.DropDownItems.Add($menuADComputerInfo)
 
 #Features List Button - Displays a list of features
 $menuFeatures.Text = "Features"

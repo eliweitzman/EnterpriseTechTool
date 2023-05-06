@@ -1,13 +1,13 @@
 #Standalone LAPS GUI Development Section
-    
-##FIRST SECTION INPUT FIELD
-Add-Type -AssemblyName System.Windows.Forms
-[System.Windows.Forms.Application]::EnableVisualStyles()
 
 #Color placeholders
 $BGcolor = "#000000"
 $TextColor = "#FFFFFF"
 $BoxColor = "#000000"
+    
+##FIRST SECTION INPUT FIELD
+Add-Type -AssemblyName System.Windows.Forms
+[System.Windows.Forms.Application]::EnableVisualStyles()
     
 #Create box
 $LapsForm = New-Object system.Windows.Forms.Form
