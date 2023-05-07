@@ -7,6 +7,7 @@ Welcome to Eli's Enterprise Tech Tool (ETT, for short). In this project, I hope 
 While it's optional, and I try to add as much context and instructions to the project as possible to run without experience, it would be good to have some experience in the following tools:
 
 - PowerShell
+- Windows PowerShell ISE
 - Active Directory
 
 ## Optimal Environment
