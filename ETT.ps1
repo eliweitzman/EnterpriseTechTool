@@ -34,8 +34,8 @@ if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 #>
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
-$BrandColor = 'SlateGray'
-$LogoLocation = 'https://upload.wikimedia.org/wikipedia/commons/a/af/PowerShell_Core_6.0_icon.png'
+$BrandColor = '#023a24' #Set the color of the form, currently populated with a hex value.
+$LogoLocation =  $null #If you want to use a custom logo, set the path here. Otherwise, leave as $null
 
 #Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 #RAM Check
@@ -152,7 +152,7 @@ function ADLookup {
     $ADSearchButton.Size = New-Object System.Drawing.Size(465, 30)
     $ADSearchButton.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
     $ADSearchButton.BackColor = $BrandColor
-    $ADSearchButton.ForeColor = $TextColor
+    $ADSearchButton.ForeColor = $ButtonText
 
     #Search button click event
     $ADSearchButton.Add_Click({
@@ -172,7 +172,7 @@ function ADLookup {
                         $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred
 
                         #Check if the search returned any results
-                        if ($ADSearchResults -eq $null) {
+                        if ($null -eq $ADSearchDomainTextBox) {
                             #If it didn't, display a message box
                             $Wshell = New-Object -ComObject Wscript.Shell
                             $Wshell.Popup("No results found.", 0, "No results found", 0x0)
@@ -198,7 +198,7 @@ function ADLookup {
                         $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain
 
                         #Check if the search returned any results
-                        if ($ADSearchResults -eq $null) {
+                        if ($null -eq $ADSearchResults) {
                             #If it didn't, display a message box
                             $Wshell = New-Object -ComObject Wscript.Shell
                             $Wshell.Popup("No results found.", 0, "No results found", 0x0)
@@ -232,7 +232,7 @@ function ADLookup {
                             $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred
             
                             #Check if the search returned any results
-                            if ($ADSearchResults -eq $null) {
+                            if ($null -eq $ADSearchResults) {
                                 #If it didn't, display a message box
                                 $Wshell = New-Object -ComObject Wscript.Shell
                                 $Wshell.Popup("No results found.", 0, "No results found", 0x0)
@@ -258,7 +258,7 @@ function ADLookup {
                             $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain
 
                             #Check if the search returned any results
-                            if ($ADSearchResults -eq $null) {
+                            if ($null -eq $ADSearchResults) {
                                 #If it didn't, display a message box
                                 $Wshell = New-Object -ComObject Wscript.Shell
                                 $Wshell.Popup("No results found.", 0, "No results found", 0x0)
@@ -297,7 +297,7 @@ function ADLookup {
                         $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred
 
                         #Check if the search returned any results
-                        if ($ADSearchResults -eq $null) {
+                        if ($null -eq $ADSearchResults) {
                             #If it didn't, display a message box
                             $Wshell = New-Object -ComObject Wscript.Shell
                             $Wshell.Popup("No results found.", 0, "No results found", 0x0)
@@ -325,7 +325,7 @@ function ADLookup {
                         $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain
 
                         #Check if the search returned any results
-                        if ($ADSearchResults -eq $null) {
+                        if ($null -eq $ADSearchResults) {
                             #If it didn't, display a message box
                             $Wshell = New-Object -ComObject Wscript.Shell
                             $Wshell.Popup("No results found.", 0, "No results found", 0x0)
@@ -361,7 +361,7 @@ function ADLookup {
                         $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred
 
                         #Check if the search returned any results
-                        if ($ADSearchResults -eq $null) {
+                        if ($null -eq $ADSearchResults) {
                             #If it didn't, display a message box
                             $Wshell = New-Object -ComObject Wscript.Shell
                             $Wshell.Popup("No results found.", 0, "No results found", 0x0)
@@ -389,7 +389,7 @@ function ADLookup {
                         $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain
 
                         #Check if the search returned any results
-                        if ($ADSearchResults -eq $null) {
+                        if ($null -eq $ADSearchResults) {
                             #If it didn't, display a message box
                             $Wshell = New-Object
                             $Wshell.Popup("No results found.", 0, "No results found", 0x0)
@@ -507,12 +507,14 @@ if ($theme -eq 0) {
     #DARK MODE
     $BGcolor = 'Black'
     $TextColor = 'White'
+    $ButtonText = 'White'
     $BoxColor = $BrandColor
 }
 else {
     #LIGHT MODE
     $BGcolor = 'WhiteSmoke'
     $TextColor = 'Black'
+    $ButtonText = 'White'
     $BoxColor = $BrandColor
 }
 
@@ -540,6 +542,9 @@ $Logo.height = 73
 $Logo.location = New-Object System.Drawing.Point(377, 29)
 $Logo.imageLocation = $LogoLocation
 $Logo.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::zoom
+if ($null -eq $LogoLocation) {
+    $Logo.Visible = $false
+}
 
 $Heading = New-Object system.Windows.Forms.Label
 $Heading.text = "Enterprise Tech Tool"
@@ -576,7 +581,7 @@ $ClearLastLogin.width = 237
 $ClearLastLogin.height = 89
 $ClearLastLogin.location = New-Object System.Drawing.Point(13, 117)
 $ClearLastLogin.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-$ClearLastLogin.ForeColor = $TextColor
+$ClearLastLogin.ForeColor = $ButtonText
 $ClearLastLogin.BackColor = $BoxColor
 
 $ClearLastLogin_Action = {
@@ -599,7 +604,7 @@ $Lapspw.height = 89
 $Lapspw.Anchor = 'top'
 $Lapspw.location = New-Object System.Drawing.Point(267, 117)
 $Lapspw.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-$Lapspw.ForeColor = $TextColor
+$Lapspw.ForeColor = $ButtonText
 $Lapspw.BackColor = $BoxColor
 
 #A seperate GUI applet for LAPS openable when the function is selected
@@ -817,7 +822,7 @@ $appUpdate.height = 89
 $appUpdate.Anchor = 'bottom,left'
 $appUpdate.location = New-Object System.Drawing.Point(13, 219)
 $appUpdate.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-$appUpdate.ForeColor = $TextColor
+$appUpdate.ForeColor = $ButtonText
 $appUpdate.BackColor = $BoxColor
 
 #Winget upgrading function
@@ -851,7 +856,7 @@ $PolicyPatch.width = 237
 $PolicyPatch.height = 89
 $PolicyPatch.location = New-Object System.Drawing.Point(266, 219)
 $PolicyPatch.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-$PolicyPatch.ForeColor = $TextColor
+$PolicyPatch.ForeColor = $ButtonText
 $PolicyPatch.BackColor = $BoxColor
 
 #BATCH MENU = Policy Update!
