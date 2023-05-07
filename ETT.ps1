@@ -78,159 +78,101 @@ $cpuCheck = (Get-Process -Id $PID).ProcessorName
 $drivetype = (Get-PhysicalDisk | Where-Object DeviceID -eq 0).MediaType
 $complianceFlag = $false#>
 
-#Function for AD User Lookup
-function ADUserlookup {
-
-    #An AD User Search GUI for Powershell
-    #Created by Eli Weitzman
-    #Version 1.0
-
+#Function for AD Computer or User Lookup, depending on the value of $ADLookupType parameter
+function ADLookup {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$searchType
+    )
+    
     #Create the form
-    $ADUserSearchForm = New-Object system.Windows.Forms.Form
-    $ADUserSearchForm.Text = "AD User Search"
-    $ADUserSearchForm.Size = New-Object System.Drawing.Size(500, 500)
-    $ADUserSearchForm.StartPosition = "CenterScreen"
-    $ADUserSearchForm.FormBorderStyle = 'FixedDialog'
-    $ADUserSearchForm.MaximizeBox = $false
-    $ADUserSearchForm.MinimizeBox = $false
-    $ADUserSearchForm.Topmost = $true
-    $ADUserSearchForm.BackColor = $BGcolor
-    $ADUserSearchForm.ForeColor = $TextColor
+    $ADSearchForm = New-Object system.Windows.Forms.Form
+    $ADSearchForm.Text = "AD $searchType Search"
+    $ADSearchForm.Size = New-Object System.Drawing.Size(500, 500)
+    $ADSearchForm.StartPosition = "CenterScreen"
+    $ADSearchForm.FormBorderStyle = 'FixedDialog'
+    $ADSearchForm.MaximizeBox = $false
+    $ADSearchForm.MinimizeBox = $false
+    $ADSearchForm.Topmost = $true
+    $ADSearchForm.BackColor = $BGcolor
+    $ADSearchForm.ForeColor = $TextColor
 
     #Create the username label
-    $ADUserSearchLabel = New-Object system.Windows.Forms.Label
-    $ADUserSearchLabel.Text = "Enter a username for search:"
-    $ADUserSearchLabel.AutoSize = $true
-    $ADUserSearchLabel.Location = New-Object System.Drawing.Size(10, 10)
-    $ADUserSearchLabel.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    $ADUserSearchLabel.BackColor = $BGcolor
-    $ADUserSearchLabel.ForeColor = $TextColor
-    $ADUserSearchForm.Controls.Add($ADUserSearchLabel)
+    $ADSearchLabel = New-Object system.Windows.Forms.Label
+    $ADSearchLabel.Text = "Enter a $searchType search:"
+    $ADSearchLabel.AutoSize = $true
+    $ADSearchLabel.Location = New-Object System.Drawing.Size(10, 10)
+    $ADSearchLabel.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $ADSearchLabel.BackColor = $BGcolor
+    $ADSearchLabel.ForeColor = $TextColor
+    $ADSearchForm.Controls.Add($ADSearchLabel)
 
     #Create the text box
-    $ADUserSearchTextBox = New-Object system.Windows.Forms.TextBox
-    $ADUserSearchTextBox.Location = New-Object System.Drawing.Size(10, 30)
-    $ADUserSearchTextBox.Size = New-Object System.Drawing.Size(465, 20)
-    $ADUserSearchTextBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
-    $ADUserSearchTextBox.BackColor = $BGcolor
-    $ADUserSearchTextBox.ForeColor = $TextColor
-    $ADUserSearchForm.Controls.Add($ADUserSearchTextBox)
+    $ADSearchTextBox = New-Object system.Windows.Forms.TextBox
+    $ADSearchTextBox.Location = New-Object System.Drawing.Size(10, 30)
+    $ADSearchTextBox.Size = New-Object System.Drawing.Size(465, 20)
+    $ADSearchTextBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
+    $ADSearchTextBox.BackColor = $BGcolor
+    $ADSearchTextBox.ForeColor = $TextColor
+    $ADSearchForm.Controls.Add($ADSearchTextBox)
 
     #Create a domain label
-    $ADUserSearchDomainLabel = New-Object system.Windows.Forms.Label
-    $ADUserSearchDomainLabel.Text = "Enter a domain:"
-    $ADUserSearchDomainLabel.AutoSize = $true
-    $ADUserSearchDomainLabel.Location = New-Object System.Drawing.Size(10, 60)
-    $ADUserSearchDomainLabel.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    $ADUserSearchDomainLabel.BackColor = $BGcolor
-    $ADUserSearchDomainLabel.ForeColor = $TextColor
-    $ADUserSearchForm.Controls.Add($ADUserSearchDomainLabel)
+    $ADSearchDomainLabel = New-Object system.Windows.Forms.Label
+    $ADSearchDomainLabel.Text = "Enter a domain:"
+    $ADSearchDomainLabel.AutoSize = $true
+    $ADSearchDomainLabel.Location = New-Object System.Drawing.Size(10, 60)
+    $ADSearchDomainLabel.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $ADSearchDomainLabel.BackColor = $BGcolor
+    $ADSearchDomainLabel.ForeColor = $TextColor
+    $ADSearchForm.Controls.Add($ADSearchDomainLabel)
 
     #Create the domain text box
-    $ADUserSearchDomainTextBox = New-Object system.Windows.Forms.TextBox
-    $ADUserSearchDomainTextBox.Location = New-Object System.Drawing.Size(10, 80)
-    $ADUserSearchDomainTextBox.Size = New-Object System.Drawing.Size(465, 20)
-    $ADUserSearchDomainTextBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
-    $ADUserSearchDomainTextBox.BackColor = $BGcolor
-    $ADUserSearchDomainTextBox.ForeColor = $TextColor
-    $ADUserSearchForm.Controls.Add($ADUserSearchDomainTextBox)
+    $ADSearchDomainTextBox = New-Object system.Windows.Forms.TextBox
+    $ADSearchDomainTextBox.Location = New-Object System.Drawing.Size(10, 80)
+    $ADSearchDomainTextBox.Size = New-Object System.Drawing.Size(465, 20)
+    $ADSearchDomainTextBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
+    $ADSearchDomainTextBox.BackColor = $BGcolor
+    $ADSearchDomainTextBox.ForeColor = $TextColor
+    $ADSearchForm.Controls.Add($ADSearchDomainTextBox)
 
     #Add a checkbox for adding additional authentication
-    $ADUserSearchAuthCheckBox = New-Object system.Windows.Forms.CheckBox
-    $ADUserSearchAuthCheckBox.Text = "Use alternate credentials"
-    $ADUserSearchAuthCheckBox.AutoSize = $true
-    $ADUserSearchAuthCheckBox.Location = New-Object System.Drawing.Size(10, 110)
-    $ADUserSearchAuthCheckBox.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    $ADUserSearchAuthCheckBox.BackColor = $BGcolor
-    $ADUserSearchAuthCheckBox.ForeColor = $TextColor
-    $ADUserSearchForm.Controls.Add($ADUserSearchAuthCheckBox)
+    $ADSearchAuthCheckBox = New-Object system.Windows.Forms.CheckBox
+    $ADSearchAuthCheckBox.Text = "Use alternate credentials"
+    $ADSearchAuthCheckBox.AutoSize = $true
+    $ADSearchAuthCheckBox.Location = New-Object System.Drawing.Size(10, 110)
+    $ADSearchAuthCheckBox.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $ADSearchAuthCheckBox.BackColor = $BGcolor
+    $ADSearchAuthCheckBox.ForeColor = $TextColor
+    $ADSearchForm.Controls.Add($ADSearchAuthCheckBox)
 
     #Search button
-    $ADUserSearchButton = New-Object system.Windows.Forms.Button
-    $ADUserSearchButton.Text = "Search"
-    $ADUserSearchButton.Location = New-Object System.Drawing.Size(10, 140)
-    $ADUserSearchButton.Size = New-Object System.Drawing.Size(465, 30)
-    $ADUserSearchButton.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    $ADUserSearchButton.BackColor = $BrandColor
-    $ADUserSearchButton.ForeColor = $TextColor
+    $ADSearchButton = New-Object system.Windows.Forms.Button
+    $ADSearchButton.Text = "Search"
+    $ADSearchButton.Location = New-Object System.Drawing.Size(10, 140)
+    $ADSearchButton.Size = New-Object System.Drawing.Size(465, 30)
+    $ADSearchButton.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $ADSearchButton.BackColor = $BrandColor
+    $ADSearchButton.ForeColor = $TextColor
 
     #Search button click event
-    $ADUserSearchButton.Add_Click({
-            #Check if the domain text box is empty
-            if ($ADUserSearchDomainTextBox.Text -eq "") {
-                #If it is, use the default domain
-                $ADUserSearchDomain = $env:USERDOMAIN
-
-                #Check if the alternate credentials checkbox is checked
-                if ($ADUserSearchAuthCheckBox.Checked -eq $true) {
-                    #If it is, prompt for credentials
-                    $ADUserSearchCred = Get-Credential
-
-                    #Run the search
-                    $ADUserSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADUserSearchTextBox.Text } -Server $ADUserSearchDomain -Credential $ADUserSearchCred
-
-                    #Check if the search returned any results
-                    if ($ADUserSearchResults -eq $null) {
-                        #If it didn't, display a message box
-                        $Wshell = New-Object -ComObject Wscript.Shell
-                        $Wshell.Popup("No results found.", 0, "No results found", 0x0)
-                    }
-                    else {
-                        #If it did, output the results to the listbox
-                        #Name
-                        $ADUserSearchResultsListBox.Items.Add("Name: " + $ADUserSearchResults.Name)
-                        #SamAccountName
-                        $ADUserSearchResultsListBox.Items.Add("Username: " + $ADUserSearchResults.SamAccountName)
-                        #DistinguishedName
-                        $ADUserSearchResultsListBox.Items.Add("Distinguished Name: " + $ADUserSearchResults.DistinguishedName)
-                        #Enabled
-                        $ADUserSearchResultsListBox.Items.Add("Enabled: " + $ADUserSearchResults.Enabled)
-                        #LastLogonDate
-                        $ADUserSearchResultsListBox.Items.Add("Last Logon Date: " + $ADUserSearchResults.LastLogonDate)
-                        #Object Location
-                        $ADUserSearchResultsListBox.Items.Add("Object Location: " + $ADUserSearchResults.ObjectLocation)
-                    }
-                }
-                else {
-                    #If it isn't, use the current user's credentials, and run the search
-                    $ADUserSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADUserSearchTextBox.Text } -Server $ADUserSearchDomain
-
-                    #Check if the search returned any results
-                    if ($ADUserSearchResults -eq $null) {
-                        #If it didn't, display a message box
-                        $Wshell = New-Object -ComObject Wscript.Shell
-                        $Wshell.Popup("No results found.", 0, "No results found", 0x0)
-                    }
-                    else {
-                        #If it did, output the results to the listbox
-                        #Name
-                        $ADUserSearchResultsListBox.Items.Add("Name: " + $ADUserSearchResults.Name)
-                        #SamAccountName
-                        $ADUserSearchResultsListBox.Items.Add("Username: " + $ADUserSearchResults.SamAccountName)
-                        #DistinguishedName
-                        $ADUserSearchResultsListBox.Items.Add("Distinguished Name: " + $ADUserSearchResults.DistinguishedName)
-                        #Enabled
-                        $ADUserSearchResultsListBox.Items.Add("Enabled: " + $ADUserSearchResults.Enabled)
-                        #LastLogonDate
-                        $ADUserSearchResultsListBox.Items.Add("Last Logon Date: " + $ADUserSearchResults.LastLogonDate)
-                        #Object Location
-                        $ADUserSearchResultsListBox.Items.Add("Object Location: " + $ADUserSearchResults.ObjectLocation)
-                    }
-                }
-                else {
-                    #If it isn't, use the domain from the text box
-                    $ADUserSearchDomain = $ADUserSearchDomainTextBox.Text
+    $ADSearchButton.Add_Click({
+            #Check searchType (User or Computer)
+            if ($searchType -eq "User") {
+                #Check if the domain text box is empty
+                if ($ADSearchDomainTextBox.Text -eq "") {
+                    #If it is, use the default domain
+                    $ADSearchDomain = $env:USERDOMAIN
 
                     #Check if the alternate credentials checkbox is checked
-                    if ($ADUserSearchAuthCheckBox.Checked -eq $true) {
+                    if ($ADSearchAuthCheckBox.Checked -eq $true) {
                         #If it is, prompt for credentials
-                        $ADUserSearchCred = Get-Credential
+                        $ADSearchCred = Get-Credential
 
                         #Run the search
-                        $ADUserSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADUserSearchTextBox.Text } -Server $ADUserSearchDomain -Credential $ADUserSearchCred
-            
+                        $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred
+
                         #Check if the search returned any results
-                        if ($ADUserSearchResults -eq $null) {
+                        if ($ADSearchResults -eq $null) {
                             #If it didn't, display a message box
                             $Wshell = New-Object -ComObject Wscript.Shell
                             $Wshell.Popup("No results found.", 0, "No results found", 0x0)
@@ -238,25 +180,25 @@ function ADUserlookup {
                         else {
                             #If it did, output the results to the listbox
                             #Name
-                            $ADUserSearchResultsListBox.Items.Add("Name: " + $ADUserSearchResults.Name)
+                            $ADSearchResultsListBox.Items.Add("Name: " + $ADSearchResults.Name)
                             #SamAccountName
-                            $ADUserSearchResultsListBox.Items.Add("Username: " + $ADUserSearchResults.SamAccountName)
+                            $ADSearchResultsListBox.Items.Add("Username: " + $ADSearchResults.SamAccountName)
                             #DistinguishedName
-                            $ADUserSearchResultsListBox.Items.Add("Distinguished Name: " + $ADUserSearchResults.DistinguishedName)
+                            $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADSearchResults.DistinguishedName)
                             #Enabled
-                            $ADUserSearchResultsListBox.Items.Add("Enabled: " + $ADUserSearchResults.Enabled)
+                            $ADSearchResultsListBox.Items.Add("Enabled: " + $ADSearchResults.Enabled)
                             #LastLogonDate
-                            $ADUserSearchResultsListBox.Items.Add("Last Logon Date: " + $ADUserSearchResults.LastLogonDate)
+                            $ADSearchResultsListBox.Items.Add("Last Logon Date: " + $ADSearchResults.LastLogonDate)
                             #Object Location
-                            $ADUserSearchResultsListBox.Items.Add("Object Location: " + $ADUserSearchResults.ObjectLocation)
+                            $ADSearchResultsListBox.Items.Add("Object Location: " + $ADSearchResults.ObjectLocation)
                         }
                     }
                     else {
-                        #If it isn't, use the current user's credentials
-                        $ADUserSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADUserSearchTextBox.Text } -Server $ADUserSearchDomain
+                        #If it isn't, use the current user's credentials, and run the search
+                        $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain
 
                         #Check if the search returned any results
-                        if ($ADUserSearchResults -eq $null) {
+                        if ($ADSearchResults -eq $null) {
                             #If it didn't, display a message box
                             $Wshell = New-Object -ComObject Wscript.Shell
                             $Wshell.Popup("No results found.", 0, "No results found", 0x0)
@@ -264,265 +206,230 @@ function ADUserlookup {
                         else {
                             #If it did, output the results to the listbox
                             #Name
-                            $ADUserSearchResultsListBox.Items.Add("Name: " + $ADUserSearchResults.Name)
+                            $ADSearchResultsListBox.Items.Add("Name: " + $ADSearchResults.Name)
                             #SamAccountName
-                            $ADUserSearchResultsListBox.Items.Add("Username: " + $ADUserSearchResults.SamAccountName)
+                            $ADSearchResultsListBox.Items.Add("Username: " + $ADSearchResults.SamAccountName)
                             #DistinguishedName
-                            $ADUserSearchResultsListBox.Items.Add("Distinguished Name: " + $ADUserSearchResults.DistinguishedName)
+                            $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADSearchResults.DistinguishedName)
                             #Enabled
-                            $ADUserSearchResultsListBox.Items.Add("Enabled: " + $ADUserSearchResults.Enabled)
+                            $ADSearchResultsListBox.Items.Add("Enabled: " + $ADSearchResults.Enabled)
                             #LastLogonDate
-                            $ADUserSearchResultsListBox.Items.Add("Last Logon Date: " + $ADUserSearchResults.LastLogonDate)
+                            $ADSearchResultsListBox.Items.Add("Last Logon Date: " + $ADSearchResults.LastLogonDate)
                             #Object Location
-                            $ADUserSearchResultsListBox.Items.Add("Object Location: " + $ADUserSearchResults.ObjectLocation)
+                            $ADSearchResultsListBox.Items.Add("Object Location: " + $ADSearchResults.ObjectLocation)
                         }
+                    }
+                    else {
+                        #If it isn't, use the domain from the text box
+                        $ADSearchDomain = $ADSearchDomainTextBox.Text
+
+                        #Check if the alternate credentials checkbox is checked
+                        if ($ADSearchAuthCheckBox.Checked -eq $true) {
+                            #If it is, prompt for credentials
+                            $ADSearchCred = Get-Credential
+
+                            #Run the search
+                            $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred
             
+                            #Check if the search returned any results
+                            if ($ADSearchResults -eq $null) {
+                                #If it didn't, display a message box
+                                $Wshell = New-Object -ComObject Wscript.Shell
+                                $Wshell.Popup("No results found.", 0, "No results found", 0x0)
+                            }
+                            else {
+                                #If it did, output the results to the listbox
+                                #Name
+                                $ADSearchResultsListBox.Items.Add("Name: " + $ADSearchResults.Name)
+                                #SamAccountName
+                                $ADSearchResultsListBox.Items.Add("Username: " + $ADSearchResults.SamAccountName)
+                                #DistinguishedName
+                                $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADSearchResults.DistinguishedName)
+                                #Enabled
+                                $ADSearchResultsListBox.Items.Add("Enabled: " + $ADSearchResults.Enabled)
+                                #LastLogonDate
+                                $ADSearchResultsListBox.Items.Add("Last Logon Date: " + $ADSearchResults.LastLogonDate)
+                                #Object Location
+                                $ADSearchResultsListBox.Items.Add("Object Location: " + $ADSearchResults.ObjectLocation)
+                            }
+                        }
+                        else {
+                            #If it isn't, use the current user's credentials
+                            $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain
+
+                            #Check if the search returned any results
+                            if ($ADSearchResults -eq $null) {
+                                #If it didn't, display a message box
+                                $Wshell = New-Object -ComObject Wscript.Shell
+                                $Wshell.Popup("No results found.", 0, "No results found", 0x0)
+                            }
+                            else {
+                                #If it did, output the results to the listbox
+                                #Name
+                                $ADSearchResultsListBox.Items.Add("Name: " + $ADSearchResults.Name)
+                                #SamAccountName
+                                $ADSearchResultsListBox.Items.Add("Username: " + $ADSearchResults.SamAccountName)
+                                #DistinguishedName
+                                $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADSearchResults.DistinguishedName)
+                                #Enabled
+                                $ADSearchResultsListBox.Items.Add("Enabled: " + $ADSearchResults.Enabled)
+                                #LastLogonDate
+                                $ADSearchResultsListBox.Items.Add("Last Logon Date: " + $ADSearchResults.LastLogonDate)
+                                #Object Location
+                                $ADSearchResultsListBox.Items.Add("Object Location: " + $ADSearchResults.ObjectLocation)
+                            }
+            
+                        }
+                    }
+                }
+            }
+            elseif ($searchType -eq "Computer") {
+                #Check if the domain text box is empty
+                if ($ADSearchDomainTextBox.Text -eq "") {
+                    #If so, use the current domain
+                    $ADSearchDomain = $env:USERDOMAIN
+                    #Check if the alternate credentials checkbox is checked
+                    if ($ADSearchAuthCheckBox.Checked -eq $true) {
+                        #If it is, prompt for credentials
+                        $ADSearchCred = Get-Credential
+
+                        #Run the search
+                        $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred
+
+                        #Check if the search returned any results
+                        if ($ADSearchResults -eq $null) {
+                            #If it didn't, display a message box
+                            $Wshell = New-Object -ComObject Wscript.Shell
+                            $Wshell.Popup("No results found.", 0, "No results found", 0x0)
+                        }
+                        else {
+                            #If it did, output the results to the listbox
+                            #Name
+                            $ADSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
+                            #CanonicalName
+                            $ADSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
+                            #DistinguishedName
+                            $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
+                            #Updated
+                            $ADSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
+                            #Description
+                            $ADSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
+                            #OperatingSystem
+                            $ADSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
+                            #OperatingSystemVersion
+                            $ADSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
+                        }
+                    }
+                    else {
+                        #If it isn't, use the current user's credentials, and run the search
+                        $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain
+
+                        #Check if the search returned any results
+                        if ($ADSearchResults -eq $null) {
+                            #If it didn't, display a message box
+                            $Wshell = New-Object -ComObject Wscript.Shell
+                            $Wshell.Popup("No results found.", 0, "No results found", 0x0)
+                        }
+                        else {
+                            #If it did, output the results to the listbox
+                            #Name
+                            $ADSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
+                            #CanonicalName
+                            $ADSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
+                            #DistinguishedName
+                            $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
+                            #Updated
+                            $ADSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
+                            #Description
+                            $ADSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
+                            #OperatingSystem
+                            $ADSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
+                            #OperatingSystemVersion
+                            $ADSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
+                        }
+                    }
+                }
+                else {
+                    #If it isn't, use the domain specified in the text box
+                    $ADSearchDomain = $ADSearchDomainTextBox.Text
+                    #Check if the alternate credentials checkbox is checked
+                    if ($ADSearchAuthCheckBox.Checked -eq $true) {
+                        #If it is, prompt for credentials
+                        $ADSearchCred = Get-Credential
+
+                        #Run the search
+                        $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred
+
+                        #Check if the search returned any results
+                        if ($ADSearchResults -eq $null) {
+                            #If it didn't, display a message box
+                            $Wshell = New-Object -ComObject Wscript.Shell
+                            $Wshell.Popup("No results found.", 0, "No results found", 0x0)
+                        }
+                        else {
+                            #If it did, output the results to the listbox
+                            #Name
+                            $ADSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
+                            #CanonicalName
+                            $ADSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
+                            #DistinguishedName
+                            $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
+                            #Updated
+                            $ADSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
+                            #Description
+                            $ADSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
+                            #OperatingSystem
+                            $ADSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
+                            #OperatingSystemVersion
+                            $ADSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
+                        }
+                    }
+                    else {
+                        #If it isn't, use the current user's credentials, and run the search
+                        $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain
+
+                        #Check if the search returned any results
+                        if ($ADSearchResults -eq $null) {
+                            #If it didn't, display a message box
+                            $Wshell = New-Object
+                            $Wshell.Popup("No results found.", 0, "No results found", 0x0)
+                        }
+                        else {
+                            #If it did, output the results to the listbox
+                            #Name
+                            $ADSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
+                            #CanonicalName
+                            $ADSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
+                            #DistinguishedName
+                            $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
+                            #Updated
+                            $ADSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
+                            #Description
+                            $ADSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
+                            #OperatingSystem
+                            $ADSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
+                            #OperatingSystemVersion
+                            $ADSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
+                        }
                     }
                 }
             }
         })
 
-    $ADUserSearchForm.Controls.Add($ADUserSearchButton)
+    $ADSearchForm.Controls.Add($ADSearchButton)
 
     #Listbox for results
-    $ADUserSearchListBox = New-Object system.Windows.Forms.ListBox
-    $ADUserSearchListBox.Location = New-Object System.Drawing.Size(10, 180)
-    $ADUserSearchListBox.Size = New-Object System.Drawing.Size(465, 265)
-    $ADUserSearchListBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
-    $ADUserSearchListBox.BackColor = $BGcolor
-    $ADUserSearchListBox.ForeColor = $TextColor
-    $ADUserSearchListBox.SelectionMode = 'MultiExtended'
-    $ADUserSearchForm.Controls.Add($ADUserSearchListBox)
+    $ADSearchListBox = New-Object system.Windows.Forms.ListBox
+    $ADSearchListBox.Location = New-Object System.Drawing.Size(10, 180)
+    $ADSearchListBox.Size = New-Object System.Drawing.Size(465, 265)
+    $ADSearchListBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
+    $ADSearchListBox.BackColor = $BGcolor
+    $ADSearchListBox.ForeColor = $TextColor
+    $ADSearchListBox.SelectionMode = 'MultiExtended'
+    $ADSearchForm.Controls.Add($ADSearchListBox)
 
     #Show the form
-    $ADUserSearchForm.ShowDialog()
-}
-
-#Function for AD Computer Lookup
-function ADComputerLookup {
-    #Set up the form
-    Add-Type -AssemblyName System.Windows.Forms
-    [System.Windows.Forms.Application]::EnableVisualStyles()
-
-    #Create the form
-    $ADComputerSearchForm = New-Object system.Windows.Forms.Form
-    $ADComputerSearchForm.Text = "AD Computer Search"
-    $ADComputerSearchForm.Size = New-Object System.Drawing.Size(500, 500)
-    $ADComputerSearchForm.StartPosition = "CenterScreen"
-    $ADComputerSearchForm.FormBorderStyle = 'FixedDialog'
-    $ADComputerSearchForm.MaximizeBox = $false
-    $ADComputerSearchForm.MinimizeBox = $false
-    $ADComputerSearchForm.Topmost = $true
-    $ADComputerSearchForm.BackColor = $BGcolor
-    $ADComputerSearchForm.ForeColor = $TextColor
-
-    #Create the username label
-    $ADComputerSearchLabel = New-Object system.Windows.Forms.Label
-    $ADComputerSearchLabel.Text = "Enter a hostname for search:"
-    $ADComputerSearchLabel.AutoSize = $true
-    $ADComputerSearchLabel.Location = New-Object System.Drawing.Size(10, 10)
-    $ADComputerSearchLabel.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    $ADComputerSearchLabel.BackColor = $BGcolor
-    $ADComputerSearchLabel.ForeColor = $TextColor
-    $ADComputerSearchForm.Controls.Add($ADComputerSearchLabel)
-
-    #Create the text box
-    $ADComputerSearchTextBox = New-Object system.Windows.Forms.TextBox
-    $ADComputerSearchTextBox.Location = New-Object System.Drawing.Size(10, 30)
-    $ADComputerSearchTextBox.Size = New-Object System.Drawing.Size(465, 20)
-    $ADComputerSearchTextBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
-    $ADComputerSearchTextBox.BackColor = $BGcolor
-    $ADComputerSearchTextBox.ForeColor = $TextColor
-    $ADComputerSearchForm.Controls.Add($ADComputerSearchTextBox)
-
-    #Create a domain label
-    $ADComputerSearchDomainLabel = New-Object system.Windows.Forms.Label
-    $ADComputerSearchDomainLabel.Text = "Enter a domain:"
-    $ADComputerSearchDomainLabel.AutoSize = $true
-    $ADComputerSearchDomainLabel.Location = New-Object System.Drawing.Size(10, 60)
-    $ADComputerSearchDomainLabel.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    $ADComputerSearchDomainLabel.BackColor = $BGcolor
-    $ADComputerSearchDomainLabel.ForeColor = $TextColor
-    $ADComputerSearchForm.Controls.Add($ADComputerSearchDomainLabel)
-
-    #Create the domain text box
-    $ADComputerSearchDomainTextBox = New-Object system.Windows.Forms.TextBox
-    $ADComputerSearchDomainTextBox.Location = New-Object System.Drawing.Size(10, 80)
-    $ADComputerSearchDomainTextBox.Size = New-Object System.Drawing.Size(465, 20)
-    $ADComputerSearchDomainTextBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
-    $ADComputerSearchDomainTextBox.BackColor = $BGcolor
-    $ADComputerSearchDomainTextBox.ForeColor = $TextColor
-    $ADComputerSearchForm.Controls.Add($ADComputerSearchDomainTextBox)
-
-    #Add a checkbox for adding additional authentication
-    $ADComputerSearchAuthCheckBox = New-Object system.Windows.Forms.CheckBox
-    $ADComputerSearchAuthCheckBox.Text = "Use alternate credentials"
-    $ADComputerSearchAuthCheckBox.AutoSize = $true
-    $ADComputerSearchAuthCheckBox.Location = New-Object System.Drawing.Size(10, 110)
-    $ADComputerSearchAuthCheckBox.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    $ADComputerSearchAuthCheckBox.BackColor = $BGcolor
-    $ADComputerSearchAuthCheckBox.ForeColor = $TextColor
-    $ADComputerSearchForm.Controls.Add($ADComputerSearchAuthCheckBox)
-
-    #Search button
-    $ADComputerSearchButton = New-Object system.Windows.Forms.Button
-    $ADComputerSearchButton.Text = "Search"
-    $ADComputerSearchButton.Location = New-Object System.Drawing.Size(10, 140)
-    $ADComputerSearchButton.Size = New-Object System.Drawing.Size(465, 30)
-    $ADComputerSearchButton.Font = New-Object System.Drawing.Font("Microsoft Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-    $ADComputerSearchButton.BackColor = $BrandColor
-    $ADComputerSearchButton.ForeColor = $TextColor
-
-    #Search button click event
-    $ADComputerSearchButton.Add_Click({
-            #Check if the domain text box is empty
-            if ($ADComputerSearchDomainTextBox.Text -eq "") {
-                #If it is, use the default domain
-                $ADComputerSearchDomain = $env:USERDOMAIN
-
-                #Check if the alternate credentials checkbox is checked
-                if ($ADComputerSearchAuthCheckBox.Checked -eq $true) {
-                    #If it is, prompt for credentials
-                    $ADComputerSearchCred = Get-Credential
-
-                    #Run the search
-                    $ADComputerSearchResults = Get-ADComputer -Filter { Name -like $ADComputerSearchTextBox.Text } -Server $ADComputerSearchDomain -Credential $ADComputerSearchCred
-
-                    #Check if the search returned any results
-                    if ($ADComputerSearchResults -eq $null) {
-                        #If it didn't, display a message box
-                        $Wshell = New-Object -ComObject Wscript.Shell
-                        $Wshell.Popup("No results found.", 0, "No results found", 0x0)
-                    }
-                    else {
-                        #If it did, output the results to the listbox
-                        #Name
-                        $ADComputerSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
-                        #CanonicalName
-                        $ADComputerSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
-                        #DistinguishedName
-                        $ADComputerSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
-                        #Updated
-                        $ADComputerSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
-                        #Description
-                        $ADComputerSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
-                        #OperatingSystem
-                        $ADComputerSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
-                        #OperatingSystemVersion
-                        $ADComputerSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
-                    }
-                }
-                else {
-                    #If it isn't, use the current user's credentials, and run the search
-                    $ADComputerSearchResults = Get-ADComputer -Filter { Name -like $ADComputerSearchTextBox.Text } -Server $ADComputerSearchDomain
-
-                    #Check if the search returned any results
-                    if ($ADComputerSearchResults -eq $null) {
-                        #If it didn't, display a message box
-                        $Wshell = New-Object -ComObject Wscript.Shell
-                        $Wshell.Popup("No results found.", 0, "No results found", 0x0)
-                    }
-                    else {
-                        #If it did, output the results to the listbox
-                        #Name
-                        $ADComputerSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
-                        #CanonicalName
-                        $ADComputerSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
-                        #DistinguishedName
-                        $ADComputerSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
-                        #Updated
-                        $ADComputerSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
-                        #Description
-                        $ADComputerSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
-                        #OperatingSystem
-                        $ADComputerSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
-                        #OperatingSystemVersion
-                        $ADComputerSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
-                    }
-                }
-                else {
-                    #If it isn't, use the domain from the text box
-                    $ADComputerSearchDomain = $ADComputerSearchDomainTextBox.Text
-
-                    #Check if the alternate credentials checkbox is checked
-                    if ($ADComputerSearchAuthCheckBox.Checked -eq $true) {
-                        #If it is, prompt for credentials
-                        $ADComputerSearchCred = Get-Credential
-
-                        #Run the search
-                        $ADComputerSearchResults = Get-ADComputer -Filter { Name -like $ADComputerSearchTextBox.Text } -Server $ADComputerSearchDomain -Credential $ADComputerSearchCred
-            
-                        #Check if the search returned any results
-                        if ($ADComputerSearchResults -eq $null) {
-                            #If it didn't, display a message box
-                            $Wshell = New-Object -ComObject Wscript.Shell
-                            $Wshell.Popup("No results found.", 0, "No results found", 0x0)
-                        }
-                        else {
-                            #If it did, output the results to the listbox
-                            #Name
-                            $ADComputerSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
-                            #CanonicalName
-                            $ADComputerSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
-                            #DistinguishedName
-                            $ADComputerSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
-                            #Updated
-                            $ADComputerSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
-                            #Description
-                            $ADComputerSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
-                            #OperatingSystem
-                            $ADComputerSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
-                            #OperatingSystemVersion
-                            $ADComputerSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
-                        }
-                    }
-                    else {
-                        #If it isn't, use the current user's credentials
-                        $ADComputerSearchResults = Get-ADComputer -Filter { Name -like $ADComputerSearchTextBox.Text } -Server $ADComputerSearchDomain
-
-                        #Check if the search returned any results
-                        if ($ADComputerSearchResults -eq $null) {
-                            #If it didn't, display a message box
-                            $Wshell = New-Object -ComObject Wscript.Shell
-                            $Wshell.Popup("No results found.", 0, "No results found", 0x0)
-                        }
-                        else {
-                            #If it did, output the results to the listbox
-                            #Name
-                            $ADComputerSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
-                            #CanonicalName
-                            $ADComputerSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
-                            #DistinguishedName
-                            $ADComputerSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
-                            #Updated
-                            $ADComputerSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
-                            #Description
-                            $ADComputerSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
-                            #OperatingSystem
-                            $ADComputerSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
-                            #OperatingSystemVersion
-                            $ADComputerSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
-                        }
-            
-                    }
-                }
-            }
-        })
-
-    $ADComputerSearchForm.Controls.Add($ADComputerSearchButton)
-
-    #Listbox for results
-    $ADComputerSearchListBox = New-Object system.Windows.Forms.ListBox
-    $ADComputerSearchListBox.Location = New-Object System.Drawing.Size(10, 180)
-    $ADComputerSearchListBox.Size = New-Object System.Drawing.Size(465, 265)
-    $ADComputerSearchListBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
-    $ADComputerSearchListBox.BackColor = $BGcolor
-    $ADComputerSearchListBox.ForeColor = $TextColor
-    $ADComputerSearchListBox.SelectionMode = 'MultiExtended'
-    $ADComputerSearchForm.Controls.Add($ADComputerSearchListBox)
-
-    #Show the form
-    $ADComputerSearchForm.ShowDialog()
+    $ADSearchForm.ShowDialog()
     
 }
 
@@ -1364,7 +1271,7 @@ $outputsuppressed = $menu.Items.Add($menuAD)
 $menuADUserInfo.Text = "AD User Info"
 $menuADUserInfo.Add_Click({
         #AD User Search - Use the function to search
-        ADUserlookup
+        ADLookup -searchType "User"
     })
 $menuADUserInfo.BackColor = $BGcolor
 $menuADUserInfo.ForeColor = $TextColor
@@ -1374,7 +1281,7 @@ $outputsuppressed = $menuAD.DropDownItems.Add($menuADUserInfo)
 $menuADComputerInfo.Text = "AD Computer Info"
 $menuADComputerInfo.Add_Click({
         #AD Computer Search - Use the function to search
-        ADComputerlookup
+        ADLookup -searchType "Computer"
     })
 $menuADComputerInfo.BackColor = $BGcolor
 $menuADComputerInfo.ForeColor = $TextColor
