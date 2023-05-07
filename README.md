@@ -17,5 +17,9 @@ The application is designed to run as a PowerShell Script, but as well is compil
 
 In the first few lines of the program, there are a few sections that are commented out, allowing for color customization, as well as other customizations to compliance checking thresholds. These are customizable as needed, but the stock is as well provided, and disables any compliance checks.
 
+## Contributing
+
+ETT is an open-source application, and I'd love to make it open for contribution! If you would like to add a feature, or propose an idea to be added to the future, fill out a GitHub issue, and I'll start tinkering with it! Every enterprise and user is different, so a one-size-fits-all solution is almost impossible without input!
+
 ## General Disclaimer
 I'm currently a college student, and this project was a small timefiller. I might not be able to add new features or maintain this too much in the future. I hope by making this open-source, many others will choose to contribute and grow this application even further (although it certainly is challening, this being PowerShell-based an all). Also, occasionally, you may find GenZ language used. But not too much 😎
