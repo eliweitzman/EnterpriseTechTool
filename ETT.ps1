@@ -35,7 +35,7 @@ if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
 $BrandColor = '#023a24' #Set the color of the form, currently populated with a hex value.
-$LogoLocation =  $null #If you want to use a custom logo, set the path here. Otherwise, leave as $null
+$LogoLocation = $null #If you want to use a custom logo, set the path here. Otherwise, leave as $null
 
 #Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 #RAM Check
@@ -145,6 +145,18 @@ function ADLookup {
     $ADSearchAuthCheckBox.ForeColor = $TextColor
     $ADSearchForm.Controls.Add($ADSearchAuthCheckBox)
 
+    #Listbox for results
+    $ADSearchListBox = New-Object system.Windows.Forms.ListBox
+    $ADSearchListBox.Location = New-Object System.Drawing.Size(10, 180)
+    $ADSearchListBox.Size = New-Object System.Drawing.Size(465, 265)
+    $ADSearchListBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
+    $ADSearchListBox.BackColor = $BGcolor
+    $ADSearchListBox.ForeColor = $TextColor
+    $ADSearchListBox.SelectionMode = 'MultiExtended'
+    $ADSearchListBox.HorizontalScrollbar = $true
+    $ADSearchListBox.Items.Add("Results will appear here.")
+    $ADSearchForm.Controls.Add($ADSearchListBox)
+
     #Search button
     $ADSearchButton = New-Object system.Windows.Forms.Button
     $ADSearchButton.Text = "Search"
@@ -169,7 +181,7 @@ function ADLookup {
                         $ADSearchCred = Get-Credential
 
                         #Run the search using the provided credentials and values
-                        $ADSearchResults = Get-ADUser ($ADSearchTextBox.Text) -Server $ADSearchDomain -Credential $ADSearchCredentials
+                        $ADSearchResults = Get-ADUser ($ADSearchTextBox.Text) -Server $ADSearchDomain -Credential $ADSearchCredentials -Properties Name, SamAccountName, DistinguishedName, Enabled, LastLogonDate, ObjectLocation
 
                         #Check if the search returned any results
                         if ($null -eq $ADSearchDomainTextBox) {
@@ -179,23 +191,29 @@ function ADLookup {
                         }
                         else {
                             #If it did, output the results to the listbox
-                            #Name
-                            $ADSearchResultsListBox.Items.Add("Name: " + $ADSearchResults.Name)
-                            #SamAccountName
-                            $ADSearchResultsListBox.Items.Add("Username: " + $ADSearchResults.SamAccountName)
-                            #DistinguishedName
-                            $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADSearchResults.DistinguishedName)
-                            #Enabled
-                            $ADSearchResultsListBox.Items.Add("Enabled: " + $ADSearchResults.Enabled)
-                            #LastLogonDate
-                            $ADSearchResultsListBox.Items.Add("Last Logon Date: " + $ADSearchResults.LastLogonDate)
-                            #Object Location
-                            $ADSearchResultsListBox.Items.Add("Object Location: " + $ADSearchResults.ObjectLocation)
+                            #Create an array for the results
+                            foreach ($User in $ADSearchResults) {
+                                $ADSearchResultsArray = @()
+                                #Name
+                                $ADSearchResultsArray += "Name: " + $ADSearchResults.Name
+                                #SamAccountName
+                                $ADSearchResultsArray += "Username: " + $ADSearchResults.SamAccountName
+                                #DistinguishedName
+                                $ADSearchResultsArray += "Distinguished Name: " + $ADSearchResults.DistinguishedName
+                                #Enabled
+                                $ADSearchResultsArray += "Enabled: " + $ADSearchResults.Enabled
+                                #LastLogonDate
+                                $ADSearchResultsArray += "Last Logon Date: " + $ADSearchResults.LastLogonDate
+                                #Object Location
+                                $ADSearchResultsArray += "Object Location: " + $ADSearchResults.ObjectLocation
+                            }
+                            #Output the array to the listbox
+                            $ADSearchResultsListBox.Items.AddRange(@($ADSearchResultsArray))
                         }
                     }
                     else {
                         #If it isn't, use the current user's credentials, and run the search
-                        $ADSearchResults = Get-ADUser ($ADSearchTextBox.Text) -Server $ADSearchDomain
+                        $ADSearchResults = Get-ADUser ($ADSearchTextBox.Text) -Server $ADSearchDomain -Properties Name, SamAccountName, DistinguishedName, Enabled, LastLogonDate, ObjectLocation
 
                         #Check if the search returned any results
                         if ($null -eq $ADSearchResults) {
@@ -205,18 +223,24 @@ function ADLookup {
                         }
                         else {
                             #If it did, output the results to the listbox
-                            #Name
-                            $ADSearchResultsListBox.Items.Add("Name: " + $ADSearchResults.Name)
-                            #SamAccountName
-                            $ADSearchResultsListBox.Items.Add("Username: " + $ADSearchResults.SamAccountName)
-                            #DistinguishedName
-                            $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADSearchResults.DistinguishedName)
-                            #Enabled
-                            $ADSearchResultsListBox.Items.Add("Enabled: " + $ADSearchResults.Enabled)
-                            #LastLogonDate
-                            $ADSearchResultsListBox.Items.Add("Last Logon Date: " + $ADSearchResults.LastLogonDate)
-                            #Object Location
-                            $ADSearchResultsListBox.Items.Add("Object Location: " + $ADSearchResults.ObjectLocation)
+                            #Create an array for the results
+                            foreach ($User in $ADSearchResults) {
+                                $ADSearchResultsArray = @()
+                                #Name
+                                $ADSearchResultsArray += "Name: " + $ADSearchResults.Name
+                                #SamAccountName
+                                $ADSearchResultsArray += "Username: " + $ADSearchResults.SamAccountName
+                                #DistinguishedName
+                                $ADSearchResultsArray += "Distinguished Name: " + $ADSearchResults.DistinguishedName
+                                #Enabled
+                                $ADSearchResultsArray += "Enabled: " + $ADSearchResults.Enabled
+                                #LastLogonDate
+                                $ADSearchResultsArray += "Last Logon Date: " + $ADSearchResults.LastLogonDate
+                                #Object Location
+                                $ADSearchResultsArray += "Object Location: " + $ADSearchResults.ObjectLocation
+                            }
+                            #Output the array to the listbox
+                            $ADSearchResultsListBox.Items.AddRange(@($ADSearchResultsArray))
                         }
                     }
                     else {
@@ -229,7 +253,7 @@ function ADLookup {
                             $ADSearchCred = Get-Credential
 
                             #Run the search
-                            $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCredentials
+                            $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCredentials -Properties Name, SamAccountName, DistinguishedName, Enabled, LastLogonDate, ObjectLocation
             
                             #Check if the search returned any results
                             if ($null -eq $ADSearchResults) {
@@ -239,23 +263,29 @@ function ADLookup {
                             }
                             else {
                                 #If it did, output the results to the listbox
+                            #Create an array for the results
+                            foreach ($User in $ADSearchResults) {
+                                $ADSearchResultsArray = @()
                                 #Name
-                                $ADSearchResultsListBox.Items.Add("Name: " + $ADSearchResults.Name)
+                                $ADSearchResultsArray += "Name: " + $ADSearchResults.Name
                                 #SamAccountName
-                                $ADSearchResultsListBox.Items.Add("Username: " + $ADSearchResults.SamAccountName)
+                                $ADSearchResultsArray += "Username: " + $ADSearchResults.SamAccountName
                                 #DistinguishedName
-                                $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADSearchResults.DistinguishedName)
+                                $ADSearchResultsArray += "Distinguished Name: " + $ADSearchResults.DistinguishedName
                                 #Enabled
-                                $ADSearchResultsListBox.Items.Add("Enabled: " + $ADSearchResults.Enabled)
+                                $ADSearchResultsArray += "Enabled: " + $ADSearchResults.Enabled
                                 #LastLogonDate
-                                $ADSearchResultsListBox.Items.Add("Last Logon Date: " + $ADSearchResults.LastLogonDate)
+                                $ADSearchResultsArray += "Last Logon Date: " + $ADSearchResults.LastLogonDate
                                 #Object Location
-                                $ADSearchResultsListBox.Items.Add("Object Location: " + $ADSearchResults.ObjectLocation)
+                                $ADSearchResultsArray += "Object Location: " + $ADSearchResults.ObjectLocation
+                            }
+                            #Output the array to the listbox
+                            $ADSearchResultsListBox.Items.AddRange(@($ADSearchResultsArray))
                             }
                         }
                         else {
                             #If it isn't, use the current user's credentials
-                            $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain
+                            $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Properties Name, SamAccountName, DistinguishedName, Enabled, LastLogonDate, ObjectLocation
 
                             #Check if the search returned any results
                             if ($null -eq $ADSearchResults) {
@@ -265,18 +295,24 @@ function ADLookup {
                             }
                             else {
                                 #If it did, output the results to the listbox
-                                #Name
-                                $ADSearchResultsListBox.Items.Add("Name: " + $ADSearchResults.Name)
-                                #SamAccountName
-                                $ADSearchResultsListBox.Items.Add("Username: " + $ADSearchResults.SamAccountName)
-                                #DistinguishedName
-                                $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADSearchResults.DistinguishedName)
-                                #Enabled
-                                $ADSearchResultsListBox.Items.Add("Enabled: " + $ADSearchResults.Enabled)
-                                #LastLogonDate
-                                $ADSearchResultsListBox.Items.Add("Last Logon Date: " + $ADSearchResults.LastLogonDate)
-                                #Object Location
-                                $ADSearchResultsListBox.Items.Add("Object Location: " + $ADSearchResults.ObjectLocation)
+                                #Create an array for the results
+                                foreach ($User in $ADSearchResults) {
+                                    $ADSearchResultsArray = @()
+                                    #Name
+                                    $ADSearchResultsArray += "Name: " + $ADSearchResults.Name
+                                    #SamAccountName
+                                    $ADSearchResultsArray += "Username: " + $ADSearchResults.SamAccountName
+                                    #DistinguishedName
+                                    $ADSearchResultsArray += "Distinguished Name: " + $ADSearchResults.DistinguishedName
+                                    #Enabled
+                                    $ADSearchResultsArray += "Enabled: " + $ADSearchResults.Enabled
+                                    #LastLogonDate
+                                    $ADSearchResultsArray += "Last Logon Date: " + $ADSearchResults.LastLogonDate
+                                    #Object Location
+                                    $ADSearchResultsArray += "Object Location: " + $ADSearchResults.ObjectLocation
+                                }
+                                #Output the array to the listbox
+                                $ADSearchResultsListBox.Items.AddRange(@($ADSearchResultsArray))
                             }
             
                         }
@@ -294,7 +330,7 @@ function ADLookup {
                         $ADSearchCred = Get-Credential
 
                         #Run the search
-                        $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred
+                        $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred -Properties Name, CanonicalName, DistinguishedName, Modified, Description, OperatingSystem, OperatingSystemVersion
 
                         #Check if the search returned any results
                         if ($null -eq $ADSearchResults) {
@@ -304,25 +340,29 @@ function ADLookup {
                         }
                         else {
                             #If it did, output the results to the listbox
-                            #Name
-                            $ADSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
-                            #CanonicalName
-                            $ADSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
-                            #DistinguishedName
-                            $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
-                            #Updated
-                            $ADSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
-                            #Description
-                            $ADSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
-                            #OperatingSystem
-                            $ADSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
-                            #OperatingSystemVersion
-                            $ADSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
+                            #Create an array for the results
+                            foreach ($Computer in $ADSearchResults) {
+                                $ADSearchResultsArray = @()
+                                #Name
+                                $ADSearchResultsArray += "Name: " + $ADSearchResults.Name
+                                #CanonicalName
+                                $ADSearchResultsArray += "Canonical Name: " + $ADSearchResults.CanonicalName
+                                #DistinguishedName
+                                $ADSearchResultsArray += "Distinguished Name: " + $ADSearchResults.DistinguishedName
+                                #Updated
+                                $ADSearchResultsArray += "Last Updated: " + $ADSearchResults.Modified
+                                #Description
+                                $ADSearchResultsArray += "Description: " + $ADSearchResults.Description
+                                #OperatingSystem
+                                $ADSearchResultsArray += "Operating System: " + $ADSearchResults.OperatingSystem
+                                #OperatingSystemVersion
+                                $ADSearchResultsArray += "Operating System Version: " + $ADSearchResults.OperatingSystemVersion
+                            }
                         }
                     }
                     else {
                         #If it isn't, use the current user's credentials, and run the search
-                        $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain
+                        $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Properties Name, CanonicalName, DistinguishedName, Modified, Description, OperatingSystem, OperatingSystemVersion
 
                         #Check if the search returned any results
                         if ($null -eq $ADSearchResults) {
@@ -332,20 +372,24 @@ function ADLookup {
                         }
                         else {
                             #If it did, output the results to the listbox
-                            #Name
-                            $ADSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
-                            #CanonicalName
-                            $ADSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
-                            #DistinguishedName
-                            $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
-                            #Updated
-                            $ADSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
-                            #Description
-                            $ADSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
-                            #OperatingSystem
-                            $ADSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
-                            #OperatingSystemVersion
-                            $ADSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
+                            #Create an array for the results
+                            foreach ($Computer in $ADSearchResults) {
+                                $ADSearchResultsArray = @()
+                                #Name
+                                $ADSearchResultsArray += "Name: " + $ADSearchResults.Name
+                                #CanonicalName
+                                $ADSearchResultsArray += "Canonical Name: " + $ADSearchResults.CanonicalName
+                                #DistinguishedName
+                                $ADSearchResultsArray += "Distinguished Name: " + $ADSearchResults.DistinguishedName
+                                #Updated
+                                $ADSearchResultsArray += "Last Updated: " + $ADSearchResults.Modified
+                                #Description
+                                $ADSearchResultsArray += "Description: " + $ADSearchResults.Description
+                                #OperatingSystem
+                                $ADSearchResultsArray += "Operating System: " + $ADSearchResults.OperatingSystem
+                                #OperatingSystemVersion
+                                $ADSearchResultsArray += "Operating System Version: " + $ADSearchResults.OperatingSystemVersion
+                            }
                         }
                     }
                 }
@@ -358,7 +402,7 @@ function ADLookup {
                         $ADSearchCred = Get-Credential
 
                         #Run the search
-                        $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred
+                        $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred -Properties Name, CanonicalName, DistinguishedName, Modified, Description, OperatingSystem, OperatingSystemVersion
 
                         #Check if the search returned any results
                         if ($null -eq $ADSearchResults) {
@@ -368,25 +412,29 @@ function ADLookup {
                         }
                         else {
                             #If it did, output the results to the listbox
-                            #Name
-                            $ADSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
-                            #CanonicalName
-                            $ADSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
-                            #DistinguishedName
-                            $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
-                            #Updated
-                            $ADSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
-                            #Description
-                            $ADSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
-                            #OperatingSystem
-                            $ADSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
-                            #OperatingSystemVersion
-                            $ADSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
+                            #Create an array for the results
+                            foreach ($Computer in $ADSearchResults) {
+                                $ADSearchResultsArray = @()
+                                #Name
+                                $ADSearchResultsArray += "Name: " + $ADSearchResults.Name
+                                #CanonicalName
+                                $ADSearchResultsArray += "Canonical Name: " + $ADSearchResults.CanonicalName
+                                #DistinguishedName
+                                $ADSearchResultsArray += "Distinguished Name: " + $ADSearchResults.DistinguishedName
+                                #Updated
+                                $ADSearchResultsArray += "Last Updated: " + $ADSearchResults.Modified
+                                #Description
+                                $ADSearchResultsArray += "Description: " + $ADSearchResults.Description
+                                #OperatingSystem
+                                $ADSearchResultsArray += "Operating System: " + $ADSearchResults.OperatingSystem
+                                #OperatingSystemVersion
+                                $ADSearchResultsArray += "Operating System Version: " + $ADSearchResults.OperatingSystemVersion
+                            }
                         }
                     }
                     else {
                         #If it isn't, use the current user's credentials, and run the search
-                        $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain
+                        $ADSearchResults = Get-ADComputer -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Properties Name, CanonicalName, DistinguishedName, Modified, Description, OperatingSystem, OperatingSystemVersion
 
                         #Check if the search returned any results
                         if ($null -eq $ADSearchResults) {
@@ -396,40 +444,33 @@ function ADLookup {
                         }
                         else {
                             #If it did, output the results to the listbox
-                            #Name
-                            $ADSearchResultsListBox.Items.Add("Name: " + $ADComputerSearchResults.Name)
-                            #CanonicalName
-                            $ADSearchResultsListBox.Items.Add("Canonical Name: " + $ADComputerSearchResults.CanonicalName)
-                            #DistinguishedName
-                            $ADSearchResultsListBox.Items.Add("Distinguished Name: " + $ADComputerSearchResults.DistinguishedName)
-                            #Updated
-                            $ADSearchResultsListBox.Items.Add("Last Updated: " + $ADComputerSearchResults.Modified)
-                            #Description
-                            $ADSearchResultsListBox.Items.Add("Description: " + $ADComputerSearchResults.Description)
-                            #OperatingSystem
-                            $ADSearchResultsListBox.Items.Add("Operating System: " + $ADComputerSearchResults.OperatingSystem)
-                            #OperatingSystemVersion
-                            $ADSearchResultsListBox.Items.Add("Operating System Version: " + $ADComputerSearchResults.OperatingSystemVersion)
+                            #Create an array for the results
+                            foreach ($Computer in $ADSearchResults) {
+                                $ADSearchResultsArray = @()
+                                #Name
+                                $ADSearchResultsArray += "Name: " + $ADSearchResults.Name
+                                #CanonicalName
+                                $ADSearchResultsArray += "Canonical Name: " + $ADSearchResults.CanonicalName
+                                #DistinguishedName
+                                $ADSearchResultsArray += "Distinguished Name: " + $ADSearchResults.DistinguishedName
+                                #Updated
+                                $ADSearchResultsArray += "Last Updated: " + $ADSearchResults.Modified
+                                #Description
+                                $ADSearchResultsArray += "Description: " + $ADSearchResults.Description
+                                #OperatingSystem
+                                $ADSearchResultsArray += "Operating System: " + $ADSearchResults.OperatingSystem
+                                #OperatingSystemVersion
+                                $ADSearchResultsArray += "Operating System Version: " + $ADSearchResults.OperatingSystemVersion
+                            }n
                         }
                     }
                 }
             }
         })
-
     $ADSearchForm.Controls.Add($ADSearchButton)
-
-    #Listbox for results
-    $ADSearchListBox = New-Object system.Windows.Forms.ListBox
-    $ADSearchListBox.Location = New-Object System.Drawing.Size(10, 180)
-    $ADSearchListBox.Size = New-Object System.Drawing.Size(465, 265)
-    $ADSearchListBox.Font = New-Object System.Drawing.Font("Microsoft Sans Serif", 10, [System.Drawing.FontStyle]::Regular)
-    $ADSearchListBox.BackColor = $BGcolor
-    $ADSearchListBox.ForeColor = $TextColor
-    $ADSearchListBox.SelectionMode = 'MultiExtended'
-    $ADSearchForm.Controls.Add($ADSearchListBox)
-
+    
     #Show the form
-    $ADSearchForm.ShowDialog()
+    [void] $ADSearchForm.ShowDialog()
     
 }
 
