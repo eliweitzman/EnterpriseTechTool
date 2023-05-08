@@ -168,8 +168,8 @@ function ADLookup {
                         #If it is, prompt for credentials
                         $ADSearchCred = Get-Credential
 
-                        #Run the search
-                        $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred
+                        #Run the search using the provided credentials and values
+                        $ADSearchResults = Get-ADUser ($ADSearchTextBox.Text) -Server $ADSearchDomain -Credential $ADSearchCredentials
 
                         #Check if the search returned any results
                         if ($null -eq $ADSearchDomainTextBox) {
@@ -195,7 +195,7 @@ function ADLookup {
                     }
                     else {
                         #If it isn't, use the current user's credentials, and run the search
-                        $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain
+                        $ADSearchResults = Get-ADUser ($ADSearchTextBox.Text) -Server $ADSearchDomain
 
                         #Check if the search returned any results
                         if ($null -eq $ADSearchResults) {
@@ -229,7 +229,7 @@ function ADLookup {
                             $ADSearchCred = Get-Credential
 
                             #Run the search
-                            $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCred
+                            $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCredentials
             
                             #Check if the search returned any results
                             if ($null -eq $ADSearchResults) {
