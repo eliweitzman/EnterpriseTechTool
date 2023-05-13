@@ -250,7 +250,7 @@ function ADLookup {
                         #Check if the alternate credentials checkbox is checked
                         if ($ADSearchAuthCheckBox.Checked -eq $true) {
                             #If it is, prompt for credentials
-                            $ADSearchCred = Get-Credential
+                            $ADSearchCredentials = Get-Credential
 
                             #Run the search
                             $ADSearchResults = Get-ADUser -Filter { SamAccountName -eq $ADSearchTextBox.Text } -Server $ADSearchDomain -Credential $ADSearchCredentials -Properties Name, SamAccountName, DistinguishedName, Enabled, LastLogonDate, ObjectLocation
@@ -907,7 +907,6 @@ $PolicyPatch_OnClick = {
     Start-Process powershell.exe -ArgumentList "-command gpupdate /force"
 
     #Any additional commands can be added here, depending on policy and compliance needs
-
 }
 
 #Make button do stuff
