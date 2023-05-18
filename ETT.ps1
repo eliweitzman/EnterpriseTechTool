@@ -572,6 +572,7 @@ $Lapspw_Action = {
     $windowsLaps.height = 10
     $windowsLaps.location = New-Object System.Drawing.Point(17, 60)
 
+    
     #Checkbox for using alternate credentials
     $altCreds = New-Object system.Windows.Forms.CheckBox
     $altCreds.text = "Use Alternate Credentials"
@@ -616,6 +617,7 @@ $Lapspw_Action = {
     $hostnameInput.height = 20
     $hostnameInput.location = New-Object System.Drawing.Point(154, 152)
     $hostnameInput.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
+    $hostname = $hostnameInput.Text
     
     #Username information label
     $usernameInfo = New-Object system.Windows.Forms.Label
@@ -668,7 +670,7 @@ $Lapspw_Action = {
                 if ($altCreds.Checked -eq $true) {
                 
                     #IF Windows LAPS is off, alternate credentials is on, run the command with alternate credentials
-                    $output = Get-ADComputer $hostname -Properties * -Server $domain -Credential (Get-Credential -Credential $usernameInput.Text) | Select-Object -ExpandProperty ms-Mcs-AdmPwd
+                    $output = Get-ADComputer $hostname -Server $domain -Credential (Get-Credential -Credential $usernameInput.Text) -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
                 
                     #If the output is null, the computer is not in AD
                     if ($output -eq $null) {
@@ -685,7 +687,7 @@ $Lapspw_Action = {
                 }
                 else {
                     #If Windows LAPS is off, and alternate credentials is off, run the command with current credentials
-                    $output = Get-ADComputer $hostname -Properties * -Server $domain | Select-Object -ExpandProperty ms-Mcs-AdmPwd
+                    $output = Get-ADComputer $hostname -Server $domain -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
                 
                     #If the output is null, the computer is not in AD
                     if ($output -eq $null) {
@@ -704,8 +706,9 @@ $Lapspw_Action = {
             elseif ($windowsLaps.Checked -eq $false) {
                 #Next, check if alternate credentials is checked
                 if ($altCreds.Checked -eq $true) {
+                    $altcredCheck = Get-Credential -Credential $usernameInput.Text
                     #IF Windows LAPS is on, alternate credentials is on, run the command with alternate credentials
-                    $output = Get-LapsADPassword -ComputerName $hostname -Credential (Get-Credential -Credential $usernameInput.Text) -AsPlainText | Select-Object -ExpandProperty Password
+                    $output = Get-LapsADPassword  $hostname -Credential $altcredCheck -DecryptionCredential -Domain $domainInput.Text $altcredCheck -AsPlainText
                         
                     #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
                     if ($output -eq $null) {
@@ -715,7 +718,7 @@ $Lapspw_Action = {
                 }
                 else {
                     #If Windows LAPS is on, and alternate credentials is off, run the command with current credentials
-                    $output = Get-LapsADPassword -ComputerName $hostname -AsPlainText | Select-Object -ExpandProperty Password
+                    $output = Get-LapsADPassword $hostname -AsPlainText -Domain $domainInput.Text | Select-Object -ExpandProperty Password
                         
                     #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
                     if ($output -eq $null) {
