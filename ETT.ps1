@@ -52,7 +52,41 @@ $drivespaceMinimum = 20 #SET MINIMUM DRIVESPACE IN GB
 $winverCheckActive = $false
 $winverTarget = '22h2' #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
 
-#Capture Machine Info
+#Capture Machine Info, and make a loading screen
+
+#Loading Screen
+$LoadingForm = New-Object System.Windows.Forms.Form
+$LoadingForm.Text = "Loading..."
+$LoadingForm.Width = 300
+$LoadingForm.Height = 100
+$LoadingForm.StartPosition = "CenterScreen"
+$LoadingForm.FormBorderStyle = "Fixed3D"
+$LoadingForm.MaximizeBox = $false
+$LoadingForm.MinimizeBox = $false
+$LoadingForm.ShowIcon = $false
+$LoadingForm.TopMost = $true
+
+#Loading Label
+$LoadingLabel = New-Object System.Windows.Forms.Label
+$LoadingLabel.Location = New-Object System.Drawing.Point(10, 10)
+$LoadingLabel.Width = 280
+$LoadingLabel.Height = 20
+$LoadingLabel.Text = "Loading..."
+$LoadingLabel.Font = New-Object System.Drawing.Font("Arial", 11)
+$LoadingLabel.ForeColor = "Black"
+$LoadingLabel.TabIndex = 0
+$LoadingLabel.TextAlign = "MiddleCenter"
+
+#Loading Progress Bar
+$LoadingProgressBar = New-Object System.Windows.Forms.ProgressBar
+$LoadingProgressBar.Location = New-Object System.Drawing.Point(10, 40)
+$LoadingProgressBar.Size = New-Object System.Drawing.Size(280, 20)
+$LoadingProgressBar.Style = "Marquee"
+$LoadingProgressBar.MarqueeAnimationSpeed = 10
+$LoadingProgressBar.TabIndex = 1
+
+
+#Conditions to load
 $username = whoami.exe
 $hostname = HOSTNAME.EXE
 $winver = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").DisplayVersion
@@ -1223,14 +1257,9 @@ $menuSuspendBitLocker.Add_Click({
             }
         }
         else {
-            Start-Process powershell.exe -ArgumentList " -command Get-BitLockerVolume -Drive C | % {
-                If ($_.EncryptionStatus -eq "On") {
-                  Write-Host "Bitlocker is enabled on drive C."
-                  Suspend-BitLocker -MountPoint C -RebootCount 1
-                }else{
-                  Write-Host "Bitlocker is not enabled on drive C."
-                }
-            }" -PassThru -Verb RunAs           
+            #Admin mode is not enabled
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("Admin mode is not enabled. Please enable adminmode flag and reboot script. If compiled, this requires a version of the application with adminmode flag turned on.", 0, "BitLocker", 64)     
         }
     })
 $menuSuspendBitLocker.BackColor = $BGcolor
