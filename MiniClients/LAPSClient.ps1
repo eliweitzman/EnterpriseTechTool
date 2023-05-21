@@ -5,7 +5,7 @@ $BGcolor = "#000000"
 $TextColor = "#FFFFFF"
 $BoxColor = "#000000"
     
-##FIRST SECTION INPUT FIELD
+# Import the module
 Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
@@ -137,42 +137,53 @@ $lapsStart.BackColor = $BoxColor
 $lapsStart.Add_Click({ 
         #First, check if Windows LAPS is checked
         if ($windowsLaps.Checked -eq $false) {
-            #Next, check if alternate credentials is checked
-            if ($altCreds.Checked -eq $true) {
+            #Next, run a test AD query to see if the user has RSAT and entitlements to run the command
+            try {
+                $testcaser = Get-ADUser -Identity $env:USERNAME -ErrorAction SilentlyContinue
+                if ($altCreds.Checked -eq $true) {
+        
+                    #IF Windows LAPS is off, alternate credentials is on, run the command with alternate credentials
+                    $output = Get-ADComputer $hostname -Server $domain -Credential (Get-Credential -Credential $usernameInput.Text) -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
             
-                #IF Windows LAPS is off, alternate credentials is on, run the command with alternate credentials
-                $output = Get-ADComputer $hostname -Server $domain -Credential (Get-Credential -Credential $usernameInput.Text) -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
-            
-                #If the output is null, the computer is not in AD
-                if ($output -eq $null) {
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
+                    #If the output is null, the computer is not in AD
+                    if ($output -eq $null) {
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
+                    }
+                    else {
+                        #If the output is not null, the computer is in AD and the password is returned
+                        $output | clip
+    
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
+                    }
                 }
                 else {
-                    #If the output is not null, the computer is in AD and the password is returned
-                    $output | clip
-
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
-                }
+                    #If Windows LAPS is off, and alternate credentials is off, run the command with current credentials
+                    $output = Get-ADComputer $hostname -Server $domain -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
+            
+                    #If the output is null, the computer is not in AD
+                    if ($output -eq $null) {
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
+                    }
+                    else {
+                        #If the output is not null, the computer is in AD and the password is returned
+                        $output | clip
+    
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
+                    }
+                }       
             }
-            else {
-                #If Windows LAPS is off, and alternate credentials is off, run the command with current credentials
-                $output = Get-ADComputer $hostname -Server $domain -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
-            
-                #If the output is null, the computer is not in AD
-                if ($output -eq $null) {
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
-                }
-                else {
-                    #If the output is not null, the computer is in AD and the password is returned
-                    $output | clip
+            catch {
+                #If the user does not have RSAT or entitlements, the command will fail and the user will be notified
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("You do not have the required permissions to run this option. Either RSAT AD Tools, or User Permissions block this route. Use Windows LAPS instead.", 0, "Error", 0x1)
 
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
-                }
-            }       
+                #Check the Windows LAPS box to allow the user to run the command without RSAT or entitlements
+                $windowsLaps.Checked = $true
+            }
         }
         elseif ($windowsLaps.Checked -eq $true) {
             #Next, check if alternate credentials is checked
@@ -180,45 +191,42 @@ $lapsStart.Add_Click({
                 $altcredCheck = Get-Credential -Credential $usernameInput.Text
                 #IF Windows LAPS is on, alternate credentials is on, run the command with alternate credentials
                 $output = Get-LapsADPassword  $hostnameInput.Text -Credential $altcredCheck -DecryptionCredential $altcredCheck -Domain $domainInput.Text $altcredCheck -AsPlainText
-                    
+                
                 #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
                 if ($output -eq $null) {
                     $wshell = New-Object -ComObject Wscript.Shell
                     $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
                 }
                 else {
-                        #If the output is not null, the computer is in AD and the password is returned
-                        $output | clip
-    
-                        $wshell = New-Object -ComObject Wscript.Shell
-                        $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
+                    #If the output is not null, the computer is in AD and the password is returned
+                    $output | clip
+
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
                 }
             }
             else {
                 #If Windows LAPS is on, and alternate credentials is off, run the command with current credentials
                 $output = Get-LapsADPassword $hostnameInput.Text -AsPlainText -Domain $domainInput.Text | Select-Object -ExpandProperty Password
-                    
+                
                 #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
                 if ($output -eq $null) {
                     $wshell = New-Object -ComObject Wscript.Shell
                     $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
                 }
                 else {
-                        #If the output is not null, the computer is in AD and the password is returned
-                        $output | clip
-    
-                        $wshell = New-Object -ComObject Wscript.Shell
-                        $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
+                    #If the output is not null, the computer is in AD and the password is returned
+                    $output | clip
+
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
                 }
             }
         }
     })
 #Add keypress event to start button
-$hostnameInput.Add_KeyDown({
-        if ($_.KeyCode -eq "Enter") {
-            $lapsStart.Click
-        }
-    })
+$LapsForm.KeyPreview = $true
+$LapsForm.Add_KeyDown({ if ($_.KeyCode -eq "Enter") { $lapsStart.PerformClick() } })
 
 #Print the above GUI applets in the box
 $LapsForm.controls.AddRange(@($Lapslogo, $domainInput, $domainLabel, $titleTag, $hostnameLabel, $hostnameInput, $usernameInfo, $usernameInput, $lapsStart, $windowsLaps, $altCreds))
