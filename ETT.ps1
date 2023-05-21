@@ -1207,10 +1207,38 @@ $outputsuppressed = $menuFunctions.DropDownItems.Add($menuSFCScan)
 #Suspend BitLocker Button - Suspends BitLocker for one reboot
 $menuSuspendBitLocker.Text = "Suspend BitLocker"
 $menuSuspendBitLocker.Add_Click({
-        #Suspend BitLocker
-        Suspend-BitLocker -MountPoint "C:" -RebootCount 1
-        $wshell = New-Object -ComObject Wscript.Shell
-        $wshell.Popup("BitLocker suspended for one reboot.", 0, "BitLocker", 64)
+        #Check if adminmode is enabled
+        if ($adminmode -eq "True") {
+            #Check if BitLocker is enabled
+            if ((Get-BitLockerVolume -MountPoint C:).ProtectionStatus -eq "On") {
+                #Suspend BitLocker
+                Suspend-BitLocker -MountPoint "C:" -RebootCount 1
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("BitLocker suspended for one reboot.", 0, "BitLocker", 64)
+            }
+            else {
+                #BitLocker is not enabled
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("BitLocker is not enabled on this computer.", 0, "BitLocker", 64)
+            }
+        }
+        else {
+            #Check if BitLocker is enabled using a UAC prompt
+            $bitlockerstatus = Start-Process powershell.exe -ArgumentList "-command (Get-BitLockerVolume -MountPoint C:).ProtectionStatus" -PassThru -Verb RunAs -Wait
+            
+            #Check if BitLocker is enabled
+            if ($bitlockerstatus.ProtectionStatus -eq "On") {
+                #Suspend BitLocker
+                Start-Process powershell.exe -ArgumentList "-command Suspend-BitLocker -MountPoint C: -RebootCount 1" -PassThru -Verb RunAs
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("BitLocker suspended for one reboot.", 0, "BitLocker", 64)
+            }
+            else {
+                #BitLocker is not enabled
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("BitLocker is not enabled on this computer.", 0, "BitLocker", 64)
+            }
+        }
     })
 $menuSuspendBitLocker.BackColor = $BGcolor
 $menuSuspendBitLocker.ForeColor = $TextColor
