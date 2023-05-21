@@ -17,8 +17,8 @@
 .NOTES
     Version:        1.0
     Creation Date:  12-26-22
-    Last Updated:   5-6-23
-    Purpose/Change: Updates, and trickledown feature integration
+    Last Updated:   5-21-23
+    Purpose/Change: Admin conditional fixes
 #>
 
 
@@ -1223,21 +1223,14 @@ $menuSuspendBitLocker.Add_Click({
             }
         }
         else {
-            #Check if BitLocker is enabled using a UAC prompt
-            $bitlockerstatus = Start-Process powershell.exe -ArgumentList "-command (Get-BitLockerVolume -MountPoint C:).ProtectionStatus" -PassThru -Verb RunAs -Wait
-            
-            #Check if BitLocker is enabled
-            if ($bitlockerstatus.ProtectionStatus -eq "On") {
-                #Suspend BitLocker
-                Start-Process powershell.exe -ArgumentList "-command Suspend-BitLocker -MountPoint C: -RebootCount 1" -PassThru -Verb RunAs
-                $wshell = New-Object -ComObject Wscript.Shell
-                $wshell.Popup("BitLocker suspended for one reboot.", 0, "BitLocker", 64)
-            }
-            else {
-                #BitLocker is not enabled
-                $wshell = New-Object -ComObject Wscript.Shell
-                $wshell.Popup("BitLocker is not enabled on this computer.", 0, "BitLocker", 64)
-            }
+            Start-Process powershell.exe -ArgumentList " -command Get-BitLockerVolume -Drive C | % {
+                If ($_.EncryptionStatus -eq "On") {
+                  Write-Host "Bitlocker is enabled on drive C."
+                  Suspend-BitLocker -MountPoint C -RebootCount 1
+                }else{
+                  Write-Host "Bitlocker is not enabled on drive C."
+                }
+            }" -PassThru -Verb RunAs           
         }
     })
 $menuSuspendBitLocker.BackColor = $BGcolor
