@@ -21,9 +21,12 @@
     Purpose/Change: Admin conditional fixes
 #>
 
+#Import Winforms API for GUI
+Add-Type -AssemblyName System.Windows.Forms
+[System.Windows.Forms.Application]::EnableVisualStyles()
 
 #Admin mode - if above auto-elevate is enabled, this will be set to $true
-$adminmode = $true
+$adminmode = $false
 
 if ($adminmode -eq $true) {
     if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
@@ -52,19 +55,41 @@ $drivespaceMinimum = 20 #SET MINIMUM DRIVESPACE IN GB
 $winverCheckActive = $false
 $winverTarget = '22h2' #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
 
+#Determine Dark/Light Mode
+# Get the current theme
+$theme = (Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize").AppsUseLightTheme
+
+#Dark/Light Parameters
+# If the theme is 0, it is dark mode
+if ($theme -eq 0) {
+    #DARK MODE
+    $BGcolor = 'Black'
+    $TextColor = 'White'
+    $ButtonText = 'White'
+    $BoxColor = $BrandColor
+}
+else {
+    #LIGHT MODE
+    $BGcolor = 'WhiteSmoke'
+    $TextColor = 'Black'
+    $ButtonText = 'White'
+    $BoxColor = $BrandColor
+}
+
 #Capture Machine Info, and make a loading screen
 
 #Loading Screen
 $LoadingForm = New-Object System.Windows.Forms.Form
-$LoadingForm.Text = "Loading..."
-$LoadingForm.Width = 300
-$LoadingForm.Height = 100
+$LoadingForm.Text = "Loading ETT..."
+$LoadingForm.Width = 320
+$LoadingForm.Height = 125
 $LoadingForm.StartPosition = "CenterScreen"
 $LoadingForm.FormBorderStyle = "Fixed3D"
 $LoadingForm.MaximizeBox = $false
 $LoadingForm.MinimizeBox = $false
 $LoadingForm.ShowIcon = $false
 $LoadingForm.TopMost = $true
+$LoadingForm.BackColor = $BGcolor
 
 #Loading Label
 $LoadingLabel = New-Object System.Windows.Forms.Label
@@ -72,8 +97,8 @@ $LoadingLabel.Location = New-Object System.Drawing.Point(10, 10)
 $LoadingLabel.Width = 280
 $LoadingLabel.Height = 20
 $LoadingLabel.Text = "Loading..."
-$LoadingLabel.Font = New-Object System.Drawing.Font("Arial", 11)
-$LoadingLabel.ForeColor = "Black"
+$LoadingLabel.Font = New-Object System.Drawing.Font("Segoe UI", 11)
+$LoadingLabel.ForeColor = $TextColor
 $LoadingLabel.TabIndex = 0
 $LoadingLabel.TextAlign = "MiddleCenter"
 
@@ -84,19 +109,61 @@ $LoadingProgressBar.Size = New-Object System.Drawing.Size(280, 20)
 $LoadingProgressBar.Style = "Marquee"
 $LoadingProgressBar.MarqueeAnimationSpeed = 10
 $LoadingProgressBar.TabIndex = 1
+$LoadingProgressBar.Value = 0
 
+#Add controls to form
+$LoadingForm.Controls.Add($LoadingLabel)
+$LoadingForm.Controls.Add($LoadingProgressBar)
+
+#Show the form
+[void]$LoadingForm.Show()
 
 #Conditions to load
+$LoadingLabel.Text = "Getting username..."
 $username = whoami.exe
+$outputsuppressed = $LoadingProgressBar.Value = 10
+
+$LoadingLabel.Text = "Getting hostname..."
 $hostname = HOSTNAME.EXE
+$outputsuppressed = $LoadingProgressBar.Value = 20
+
+$LoadingLabel.Text = "Getting Windows Version..."
 $winver = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").DisplayVersion
+$outputsuppressed = $LoadingProgressBar.Value = 30
+
+$LoadingLabel.Text = "Getting Manufacturer..."
 $manufacturer = Get-WmiObject -Class Win32_ComputerSystemProduct | Select-Object -ExpandProperty Vendor
+$outputsuppressed = $LoadingProgressBar.Value = 40
+
+$LoadingLabel.Text = "Getting Model..."
 $model = Get-WmiObject -Class Win32_ComputerSystem -Property Model | Select-Object -ExpandProperty Model
+$outputsuppressed = $LoadingProgressBar.Value = 50
+
+$LoadingLabel.Text = "Getting Domain..."
 $domain = Get-WmiObject -Class Win32_ComputerSystem -Property Domain | Select-Object -ExpandProperty Domain
+$outputsuppressed = $LoadingProgressBar.Value = 60
+
+$LoadingLabel.Text = "Getting Drive Info..."
 $drivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
+$outputsuppressed = $LoadingProgressBar.Value = 70
+
+$LoadingLabel.Text = "Getting RAM Info..."
 $ramCheck = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
+$outputsuppressed = $LoadingProgressBar.Value = 80
+
+$LoadingLabel.Text = "Getting CPU Info..."
 $cpuCheck = Get-WmiObject -Class Win32_Processor | Select-Object -ExpandProperty Name
+$outputsuppressed = $LoadingProgressBar.Value = 90
+
+$LoadingLabel.Text = "Getting Drive Type..."
 $drivetype = Get-PhysicalDisk | Where-Object DeviceID -eq 0 | Select-Object -ExpandProperty MediaType
+$outputsuppressed = $LoadingProgressBar.Value = 100
+
+$LoadingLabel.Text = "Loading Complete!"
+
+#Close Loading Screen
+$LoadingForm.Close()
+
 $complianceFlag = $false
 
 <#EXPERIMENTAL NEW INFO METHOD
@@ -525,14 +592,14 @@ function LAPSTool {
             if ($windowsLaps.Checked -eq $false) {
                 #Next, run a test AD query to see if the user has RSAT and entitlements to run the command
                 try {
-                    $testcaser = Get-ADUser -Identity $env:USERNAME -ErrorAction SilentlyContinue
+                    Get-ADUser -Identity $env:USERNAME -ErrorAction SilentlyContinue
                     if ($altCreds.Checked -eq $true) {
         
                         #IF Windows LAPS is off, alternate credentials is on, run the command with alternate credentials
                         $output = Get-ADComputer $hostname -Server $domain -Credential (Get-Credential -Credential $usernameInput.Text) -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
             
                         #If the output is null, the computer is not in AD
-                        if ($output -eq $null) {
+                        if ($null -eq $output) {
                             $wshell = New-Object -ComObject Wscript.Shell
                             $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
                         }
@@ -549,7 +616,7 @@ function LAPSTool {
                         $output = Get-ADComputer $hostname -Server $domain -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
             
                         #If the output is null, the computer is not in AD
-                        if ($output -eq $null) {
+                        if ($null -eq $output) {
                             $wshell = New-Object -ComObject Wscript.Shell
                             $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
                         }
@@ -579,7 +646,7 @@ function LAPSTool {
                     $output = Get-LapsADPassword  $hostnameInput.Text -Credential $altcredCheck -DecryptionCredential $altcredCheck -Domain $domainInput.Text $altcredCheck -AsPlainText
                 
                     #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
-                    if ($output -eq $null) {
+                    if ($null -eq $output) {
                         $wshell = New-Object -ComObject Wscript.Shell
                         $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
                     }
@@ -596,7 +663,7 @@ function LAPSTool {
                     $output = Get-LapsADPassword $hostnameInput.Text -AsPlainText -Domain $domainInput.Text | Select-Object -ExpandProperty Password
                 
                     #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
-                    if ($output -eq $null) {
+                    if ($null -eq $output) {
                         $wshell = New-Object -ComObject Wscript.Shell
                         $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
                     }
@@ -685,31 +752,6 @@ Domain: $domain
 Storage: $drivespace
 Storage Type: $drivetype
 "@
-
-#Determine Dark/Light Mode
-# Get the current theme
-$theme = (Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize").AppsUseLightTheme
-
-#Dark/Light Parameters
-# If the theme is 0, it is dark mode
-if ($theme -eq 0) {
-    #DARK MODE
-    $BGcolor = 'Black'
-    $TextColor = 'White'
-    $ButtonText = 'White'
-    $BoxColor = $BrandColor
-}
-else {
-    #LIGHT MODE
-    $BGcolor = 'WhiteSmoke'
-    $TextColor = 'Black'
-    $ButtonText = 'White'
-    $BoxColor = $BrandColor
-}
-
-#Import Winforms API for GUI
-Add-Type -AssemblyName System.Windows.Forms
-[System.Windows.Forms.Application]::EnableVisualStyles()
 
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
@@ -1294,7 +1336,7 @@ $menuAD.Text = "AD Lookup"
 $menuAD.Add_Click({
         #Test if RSAT is installed
         try {
-            $testcase = Get-ADUser -Identity $env:USERNAME -ErrorAction SilentlyContinue
+            Get-ADUser -Identity $env:USERNAME -ErrorAction SilentlyContinue
             #AD Lookup
             ADLookup
         }
@@ -1331,5 +1373,3 @@ $ETT.controls.AddRange(@($Logo, $Heading, $ClearLastLogin, $Lapspw, $appUpdate, 
 #endregion
 
 [void]$ETT.ShowDialog()
-
-$outputsuppressed
