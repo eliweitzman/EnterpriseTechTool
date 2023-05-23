@@ -971,9 +971,11 @@ $menuSFCScan = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuSuspendBitlocker = New-Object System.Windows.Forms.ToolStripMenuItem
 #$menuRenameComputer = New-Object System.Windows.Forms.ToolStripMenuItem - Commented out until I can figure out how to make it work
 $menuTestNet = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuRebootQuick = New-Object System.Windows.Forms.ToolStripMenuItem
 
 #AD Tab
 $menuAD = New-Object System.Windows.Forms.ToolStripMenuItem
+
 #One-Off Tabs
 $menuFeatures = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuExit = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1007,6 +1009,10 @@ $menuSuspendBitlocker.ShortcutKeyDisplayString = "CTRL + SHIFT + B"
 #CTRL + Shift + T to run menuTestNet
 $menuTestNet.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::T
 $menuTestNet.ShortcutKeyDisplayString = "CTRL + SHIFT + T"
+
+#CTRL + Shift + Q to run menuRebootQuick
+$menuRebootQuick.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::Q
+$menuRebootQuick.ShortcutKeyDisplayString = "CTRL + SHIFT + Q"
 
 #CTRL + Shift + R to run menuRenameComputer
 #$menuRenameComputer.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::R
@@ -1317,6 +1323,21 @@ $menuTestNet.Add_Click({
 $menuTestNet.BackColor = $BGcolor
 $menuTestNet.ForeColor = $TextColor
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuTestNet)
+
+#Quick Reboot Button - Reboots the computer
+$menuRebootQuick.Text = "Quick Reboot"
+$menuRebootQuick.Add_Click({
+        #First, confirm reboot
+        $wshell = New-Object -ComObject Wscript.Shell
+        if ($wshell.Popup("Are you sure you want to reboot? Make sure everything is saved before proceeding.", 0, "Reboot", 4 + 32) -eq 6) {
+            #Reboot
+            Start-Process shutdown -argumentlist "-r -t 0" -PassThru
+        }
+
+    })
+$menuRebootQuick.BackColor = $BGcolor
+$menuRebootQuick.ForeColor = $TextColor
+$outputsuppressed = $menuFunctions.DropDownItems.Add($menuRebootQuick)
 
 <#
 #Rename Computer Button
