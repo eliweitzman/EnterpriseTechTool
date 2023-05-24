@@ -29,7 +29,7 @@ ETT can run in a few different ways, depending on preference, and on your own pe
 
 ## Optimal Environment
 
-The application is designed to run as a PowerShell Script, but as well is compiled into an executable, using the awesome module PS2EXE, made by MScholtes (https://github.com/MScholtes/PS2EXE). This is currently designed to run in an Enterprise environment, however it is tweakable to be run as a personal tool as well (although LAPS, policy updates, and a few other tools certainly aren't necessary).
+The application is designed to run as a PowerShell Script, but as well is compiled into an executable, using the awesome module [PS2EXE](https://github.com/MScholtes/PS2EXE), made by MScholtes, based on code by [Ingo Karstein](https://github.com/ikarstein/ps2exe). This is currently designed to run in an Enterprise environment, however it is tweakable to be run as a personal tool as well (although LAPS, policy updates, and a few other tools certainly aren't necessary).
 
 ## Customizing for your Deployment
 
