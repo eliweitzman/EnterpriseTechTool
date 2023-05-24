@@ -29,7 +29,7 @@ Add-Type -AssemblyName System.Windows.Forms
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
 #Admin mode - if auto-elevate is enabled, this will be set to $true
-$adminmode = $false
+$adminmode = $true
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
 $BrandColor = '#023a24' #Set the color of the form, currently populated with a hex value.
