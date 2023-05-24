@@ -57,5 +57,9 @@ $winverTarget = '22h2' #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
 
 ETT is an open-source application, and I'd love to make it open for contribution! If you would like to add a feature, or propose an idea to be added to the future, fill out a GitHub issue, and I'll start tinkering with it! Every enterprise and user is different, so a one-size-fits-all solution is almost impossible without input!
 
+## License
+
+This code is provided under a [BSD-3-Clause License]( https://opensource.org/license/BSD-3-clause/ ). 
+
 ## General Disclaimer
 I'm currently a college student, and this project was a small timefiller. I might not be able to add new features or maintain this too much in the future. I hope by making this open-source, many others will choose to contribute and grow this application even further (although it certainly is challening, this being PowerShell-based an all). Also, occasionally, you may find GenZ language used. But not too much 😎
