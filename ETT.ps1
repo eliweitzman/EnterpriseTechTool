@@ -25,18 +25,11 @@
 Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
-#Admin mode - if above auto-elevate is enabled, this will be set to $true
-$adminmode = $false
 
-if ($adminmode -eq $true) {
-    if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
-        if ([int](Get-CimInstance -Class Win32_OperatingSystem | Select-Object -ExpandProperty BuildNumber) -ge 6000) {
-            $Command = "-File `"" + $MyInvocation.MyCommand.Path + "`" " + $MyInvocation.UnboundArguments
-            Start-Process -FilePath PowerShell.exe -Verb RunAs -ArgumentList $Command
-            Exit
-        }
-    }
-}
+## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
+
+#Admin mode - if auto-elevate is enabled, this will be set to $true
+$adminmode = $false
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
 $BrandColor = '#023a24' #Set the color of the form, currently populated with a hex value.
@@ -54,6 +47,8 @@ $drivespaceMinimum = 20 #SET MINIMUM DRIVESPACE IN GB
 #Windows Version Check
 $winverCheckActive = $false
 $winverTarget = '22h2' #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
+
+## END INITIAL FLAGS
 
 #Determine Dark/Light Mode
 # Get the current theme
@@ -74,6 +69,18 @@ else {
     $TextColor = 'Black'
     $ButtonText = 'White'
     $BoxColor = $BrandColor
+}
+
+#Admin Mode Auto-Elevate - If enabled, will auto-elevate to admin if not already running as admin. This will involve a UAC prompt.
+
+if ($adminmode -eq $true) {
+    if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
+        if ([int](Get-CimInstance -Class Win32_OperatingSystem | Select-Object -ExpandProperty BuildNumber) -ge 6000) {
+            $Command = "-File `"" + $MyInvocation.MyCommand.Path + "`" " + $MyInvocation.UnboundArguments
+            Start-Process -FilePath PowerShell.exe -Verb RunAs -ArgumentList $Command
+            Exit
+        }
+    }
 }
 
 #Capture Machine Info, and make a loading screen
