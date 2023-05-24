@@ -2,6 +2,10 @@
 
 Welcome to Eli's Enterprise Tech Tool (ETT, for short). In this project, I hope to combine a bunch of useful sysadmin/helpdesk solutions that could be potentially helpful in general field work. Most of these projects are made from ideas I've had while at work, but hopefully some new functions come about soon!
 
+<p align="center">
+  <img src="https://github.com/eliweitzman/EnterpriseTechTool/blob/main/ImageAssets/UI%20Screenshot.png" alt="A screenshot of the application window." width=50% height=50%/>
+</p>
+
 ## Recommended Experience before deployment
 
 While it's optional, and I try to add as much context and instructions to the project as possible to run without experience, it would be good to have some experience in the following tools:
