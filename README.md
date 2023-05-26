@@ -21,9 +21,9 @@ ETT can run in a few different ways, depending on preference, and on your own pe
 | Run option | Details          |
 | ------- | ------------------ |
 | Stock PS Script | Just downloading and running the PS1 file direct from the repository. |
-| Stock EXE Version | A pre-compiled stock version of ETT, either with Admin mode on or off. |
+| Stock EXE Version | A pre-compiled stock version of ETT, either with Admin mode on or off. Able to bypass execution policy. |
 | Modified PS Script | Downloading the PS1 file, and adjusting the feature flags (indicated below). |
-| Modified EXE | Modifying the flags, and compiling it as an EXE for use. |
+| Modified EXE | Modifying the flags, and compiling it as an EXE for use. Able to bypass execution policy.|
 
 
 
