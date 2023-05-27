@@ -485,6 +485,7 @@ function LAPSTool {
     $titleTag.height = 10
     $titleTag.location = New-Object System.Drawing.Point(88, 20)
     $titleTag.Font = New-Object System.Drawing.Font('Segoe UI', 16, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+    $titleTag.AutoSize = $true
     $titleTag.ForeColor = $TextColor
 
     #Logo sourced from choccolatey gal
