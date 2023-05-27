@@ -10,6 +10,6 @@ Due to the nature of the application being effectively just a PowerShell script,
 
 ## Reporting a Vulnerability
 
-If you encounter a security concern of extreme range, please get in touch with myself directly. Depending on the security issue however, this could be due to a vulnerability in PowerShell, or Windows as a whole. Else, if it's a low-priority security concern, you can create an issue with the "Security-Issue" tag and it can be added to active development roadmap if accepted. 
+If you encounter a security concern of extreme range, please get in touch with myself directly, or the maintainers, by creating a new Security advisory. Depending on the security issue however, this could be due to a vulnerability in PowerShell, or Windows as a whole. 
 
 Because there isn't a set development routine in place yet, nor full-time development determined, security concerns will be evaluated and addressed whenever a development cycle is started. 
