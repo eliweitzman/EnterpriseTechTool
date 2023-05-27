@@ -594,6 +594,7 @@ function LAPSTool {
     $lapsStart.location = New-Object System.Drawing.Point(154, 251)
     $lapsStart.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
     $lapsStart.BackColor = $BoxColor
+    $lapsStart.ForeColor = $ButtonText
     $lapsStart.Add_Click({ 
             #First, check if Windows LAPS is checked
             if ($windowsLaps.Checked -eq $false) {
