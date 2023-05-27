@@ -29,7 +29,7 @@ Add-Type -AssemblyName System.Windows.Forms
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
 #Admin mode - if auto-elevate is enabled, this will be set to $true
-$adminmode = $true
+$adminmode = $false
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
 $BrandColor = '#023a24' #Set the color of the form, currently populated with a hex value.
@@ -481,7 +481,6 @@ function LAPSTool {
     #Title for box
     $titleTag = New-Object system.Windows.Forms.Label
     $titleTag.text = "LAPS GUI"
-    $titleTag.AutoSize = $true
     $titleTag.width = 25
     $titleTag.height = 10
     $titleTag.location = New-Object System.Drawing.Point(88, 20)
@@ -770,7 +769,6 @@ $ETT.MaximumSize = $ETT.Size
 $ETT.MinimumSize = $ETT.Size
 $ETT.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($PSHOME + "\powershell.exe")
 $ETT.TopMost = $false
-$ETT.FormBorderStyle = 'FixedSingle'
 $ETT.BackColor = $BGcolor
 
 #Import and load in logo icon
@@ -961,6 +959,7 @@ $domainInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $storageInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $ramInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $cpuInfo = New-Object System.Windows.Forms.ToolStripMenuItem
+$adminInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoPrint = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoClipboard = New-Object System.Windows.Forms.ToolStripMenuItem
 
@@ -1168,6 +1167,18 @@ $cpuInfo.BackColor = $BGcolor
 $cpuInfo.ForeColor = $TextColor
 $cpuInfo.ToolTipText = "Current device CPU." + "`nClick to copy CPU to clipboard."
 $outputsuppressed = $menuInfo.DropDownItems.Add($cpuInfo)
+
+#Admin Mode Status Display
+$adminInfo.Text = "ETT Admin Mode: " + $adminmode
+$adminInfo.Add_Click({
+        Set-Clipboard -Value $adminInfo.Text
+        $wshell = New-Object -ComObject Wscript.Shell
+        $wshell.Popup("ETT Admin Mode copied to clipboard", 0, "Admin Mode Copied", 64)
+    })
+$adminInfo.BackColor = $BGcolor
+$adminInfo.ForeColor = $TextColor
+$adminInfo.ToolTipText = "Current ETT Admin Mode." + "`nClick to copy ETT Admin Mode to clipboard."
+$outputsuppressed = $menuInfo.DropDownItems.Add($adminInfo)
 
 #Device Info Print to Text File in C Temp
 $deviceInfoPrint.Text = "Print Device Info to Text File"
