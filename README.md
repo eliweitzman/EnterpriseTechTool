@@ -2,8 +2,35 @@
 
 Welcome to Eli's Enterprise Tech Tool (ETT, for short). In this project, I hope to combine a bunch of useful sysadmin/helpdesk solutions that could be potentially helpful in general field work. Most of these projects are made from ideas I've had while at work, but hopefully some new functions come about soon!
 
+## Features
+
 <p align="center">
   <img src="https://github.com/eliweitzman/EnterpriseTechTool/blob/main/ImageAssets/UI%20Screenshot.png" alt="A screenshot of the application window." width=50% height=50%/>
+</p>
+
+### Core Functions
+
+- Clear Last Windows Session Login
+- Retreive Microsoft and Windows LAPS passwords from On-Prem AD (Azure AD Windows LAPS coming soon!)
+- Update all apps (using Windows Package Manager)
+- Update Device Policy (gpupdate)
+- System-aware dark/light mode!
+- Retreive device information details
+- Set hardware/software compliance flags
+- And more!
+
+### Additional Modules!
+
+- AD Explorer Pop-out! (Uses RSAT AD Tools)
+
+<p align="center">
+  <img src="https://github.com/eliweitzman/EnterpriseTechTool/blob/main/ImageAssets/ADExplorerSC.png" alt="A screenshot of an Active Directory Explorer popout function." width=50% height=50%/>
+</p>
+
+- LAPS Pop-out!
+
+<p align="center">
+  <img src="https://github.com/eliweitzman/EnterpriseTechTool/blob/main/ImageAssets/LAPSLightmodeSC.png" alt="A screenshot of a LAPS UI popout function to get LAPS passcodes." width=50% height=50%/>
 </p>
 
 ## Recommended Experience before deployment
@@ -24,7 +51,6 @@ ETT can run in a few different ways, depending on preference, and on your own pe
 | Stock EXE Version | A pre-compiled stock version of ETT, either with Admin mode on or off. Able to bypass execution policy. |
 | Modified PS Script | Downloading the PS1 file, and adjusting the feature flags (indicated below). |
 | Modified EXE | Modifying the flags, and compiling it as an EXE for use. Able to bypass execution policy.|
-
 
 
 ## Optimal Environment
