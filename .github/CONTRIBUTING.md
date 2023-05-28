@@ -18,7 +18,7 @@ For ETT, there will be two main development branches. The main branch, which is 
 
 The main steps (summarized):
 1. [Fork the repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo)
-2. [Clone the repository to your local machine](https://docs.github.com/en/get-started/quickstart/fork-a-repo#cloning-your-forked-repository) (If you want an easy dev environment that is more optimal, check out [this]() wiki article!)
+2. [Clone the repository to your local machine](https://docs.github.com/en/get-started/quickstart/fork-a-repo#cloning-your-forked-repository) (If you want an easy dev environment that works, check out [this](https://github.com/eliweitzman/EnterpriseTechTool/wiki/Optimal-Coding-Environment) wiki article!)
 3. Make a new branch off of Dev, describing any changes you intend to make.
 4. Be sure to keep your branch up-to-date with current developments, by syncing changes when behind!
 5. Commit your changes to your forked repository.
