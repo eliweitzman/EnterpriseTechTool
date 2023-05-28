@@ -33,6 +33,8 @@ Welcome to Eli's Enterprise Tech Tool (ETT, for short). In this project, I hope 
   <img src="https://github.com/eliweitzman/EnterpriseTechTool/blob/main/ImageAssets/LAPSLightmodeSC.png" alt="A screenshot of a LAPS UI popout function to get LAPS passcodes." width=50% height=50%/>
 </p>
 
+_A standalone version of the LAPS client currently lives at [https://github.com/eliweitzman/ETT-LAPS](https://github.com/eliweitzman/ETT-LAPS) in case you don't want to download the whole toolkit! Version updates for this will be updated in sequence, but all changes will be made here in ETT._
+
 ## Recommended Experience before deployment
 
 While it's optional, and I try to add as much context and instructions to the project as possible to run without experience, it would be good to have some experience in the following tools:
