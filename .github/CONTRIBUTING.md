@@ -4,7 +4,7 @@ First off, thank you so much for your interest in my app!
 
 ## Ideas
 
-If you have an idea or feature request, but not the technical knowledge to back it fully, no fret! Just create an issue using the appropriate templace, and put in as many details as possible, and we'll try to get to it as quickly as possible!
+If you have an idea or feature request, but not the technical knowledge to back it fully, no fret! Just create an [issue](https://github.com/eliweitzman/EnterpriseTechTool/issues/new/choose) using the appropriate templace, and put in as many details as possible, and we'll try to get to it as quickly as possible!
 
 ## Contributing to Development
 
