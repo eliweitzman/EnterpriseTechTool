@@ -14,7 +14,7 @@ Before creating your issue, please be sure to review the following:
 
 ## Contributing to Development
 
-For ETT, there will be two main development branches. The main branch, which is updated at release, and the dev branch, which is where all changes will occur. If you want to make a change, the process is quite simple! Just create a personal fork of the repository, keep it up-to-date with the main repository, and make any modifications in the fork on the Dev branch. When it comes time for you to want to add it to the general codebase, submit a pull request to ETT's Dev branch, and it will go into code review, then be accepted and merged into the main repository! For additional resource on this process, check out GitHub's notes [here](https://docs.github.com/en/get-started/quickstart/contributing-to-projects).
+For ETT, there will be two main development branches. The main branch, which is updated at release, and the dev branch, which is where all changes will occur. If you want to make a change, the process is quite simple! Just create a personal fork of the repository, keep it up-to-date with the main repository, and make any modifications in the fork on a new branch. When it comes time for you to want to add it to the general codebase, submit a pull request to ETT's Dev branch, and it will go into code review, then be accepted and merged into the main repository! For additional resource on this process, check out GitHub's notes [here](https://docs.github.com/en/get-started/quickstart/contributing-to-projects), or this fun [video](https://www.youtube.com/watch?v=8lGpZkjnkt4) (for those who are visual learners).
 
 The main steps (summarized):
 1. [Fork the repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo)
