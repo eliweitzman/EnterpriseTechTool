@@ -177,7 +177,7 @@ $model = Get-WmiObject -Class Win32_ComputerSystem -Property Model | Select-Obje
 $outputsuppressed = $LoadingProgressBar.Value = 50
 
 $LoadingLabel.Text = "Getting Domain..."
-$domain = Get-WmiObject -Class Win32_ComputerSystem -Property Domain | Select-Object -ExpandProperty Domain
+$domain = (Get-CIMInstance -ClassName Win32_ComputerSystem).Domain
 $outputsuppressed = $LoadingProgressBar.Value = 60
 
 $LoadingLabel.Text = "Getting Drive Info..."
