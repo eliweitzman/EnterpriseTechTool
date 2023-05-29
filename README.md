@@ -1,6 +1,6 @@
 # 🚀 Eli's Enterprise Tech Toolkit!
 
-Welcome to Eli's Enterprise Tech Tool (ETT, for short). In this project, I hope to combine a bunch of useful sysadmin/helpdesk solutions that could be potentially helpful in general field work. Most of these projects are made from ideas I've had while at work, but hopefully some new functions come about soon!
+Welcome to Eli's Enterprise Tech Tool (ETT, or Enterprise Tech Tool, for short). In this project, I hope to combine a bunch of useful sysadmin/helpdesk solutions that could be potentially helpful in general field work. Most of these projects are made from ideas I've had while at work, but hopefully some new functions come about soon!
 
 ## Features
 
