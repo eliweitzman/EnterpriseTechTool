@@ -1259,6 +1259,9 @@ $menuFun.Add_Click({
     })
 $menuFun.BackColor = $BGcolor
 $menuFun.ForeColor = $TextColor
+#Set keyboard shortcut to Ctrl + R
+$menuFun.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::R
+
 $outputsuppressed = $menuHelp.DropDownItems.Add($menuFun)
 
 #Licenses Button - Displays basic license information
