@@ -1,3 +1,5 @@
 *.DS_Store
 *.db
 ImageAssets/Thumbs.db
+ImageAssets/Thumbs.db
+*.db
