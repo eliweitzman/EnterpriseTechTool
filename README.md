@@ -61,7 +61,7 @@ The application is designed to run as a PowerShell Script, but as well is compil
 
 ## Customizing for your Deployment
 
-In the first few lines of the program, there are a few sections that are commented out, allowing for color customization, as well as other customizations to compliance checking thresholds. These are customizable as needed, but the stock is as well provided, and disables any compliance checks.
+In the first few lines of the program, there are a few sections that are commented out, allowing for color customization, as well as other customizations to compliance checking thresholds. These are customizable as needed, but the stock is as well provided, and disables any compliance checks. To understand what each flag does, check out this [Wiki](https://github.com/eliweitzman/EnterpriseTechTool/wiki/Customization-Overview) page for more!
 
 ```
 #Admin mode - if auto-elevate is enabled, this will be set to $true
