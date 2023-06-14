@@ -221,7 +221,7 @@ $complianceFlag = $false#>
 #Function for AD Computer or User Lookup, depending on the value of $ADLookupType parameter - DISABLED FOR INITIAL RELEASE, WILL BE RE-ENABLED IN FUTURE, after fixing bugs
 
 function ADLookup {
-    <# 
+<# 
 .NAME
     Active Directory Explorer
 .SYNOPSIS
