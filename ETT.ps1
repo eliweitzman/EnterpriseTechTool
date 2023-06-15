@@ -259,6 +259,7 @@ function ADLookup {
     $ADForm.MinimizeBox = $false
     $ADForm.ShowIcon = $false
     $ADForm.TopMost = $true
+    $ADForm.BackColor = $BGcolor
 
     #Label next to Search Field - Call it "Search Query:"
     $SearchLabel = New-Object System.Windows.Forms.Label
@@ -267,7 +268,7 @@ function ADLookup {
     $SearchLabel.Height = 20
     $SearchLabel.Text = "Search Query:"
     $SearchLabel.Font = New-Object System.Drawing.Font("Arial", 11)
-    $SearchLabel.ForeColor = "Black"
+    $SearchLabel.ForeColor = $TextColor
     $SearchLabel.TabIndex = 0
     $SearchLabel.TextAlign = "MiddleLeft"
     $SearchLabel.UseMnemonic = $false
@@ -319,8 +320,8 @@ function ADLookup {
     $SearchButton.Height = 23
     $SearchButton.Text = "Search"
     $SearchButton.Font = New-Object System.Drawing.Font("Arial", 10)
-    $SearchButton.BackColor = "White"
-    $SearchButton.ForeColor = "Black"
+    $SearchButton.BackColor = $BrandColor
+    $SearchButton.ForeColor = $ButtonText
     $SearchButton.FlatStyle = "Flat"
     $SearchButton.TabIndex = 1
     $ADForm.Controls.Add($SearchButton)
@@ -332,7 +333,7 @@ function ADLookup {
     $DomainLabel.Height = 20
     $DomainLabel.Text = "Domain:"
     $DomainLabel.Font = New-Object System.Drawing.Font("Arial", 11)
-    $DomainLabel.ForeColor = "Black"
+    $DomainLabel.ForeColor = $TextColor
     $DomainLabel.TabIndex = 0
     $DomainLabel.TextAlign = "MiddleLeft"
     $DomainLabel.UseMnemonic = $false
@@ -1426,6 +1427,7 @@ $menuAD.Add_Click({
             ADLookup
         }
         catch {
+            ADLookup #TEMP
             $wshell = New-Object -ComObject Wscript.Shell
             $wshell.Popup("RSAT AD Tools or your permissions level are not compliant. Please install RSAT AD tools or use an entitled account and try again.", 0, "RSAT", 64)
         }
