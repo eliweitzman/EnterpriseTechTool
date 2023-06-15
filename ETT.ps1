@@ -1427,7 +1427,6 @@ $menuAD.Add_Click({
             ADLookup
         }
         catch {
-            ADLookup #TEMP
             $wshell = New-Object -ComObject Wscript.Shell
             $wshell.Popup("RSAT AD Tools or your permissions level are not compliant. Please install RSAT AD tools or use an entitled account and try again.", 0, "RSAT", 64)
         }
