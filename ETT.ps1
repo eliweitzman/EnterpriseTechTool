@@ -126,6 +126,7 @@ $LoadingForm.MaximizeBox = $false
 $LoadingForm.MinimizeBox = $false
 $LoadingForm.ShowIcon = $false
 $LoadingForm.TopMost = $true
+$LoadingForm.AutoScale = $true
 $LoadingForm.BackColor = $BGcolor
 
 #Loading Label
