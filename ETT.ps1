@@ -732,9 +732,9 @@ function LAPSTool {
                     $tenantID = Read-Host -Prompt "Enter the Azure AD Tenant ID"
                     $clientID = Read-Host -Prompt "Enter the Azure AD Client ID"
 
-                    #Next, actually connect to the MS Graph API
+                    #Connect to the MS Graph API
                     Connect-MgGraph -TenantId $tenantID -ClientId $clientID
-                    #Now, get the password
+                    #Get the password
                     $lapsResult = Get-LapsAADPassword -DeviceIds $hostnameInput.Text -AsPlainText
                     #If the output is null, the computer is not in Azure AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
                     if ($null -eq $lapsResult) {
