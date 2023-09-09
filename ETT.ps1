@@ -538,7 +538,7 @@ function LAPSTool {
 
     #To the right of the checkbox for using Windows LAPS, add a LAPS Azure AD option checkbox
     $azureLaps = New-Object system.Windows.Forms.CheckBox
-    $azureLaps.text = "Use Azure AD LAPS"
+    $azureLaps.text = "Use Azure AD LAPS (ALPHA)"
     $azureLaps.AutoSize = $true
     $azureLaps.width = 25
     $azureLaps.height = 10
