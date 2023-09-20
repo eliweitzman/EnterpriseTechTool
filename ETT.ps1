@@ -1052,6 +1052,11 @@ $menuRebootQuick = New-Object System.Windows.Forms.ToolStripMenuItem
 #AD Tab
 $menuAD = New-Object System.Windows.Forms.ToolStripMenuItem
 
+#Windows Tools
+$menuWindowsTools = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuWindowsUpdateCheck = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuWindowsActivation = New-Object System.Windows.Forms.ToolStripMenuItem
+
 #One-Off Tabs
 $menuFeatures = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuExit = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1468,6 +1473,49 @@ $menuAD.Add_Click({
         }
     })
 $outputsuppressed = $menu.Items.Add($menuAD)
+
+#Windows Tools Tab
+$menuWindowsTools.Text = "Windows Tools"
+$outputsuppressed = $menu.Items.Add($menuWindowsTools)
+
+#Windows Update Check Button - Checks for Windows Updates
+$menuWindowsUpdateCheck.Text = "Check for Windows Updates"
+$menuWindowsUpdateCheck.Add_Click({
+        #Check for Windows Updates
+        $updates = (New-Object -ComObject Microsoft.Update.Session).CreateupdateSearcher().Search("IsHidden=0 and IsInstalled=0").Updates | Select-Object Title
+        #Check if updates are available, if blank then no updates are available
+        if ($updates -eq $null) {
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("No updates available.", 0, "Windows Updates", 64)
+        }
+        else {
+            #Updates are available, so display them in a popup
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("Updates Available:" + "`n" + $updates, 0, "Windows Updates", 64)
+        }
+    })
+$menuWindowsUpdateCheck.BackColor = $BGcolor
+$menuWindowsUpdateCheck.ForeColor = $TextColor
+$outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsUpdateCheck)
+
+#Windows Activation Button - Checks Windows Activation Status
+$menuWindowsActivation.Text = "Check Windows Activation Status"
+$menuWindowsActivation.Add_Click({
+        #First, check if admin mode is enabled
+        if ($adminmode -eq $true) {
+            #Check Windows Activation Status
+            $result = (Get-WmiObject -query 'select * from SoftwareLicensingService').OA3xOriginalProductKey
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("Windows Activation Key: $result", 0, "Windows Activation Status", 64)
+        } else {
+            #Admin mode is not enabled, so run the command in a sub-process shell, as admin, and show a popup
+            Start-Process powershell.exe -Verb runAs -ArgumentList '-Command', 'Get-WmiObject -query ''select * from SoftwareLicensingService'' | select OA3xOriginalProductKey | Out-File -FilePath C:\Temp\WindowsActivation.txt; $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup("Windows Activation Key copied to C:\Temp\WindowsActivation.txt", 0, "Windows Activation Status", 64)' -Wait          
+        }
+})
+$menuWindowsActivation.BackColor = $BGcolor
+$menuWindowsActivation.ForeColor = $TextColor
+$outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsActivation)
+
 
 #Features List Button - Displays a list of features
 $menuFeatures.Text = "Features"
