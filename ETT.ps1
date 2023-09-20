@@ -1475,7 +1475,7 @@ $menuAD.Add_Click({
 $outputsuppressed = $menu.Items.Add($menuAD)
 
 #Windows Tools Tab
-$menuWindowsTools.Text = "Windows Tools"
+$menuWindowsTools.Text = "Windows"
 $outputsuppressed = $menu.Items.Add($menuWindowsTools)
 
 #Windows Update Check Button - Checks for Windows Updates
@@ -1498,8 +1498,8 @@ $menuWindowsUpdateCheck.BackColor = $BGcolor
 $menuWindowsUpdateCheck.ForeColor = $TextColor
 $outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsUpdateCheck)
 
-#Windows Activation Button - Checks Windows Activation Status
-$menuWindowsActivation.Text = "Check Windows Activation Status"
+#Windows Activation Button - Windows Activation Key
+$menuWindowsActivation.Text = "Get Windows Activation Key"
 $menuWindowsActivation.Add_Click({
         #First, check if admin mode is enabled
         if ($adminmode -eq $true) {
