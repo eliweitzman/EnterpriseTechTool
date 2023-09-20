@@ -831,6 +831,15 @@ Storage: $drivespace
 Storage Type: $drivetype
 "@
 
+#Create notification framework
+if ($ticketType = "Jira") {
+    #Create a Jira Ticket with the device info 
+}elseif ($ticketType = "ServiceNow") {
+    <# Action to perform if the condition is true #>
+} else {
+    <# Action to perform if the condition is false #>
+}
+
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
 $ETT.ClientSize = New-Object System.Drawing.Point(519, 330)
