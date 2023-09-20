@@ -1509,7 +1509,7 @@ $menuWindowsActivation.Add_Click({
             $wshell.Popup("Windows Activation Key: $result", 0, "Windows Activation Status", 64)
         } else {
             #Admin mode is not enabled, so run the command in a sub-process shell, as admin, and show a popup
-            Start-Process powershell.exe -Verb runAs -ArgumentList '-Command', 'Get-WmiObject -query ''select * from SoftwareLicensingService'' | select OA3xOriginalProductKey | Out-File -FilePath C:\Temp\WindowsActivation.txt; $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup("Windows Activation Key copied to C:\Temp\WindowsActivation.txt", 0, "Windows Activation Status", 64)' -Wait          
+            Start-Process powershell.exe -Verb runAs -ArgumentList '-Command', 'Get-WmiObject -query ''select * from SoftwareLicensingService'' | select OA3xOriginalProductKey | Out-File -FilePath C:\Temp\WindowsActivation.txt; $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup("Windows Activation Key copied to C:\Temp\WindowsActivation.txt", 0, "Windows Activation Status", 64)' -Wait         
         }
 })
 $menuWindowsActivation.BackColor = $BGcolor
