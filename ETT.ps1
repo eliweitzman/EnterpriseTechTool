@@ -543,6 +543,9 @@ function LAPSTool {
     $azureLaps.width = 25
     $azureLaps.height = 10
     $azureLaps.location = New-Object System.Drawing.Point(150, 60)
+    #Disable and Hide Azure LAPS until it is ready for release and tested
+    $azureLaps.Enabled = $false
+    $azureLaps.Visible = $false
 
     #Checkbox for using alternate credentials
     $altCreds = New-Object system.Windows.Forms.CheckBox
