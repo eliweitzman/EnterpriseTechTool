@@ -1069,6 +1069,9 @@ $menuWindowsTools = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuWindowsUpdateCheck = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuWindowsActivation = New-Object System.Windows.Forms.ToolStripMenuItem
 
+#SCCM Tools
+$sccmClientTools = New-Object System.Windows.Forms.ToolStripMenuItem
+
 #One-Off Tabs
 $menuFeatures = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuExit = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1541,6 +1544,55 @@ $menuFeatures.Add_Click({
     - Force Policy Sync", 0, "Functions", 64)
     })
 $outputsuppressed = $menu.Items.Add($menuFeatures)
+
+#SCCM Functions Button - Displays a list of SCCM Client functions if the client is present on the machine
+#Check to see if the SCCM client is installed and we have the required WMI class
+$sccmClass = Get-WmiObject -Class "SMS_Client" -List -Namespace "root\CCM" -ErrorAction SilentlyContinue
+$sccmClassExists = $sccmClass -ne $null
+
+#Create the SCCM Trigger Schedule Table
+$sccmTSTable = [ordered]@{}
+$sccmTSTable.Add("Application Deployment Evaluation Cycle", "{00000000-0000-0000-0000-000000000121}")
+$sccmTSTable.Add("Discovery Data Collection Cycle", "{00000000-0000-0000-0000-000000000103}")
+$sccmTSTable.Add("File Collection Cycle","{00000000-0000-0000-0000-000000000104}")
+$sccmTSTable.Add("Hardware Inventory Cycle","{00000000-0000-0000-0000-000000000001}")
+$sccmTSTable.Add("Machine Policy Retrieval","{00000000-0000-0000-0000-000000000021}")
+$sccmTSTable.Add("Machine Policy Evaluation Cycle","{00000000-0000-0000-0000-000000000022}")
+$sccmTSTable.Add("Software Inventory Cycle","{00000000-0000-0000-0000-000000000002}" )
+$sccmTSTable.Add("Software Metering Usage Report Cycle", "{00000000-0000-0000-0000-000000000106}")
+$sccmTSTable.Add("Software Updates Deployment Evaluation Cycle", "{00000000-0000-0000-0000-000000000114}")
+$sccmTSTable.Add("User Policy Retrieval", "{00000000-0000-0000-0000-000000000026}")
+$sccmTSTable.Add("User Policy Evaluation Cycle", "{00000000-0000-0000-0000-000000000027}")
+$sccmTSTable.Add("Windows Installer Source List Update Cycle", "{00000000-0000-0000-0000-000000000107}")
+
+#SCCM Trigger helper function
+function TriggerSCCMClientFunction {
+    param (
+        $TriggerScheduleGUID,
+        $TriggerScheduleName
+    )
+    Invoke-CimMethod -Namespace 'root\CCM' -ClassName SMS_Client -MethodName TriggerSchedule -Arguments @{sScheduleID=$TriggerScheduleGUID}
+    $wshell = New-Object -ComObject Wscript.Shell
+        $wshell.Popup("SCCM Client Task $TriggerScheduleName Triggered. The selected task will run and might take several minutes to finish.", 0, "SCCM Client Task", 64)
+}
+
+#SCCM Tools Menu Construction
+#If the SCCM Client is not installed on the computer, the menu option will be unavailable.
+if($sccmClassExists)
+{
+    $outputsuppressed = $menu.Items.Add($sccmClientTools)
+}
+$sccmClientTools.Text = "SCCM Tools"
+
+foreach ($key in $($sccmTSTable.Keys))
+{
+    $tmpButton = New-Object System.Windows.Forms.ToolStripMenuItem
+    $tmpButton.Text = $key
+    $tmpButton.Add_Click({
+        TriggerSCCMClientFunction -TriggerScheduleGUID $sccmTSTable[$key] -TriggerScheduleName $key
+    })
+    $outputsuppressed = $sccmClientTools.DropDownItems.Add($tmpButton)
+}
 
 #Exit Button
 $menuExit.Text = "Exit"
