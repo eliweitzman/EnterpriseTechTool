@@ -15,7 +15,7 @@
 .AUTHOR
     Eli Weitzman
 .NOTES
-    Version:        1.1 - Dev
+    Version:        1.1
     Creation Date:  12-26-22
     Last Updated:   9-23-23
     Purpose/Change: 
