@@ -1588,6 +1588,8 @@ foreach ($key in $($sccmTSTable.Keys))
 {
     $tmpButton = New-Object System.Windows.Forms.ToolStripMenuItem
     $tmpButton.Text = $key
+    $tmpButton.BackColor = $BGcolor
+    $tmpButton.ForeColor = $TextColor
     $tmpButton.Add_Click({
         TriggerSCCMClientFunction -TriggerScheduleGUID $sccmTSTable[$key] -TriggerScheduleName $key
     })
