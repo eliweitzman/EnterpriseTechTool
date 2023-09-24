@@ -94,13 +94,12 @@ $SNuri = $null
 $SNtoken = $null
 
 #For email, set the SMTP server, port, and credentials here (if required), as well as the email address to send to
-$smtpServer = $null
-$smtpPort = $null
-$smtpCreds = $null
-$smtpSSL = $null
-$smtpFrom = $null
-$smtpTo = $null
-
+$emailServer = $null
+$emailPort = $null
+$emailCreds = $null
+$emailSSL = $null
+$emailFrom = $null
+$emailTo = $null
 
 
 ## END INITIAL FLAGS
@@ -146,7 +145,6 @@ $LoadingForm.Text = "Loading ETT..."
 $LoadingForm.Width = 320
 $LoadingForm.Height = 125
 $LoadingForm.StartPosition = "CenterScreen"
-$LoadingForm.FormBorderStyle = "Fixed3D"
 $LoadingForm.MaximizeBox = $false
 $LoadingForm.MinimizeBox = $false
 $LoadingForm.ShowIcon = $false
@@ -168,7 +166,7 @@ $LoadingLabel.TextAlign = "MiddleCenter"
 #Loading Progress Bar
 $LoadingProgressBar = New-Object System.Windows.Forms.ProgressBar
 $LoadingProgressBar.Location = New-Object System.Drawing.Point(10, 40)
-$LoadingProgressBar.Size = New-Object System.Drawing.Size(280, 20)
+$LoadingProgressBar.Size = New-Object System.Drawing.Size(284, 20)
 $LoadingProgressBar.Style = "Marquee"
 $LoadingProgressBar.MarqueeAnimationSpeed = 10
 $LoadingProgressBar.TabIndex = 1
