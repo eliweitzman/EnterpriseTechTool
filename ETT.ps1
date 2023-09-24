@@ -15,10 +15,10 @@
 .AUTHOR
     Eli Weitzman
 .NOTES
-    Version:        1.0
+    Version:        1.1 - Dev
     Creation Date:  12-26-22
-    Last Updated:   5-21-23
-    Purpose/Change: Admin conditional fixes 
+    Last Updated:   9-23-23
+    Purpose/Change: 
 
 .LICENSE
     BSD 3-Clause License
@@ -90,15 +90,17 @@ $jiraProject = $null
 
 
 #IF ServiceNow is selected, set the ServiceNow URL, token, and table here
-$serviceNowURL = $null
-$serviceNowToken = $null
-$serviceNowTable = $null
+$SNuri = $null
+$SNtoken = $null
 
-#IF Email is selected, set the SMTP server, port, and credentials here
+#For email, set the SMTP server, port, and credentials here (if required), as well as the email address to send to
 $smtpServer = $null
 $smtpPort = $null
-$smtpUsername = $null
-$smtpPassword = $null
+$smtpCreds = $null
+$smtpSSL = $null
+$smtpFrom = $null
+$smtpTo = $null
+
 
 
 ## END INITIAL FLAGS
@@ -854,16 +856,22 @@ Storage: $drivespace
 Storage Type: $drivetype
 "@
 
-#Create notification framework
-if ($ticketType = "Jira") {
-    #Create a title for the ticket using the current time
-    $ticketTitle = "ETT Report " + (Get-Date -Format "MM/dd/yyyy HH:mm:ss") + " for " + $hostname
+function notificationPush {
+    param (
+        #Get message body
+        [Parameter(Mandatory=$true)]
+        [string]$messageBody
+    )
+    #Create notification framework
+    if ($ticketType = "Jira") {
+        #Create a title for the ticket using the current time
+        $ticketTitle = "ETT Report " + (Get-Date -Format "MM/dd/yyyy HH:mm:ss") + " for " + $hostname
 
-    #Assume the ticket body is the device info dump
-    $ticketBody = $deviceInfo
+        #Assume the ticket body is the device info dump
+        $ticketBody = $messageBody
 
-    #Create a JSON object for the ticket
-    $jiraJSON = @"
+        #Create a JSON object for the ticket
+        $jiraJSON = @"
 {
     "fields": {
        "project":
@@ -879,46 +887,74 @@ if ($ticketType = "Jira") {
 
 "@
     
-#Send the ticket to Jira
-Invoke-RestMethod -Uri $jiraURL -Method Post -Headers $jiraHeaders -Body $jiraJSON -ContentType "application/json"
+        #Send the ticket to Jira
+        Invoke-RestMethod -Uri $jiraURL -Method Post -Headers $jiraHeaders -Body $jiraJSON -ContentType "application/json"
 
-}elseif ($ticketType = "ServiceNow") {
-    
-#Create a title for the ticket using the current time
-    $ticketTitle = "ETT Report " + (Get-Date -Format "MM/dd/yyyy HH:mm:ss") + " for " + $hostname
-
-    #Assume the ticket body is the device info dump
-    $ticketBody = $deviceInfo
-
-    # Define headers
-    $headers = @{
-        Authorization = "Bearer $token"
-        "Content-Type" = "application/json"
     }
+    elseif ($ticketType = "ServiceNow") {
+    
+        #Create a title for the ticket using the current time
+        $ticketTitle = "ETT Report " + (Get-Date -Format "MM/dd/yyyy HH:mm:ss") + " for " + $hostname
 
-    # Define the body
-    $body = @{
-    short_description = "Enterprise Tech Tool Report"
-    description       = $ticketText
-    urgency           = 1 # 1 - High, 2 - Medium, 3 - Low
-    impact            = 1 # 1 - High, 2 - Medium, 3 - Low
-    } | ConvertTo-Json
+        #Assume the ticket body is the device info dump
+        $ticketBody = $messageBody
+
+        # Define headers
+        $headers = @{
+            Authorization  = "Bearer $SNtoken"
+            "Content-Type" = "application/json"
+        }
+
+        # Define the body
+        $body = @{
+            short_description = $ticketTitle
+            description       = $ticketBody
+            urgency           = 1 # 1 - High, 2 - Medium, 3 - Low
+            impact            = 1 # 1 - High, 2 - Medium, 3 - Low
+        } | ConvertTo-Json
 
 
-    # Send the request
-    $response = Invoke-RestMethod -Uri $SNuri -Method Post -Body $body -Headers $headers
+        # Send the request
+        Invoke-RestMethod -Uri $SNuri -Method Post -Body $body -Headers $headers
 
-} elseif ($ticketType = "Email") {
-    #Create a title for the ticket using the current time
-    $ticketTitle = "ETT Report " + (Get-Date -Format "MM/dd/yyyy HH:mm:ss") + " for " + $hostname
+    }
+    elseif ($ticketType = "Email") {
+        #Create a title for the ticket using the current time
+        $ticketTitle = "ETT Report " + (Get-Date -Format "MM/dd/yyyy HH:mm:ss") + " for " + $hostname
 
-    #Assume the ticket body is the device info dump
-    $ticketBody = $deviceInfo
+        #Assume the ticket body is the device info dump
+        $ticketBody = $messageBody
 
-    #Send the ticket to the email address
-    Send-MailMessage -To $emailAddress -From $emailFrom -Subject $ticketTitle -Body $ticketBody -SmtpServer $emailServer
-}else {
-    #Do nothing
+        #Send the ticket to email
+        if ($emailSSL -eq $true) {
+            Send-MailMessage -To $emailTo -From $emailFrom -Subject $ticketTitle -Body $ticketBody -SmtpServer $emailServer -Port $emailPort -UseSsl -Credential $emailCreds
+        }
+        elseif ($emailSSL -eq $false) {
+            Send-MailMessage -To $emailTo -From $emailFrom -Subject $ticketTitle -Body $ticketBody -SmtpServer $emailServer -Port $emailPort -Credential $emailCreds
+        }
+        elseif ($null -eq $emailSSL) {
+            Send-MailMessage -To $emailTo -From $emailFrom -Subject $ticketTitle -Body $ticketBody -SmtpServer $emailServer -Port $emailPort
+        }
+        elseif ($null -eq $emailPort) {
+            Send-MailMessage -To $emailTo -From $emailFrom -Subject $ticketTitle -Body $ticketBody -SmtpServer $emailServer
+        }
+        elseif ($null -eq $emailServer) {
+            Send-MailMessage -To $emailTo -From $emailFrom -Subject $ticketTitle -Body $ticketBody
+        }
+        elseif ($null -eq $emailFrom) {
+            Send-MailMessage -To $emailTo -Subject $ticketTitle -Body $ticketBody -SmtpServer $emailServer
+        }
+        elseif ($null -eq $emailTo) {
+            #Return an error if the emailTo field is null
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("Email To field is null. Please check your configuration.", 0, "Error", 0x1)
+        }
+
+    }
+    else {
+        #Do nothing
+    }
+    
 }
 
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
@@ -1124,6 +1160,7 @@ $cpuInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $adminInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoPrint = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoClipboard = New-Object System.Windows.Forms.ToolStripMenuItem
+$deviceInfoTicket = New-Object System.Windows.Forms.ToolStripMenuItem
 
 #HELP TAB
 $menuHelp = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1374,6 +1411,28 @@ $deviceInfoClipboard.ForeColor = $TextColor
 $deviceInfoClipboard.ToolTipText = "Copies device info to clipboard." + "`nClick to copy device info to clipboard."
 $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoClipboard)
 
+#Device Info Ticket
+if ($null -eq $ticketType){
+    #If ticket type is null, do nothing, and disable the button
+    $deviceInfoTicket.Text = "Send Device Info to Ticketing System"
+    $deviceInfoTicket.BackColor = $BGcolor
+    $deviceInfoTicket.ForeColor = $TextColor
+    $deviceInfoTicket.Enabled = $false
+    $deviceInfoTicket.ToolTipText = "Sends device info to ticketing system. Not configured presently."
+    $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoTicket)
+}else{
+    #If ticket type is not null, run the ticketing function
+    $deviceInfoTicket.Text = "Send Device Info to $ticketType"
+    $deviceInfoTicket.Add_Click({
+            #Run the ticketing function
+            notificationPush -messageBody $deviceInfo
+        })
+    $deviceInfoTicket.BackColor = $BGcolor
+    $deviceInfoTicket.ForeColor = $TextColor
+    $deviceInfoTicket.ToolTipText = "Sends device info to $ticketType." + "`nClick to send device info to $ticketType."
+    $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoTicket)
+}
+
 #Help Tab
 $menuHelp.Text = "Help"
 $outputsuppressed = $menu.Items.Add($menuHelp)
@@ -1603,11 +1662,12 @@ $menuWindowsActivation.Add_Click({
             $result = (Get-WmiObject -query 'select * from SoftwareLicensingService').OA3xOriginalProductKey
             $wshell = New-Object -ComObject Wscript.Shell
             $wshell.Popup("Windows Activation Key: $result", 0, "Windows Activation Status", 64)
-        } else {
+        }
+        else {
             #Admin mode is not enabled, so run the command in a sub-process shell, as admin, and show a popup
             Start-Process powershell.exe -Verb runAs -ArgumentList '-Command', 'Get-WmiObject -query ''select * from SoftwareLicensingService'' | select OA3xOriginalProductKey | Out-File -FilePath C:\Temp\WindowsActivation.txt; $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup("Windows Activation Key copied to C:\Temp\WindowsActivation.txt", 0, "Windows Activation Status", 64)' -Wait         
         }
-})
+    })
 $menuWindowsActivation.BackColor = $BGcolor
 $menuWindowsActivation.ForeColor = $TextColor
 $outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsActivation)
@@ -1635,11 +1695,11 @@ $sccmClassExists = $sccmClass -ne $null
 $sccmTSTable = [ordered]@{}
 $sccmTSTable.Add("Application Deployment Evaluation Cycle", "{00000000-0000-0000-0000-000000000121}")
 $sccmTSTable.Add("Discovery Data Collection Cycle", "{00000000-0000-0000-0000-000000000103}")
-$sccmTSTable.Add("File Collection Cycle","{00000000-0000-0000-0000-000000000104}")
-$sccmTSTable.Add("Hardware Inventory Cycle","{00000000-0000-0000-0000-000000000001}")
-$sccmTSTable.Add("Machine Policy Retrieval","{00000000-0000-0000-0000-000000000021}")
-$sccmTSTable.Add("Machine Policy Evaluation Cycle","{00000000-0000-0000-0000-000000000022}")
-$sccmTSTable.Add("Software Inventory Cycle","{00000000-0000-0000-0000-000000000002}" )
+$sccmTSTable.Add("File Collection Cycle", "{00000000-0000-0000-0000-000000000104}")
+$sccmTSTable.Add("Hardware Inventory Cycle", "{00000000-0000-0000-0000-000000000001}")
+$sccmTSTable.Add("Machine Policy Retrieval", "{00000000-0000-0000-0000-000000000021}")
+$sccmTSTable.Add("Machine Policy Evaluation Cycle", "{00000000-0000-0000-0000-000000000022}")
+$sccmTSTable.Add("Software Inventory Cycle", "{00000000-0000-0000-0000-000000000002}" )
 $sccmTSTable.Add("Software Metering Usage Report Cycle", "{00000000-0000-0000-0000-000000000106}")
 $sccmTSTable.Add("Software Updates Deployment Evaluation Cycle", "{00000000-0000-0000-0000-000000000114}")
 $sccmTSTable.Add("User Policy Retrieval", "{00000000-0000-0000-0000-000000000026}")
@@ -1652,28 +1712,26 @@ function TriggerSCCMClientFunction {
         $TriggerScheduleGUID,
         $TriggerScheduleName
     )
-    Invoke-CimMethod -Namespace 'root\CCM' -ClassName SMS_Client -MethodName TriggerSchedule -Arguments @{sScheduleID=$TriggerScheduleGUID}
+    Invoke-CimMethod -Namespace 'root\CCM' -ClassName SMS_Client -MethodName TriggerSchedule -Arguments @{sScheduleID = $TriggerScheduleGUID }
     $wshell = New-Object -ComObject Wscript.Shell
-        $wshell.Popup("SCCM Client Task $TriggerScheduleName Triggered. The selected task will run and might take several minutes to finish.", 0, "SCCM Client Task", 64)
+    $wshell.Popup("SCCM Client Task $TriggerScheduleName Triggered. The selected task will run and might take several minutes to finish.", 0, "SCCM Client Task", 64)
 }
 
 #SCCM Tools Menu Construction
 #If the SCCM Client is not installed on the computer, the menu option will be unavailable.
-if($sccmClassExists)
-{
+if ($sccmClassExists) {
     $outputsuppressed = $menu.Items.Add($sccmClientTools)
 }
 $sccmClientTools.Text = "SCCM Tools"
 
-foreach ($key in $($sccmTSTable.Keys))
-{
+foreach ($key in $($sccmTSTable.Keys)) {
     $tmpButton = New-Object System.Windows.Forms.ToolStripMenuItem
     $tmpButton.Text = $key
     $tmpButton.BackColor = $BGcolor
     $tmpButton.ForeColor = $TextColor
     $tmpButton.Add_Click({
-        TriggerSCCMClientFunction -TriggerScheduleGUID $sccmTSTable[$key] -TriggerScheduleName $key
-    })
+            TriggerSCCMClientFunction -TriggerScheduleGUID $sccmTSTable[$key] -TriggerScheduleName $key
+        })
     $outputsuppressed = $sccmClientTools.DropDownItems.Add($tmpButton)
 }
 
