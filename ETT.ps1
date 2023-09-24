@@ -78,6 +78,29 @@ $drivespaceMinimum = 20 #SET MINIMUM DRIVESPACE IN GB
 $winverCheckActive = $false
 $winverTarget = '22h2' #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
 
+#Notification Framework
+
+#Set ticketing system - CHANGE THIS TO MATCH YOUR PREFERENCE (Jira or ServiceNow or Email. Null will disable)
+$ticketType = $null
+
+#IF Jira is selected, set the Jira URL and issue type here
+$jiraURL = $null
+$jiraIssueType = $null
+$jiraProject = $null
+
+
+#IF ServiceNow is selected, set the ServiceNow URL, token, and table here
+$serviceNowURL = $null
+$serviceNowToken = $null
+$serviceNowTable = $null
+
+#IF Email is selected, set the SMTP server, port, and credentials here
+$smtpServer = $null
+$smtpPort = $null
+$smtpUsername = $null
+$smtpPassword = $null
+
+
 ## END INITIAL FLAGS
 
 #Determine Dark/Light Mode
@@ -833,11 +856,69 @@ Storage Type: $drivetype
 
 #Create notification framework
 if ($ticketType = "Jira") {
-    #Create a Jira Ticket with the device info 
+    #Create a title for the ticket using the current time
+    $ticketTitle = "ETT Report " + (Get-Date -Format "MM/dd/yyyy HH:mm:ss") + " for " + $hostname
+
+    #Assume the ticket body is the device info dump
+    $ticketBody = $deviceInfo
+
+    #Create a JSON object for the ticket
+    $jiraJSON = @"
+{
+    "fields": {
+       "project":
+       {
+          "key": "$jiraProject"
+       },
+       "summary": "$ticketTitle",
+       "description": "$ticketBody",
+       "issuetype": {
+          "name": "$jiraIssueType"
+         }
+    }
+
+"@
+    
+#Send the ticket to Jira
+Invoke-RestMethod -Uri $jiraURL -Method Post -Headers $jiraHeaders -Body $jiraJSON -ContentType "application/json"
+
 }elseif ($ticketType = "ServiceNow") {
-    <# Action to perform if the condition is true #>
-} else {
-    <# Action to perform if the condition is false #>
+    
+#Create a title for the ticket using the current time
+    $ticketTitle = "ETT Report " + (Get-Date -Format "MM/dd/yyyy HH:mm:ss") + " for " + $hostname
+
+    #Assume the ticket body is the device info dump
+    $ticketBody = $deviceInfo
+
+    # Define headers
+    $headers = @{
+        Authorization = "Bearer $token"
+        "Content-Type" = "application/json"
+    }
+
+    # Define the body
+    $body = @{
+    short_description = "Enterprise Tech Tool Report"
+    description       = $ticketText
+    urgency           = 1 # 1 - High, 2 - Medium, 3 - Low
+    impact            = 1 # 1 - High, 2 - Medium, 3 - Low
+    } | ConvertTo-Json
+
+
+    # Send the request
+    $response = Invoke-RestMethod -Uri $SNuri -Method Post -Body $body -Headers $headers
+
+} elseif ($ticketType = "Email") {
+    #Create a title for the ticket using the current time
+    $ticketTitle = "ETT Report " + (Get-Date -Format "MM/dd/yyyy HH:mm:ss") + " for " + $hostname
+
+    #Assume the ticket body is the device info dump
+    $ticketBody = $deviceInfo
+
+    #Send the ticket to the email address
+    Send-MailMessage -To $emailAddress -From $emailFrom -Subject $ticketTitle -Body $ticketBody -SmtpServer $emailServer
+}else {
+    #Do nothing
 }
 
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
