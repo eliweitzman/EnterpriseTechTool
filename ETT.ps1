@@ -101,6 +101,10 @@ $emailSSL = $null
 $emailFrom = $null
 $emailTo = $null
 
+#ETT UI Options
+$backgroundImagePath = "" #Set this to a web URL or local path to change the BG image of ETT
+$ettHeaderTextColor = [System.Drawing.Color]::FromName("White")#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
+
 
 ## END INITIAL FLAGS
 
@@ -967,6 +971,16 @@ $ETT.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($PSHOME + "\powershell.
 $ETT.TopMost = $false
 $ETT.BackColor = $BGcolor
 
+#Check to see if we have a BG Image, if we do, apply it.
+if($backgroundImagePath -ne "")
+{
+    $wc = New-Object System.Net.WebClient
+    $wcStream = $wc.OpenRead($backgroundImagePath)
+    $Image = [system.drawing.image]::FromStream($wcStream)
+    $ETT.BackgroundImage = $Image
+    $ETT.BackgroundImageLayout = [System.Windows.Forms.ImageLayout]::Stretch
+}
+
 #Import and load in logo icon
 $Logo = New-Object system.Windows.Forms.PictureBox
 $Logo.width = 126
@@ -980,6 +994,7 @@ if ($null -eq $LogoLocation) {
 
 $Heading = New-Object system.Windows.Forms.Label
 $Heading.text = "Enterprise Tech Tool"
+$Heading.BackColor = [System.Drawing.Color]::FromName("Transparent")
 $Heading.AutoSize = $true
 $Heading.width = 25
 $Heading.height = 10
@@ -993,6 +1008,10 @@ else {
 
 $Heading.Font = New-Object System.Drawing.Font('Segoe UI', 25, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
 $Heading.ForeColor = $TextColor
+if($null -ne $ETT.BackgroundImage)
+{
+    $Heading.ForeColor = $ettHeaderTextColor
+}
 
 #Create Toast Notification Stack
 $ToastStack = New-Object System.Windows.Forms.NotifyIcon
