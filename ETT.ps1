@@ -65,6 +65,10 @@ $adminmode = $false
 $BrandColor = '#023a24' #Set the color of the form, currently populated with a hex value.
 $LogoLocation = $null #If you want to use a custom logo, set the path here. Otherwise, leave as $null
 
+#ETT UI Options
+$backgroundImagePath = "" #Set this to a web URL or local path to change the BG image of ETT
+$ettHeaderTextColor = [System.Drawing.Color]::FromName("White")#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
+
 #Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 #RAM Check
 $ramCheckActive = $false
@@ -78,7 +82,7 @@ $drivespaceMinimum = 20 #SET MINIMUM DRIVESPACE IN GB
 $winverCheckActive = $false
 $winverTarget = '22h2' #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
 
-#Notification Framework
+<#Notification Framework - COMING IN 1.2.1
 
 #Set ticketing system - CHANGE THIS TO MATCH YOUR PREFERENCE (Jira or ServiceNow or Email. Null will disable)
 $ticketType = $null
@@ -100,10 +104,7 @@ $emailCreds = $null
 $emailSSL = $null
 $emailFrom = $null
 $emailTo = $null
-
-#ETT UI Options
-$backgroundImagePath = "" #Set this to a web URL or local path to change the BG image of ETT
-$ettHeaderTextColor = [System.Drawing.Color]::FromName("White")#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
+#>
 
 
 ## END INITIAL FLAGS
@@ -962,7 +963,7 @@ function notificationPush {
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
 $ETT.ClientSize = New-Object System.Drawing.Point(519, 330)
-$ETT.text = "Eli's Enterprise Tech Tool V1.0"
+$ETT.text = "Eli's Enterprise Tech Tool V1.1"
 $ETT.StartPosition = 'CenterScreen'
 $ETT.MaximizeBox = $false
 $ETT.MaximumSize = $ETT.Size
@@ -1208,7 +1209,6 @@ $menuWindowsActivation = New-Object System.Windows.Forms.ToolStripMenuItem
 $sccmClientTools = New-Object System.Windows.Forms.ToolStripMenuItem
 
 #One-Off Tabs
-$menuFeatures = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuExit = New-Object System.Windows.Forms.ToolStripMenuItem
 
 #Keyboard Shortcuts
@@ -1435,7 +1435,7 @@ if ($null -eq $ticketType){
     $deviceInfoTicket.BackColor = $BGcolor
     $deviceInfoTicket.ForeColor = $TextColor
     $deviceInfoTicket.Enabled = $false
-    $deviceInfoTicket.ToolTipText = "Sends device info to ticketing system. Not configured presently."
+    $deviceInfoTicket.ToolTipText = "Sends device info to ticketing system. Not configured presently. Coming in 1.2.1"
     $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoTicket)
 }else{
     #If ticket type is not null, run the ticketing function
@@ -1683,20 +1683,6 @@ $menuWindowsActivation.Add_Click({
 $menuWindowsActivation.BackColor = $BGcolor
 $menuWindowsActivation.ForeColor = $TextColor
 $outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsActivation)
-
-
-#Features List Button - Displays a list of features
-$menuFeatures.Text = "Features"
-$menuFeatures.Add_Click({
-        $wshell = New-Object -ComObject Wscript.Shell
-        $wshell.Popup("Current Features:
-    - Auto-elevate to admin
-    - Clear last Windows login
-    - Check for app updates thru WinGet
-    - Retreive Local Admin Passwords thru LAPS
-    - Force Policy Sync", 0, "Functions", 64)
-    })
-$outputsuppressed = $menu.Items.Add($menuFeatures)
 
 #SCCM Functions Button - Displays a list of SCCM Client functions if the client is present on the machine
 #Check to see if the SCCM client is installed and we have the required WMI class
