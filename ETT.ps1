@@ -1673,17 +1673,12 @@ $outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsUpdateCheck)
 #Windows Activation Button - Windows Activation Key
 $menuWindowsActivation.Text = "Get Windows Activation Key"
 $menuWindowsActivation.Add_Click({
-        #First, check if admin mode is enabled
-        if ($adminmode -eq $true) {
-            #Check Windows Activation Status
-            $result = (Get-WmiObject -query 'select * from SoftwareLicensingService').OA3xOriginalProductKey
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Windows Activation Key: $result", 0, "Windows Activation Status", 64)
-        }
-        else {
-            #Admin mode is not enabled, so run the command in a sub-process shell, as admin, and show a popup
-            Start-Process powershell.exe -Verb runAs -ArgumentList '-Command', 'Get-WmiObject -query ''select * from SoftwareLicensingService'' | select OA3xOriginalProductKey | Out-File -FilePath C:\Temp\WindowsActivation.txt; $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup("Windows Activation Key copied to C:\Temp\WindowsActivation.txt", 0, "Windows Activation Status", 64)' -Wait         
-        }
+        $HardwareKey = (Get-WmiObject -query 'select * from SoftwareLicensingService' | Select OA3xOriginalProductKey).OA3xOriginalProductKey
+        
+        #Make popup window with the key, and a button to copy it to the clipboard
+        $wshell = New-Object -ComObject Wscript.Shell
+        $wshell.Popup("Windows Activation Key: " + $HardwareKey + "`n`nKey Copied to Clipboard.", 0, "Windows Activation Key", 64)
+        
     })
 $menuWindowsActivation.BackColor = $BGcolor
 $menuWindowsActivation.ForeColor = $TextColor
