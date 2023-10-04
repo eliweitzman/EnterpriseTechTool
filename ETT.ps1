@@ -1675,9 +1675,16 @@ $menuWindowsActivation.Text = "Get Windows Activation Key"
 $menuWindowsActivation.Add_Click({
         $HardwareKey = (Get-WmiObject -query 'select * from SoftwareLicensingService' | Select OA3xOriginalProductKey).OA3xOriginalProductKey
         
-        #Make popup window with the key, and a button to copy it to the clipboard
-        $wshell = New-Object -ComObject Wscript.Shell
-        $wshell.Popup("Windows Activation Key: " + $HardwareKey + "`n`nKey Copied to Clipboard.", 0, "Windows Activation Key", 64)
+        #Verify that the key is not null
+        if ($HardwareKey -eq $null -or $HardwareKey -eq "") {
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("No Windows Activation Key found in WMI." + "`n`nThis could be the result of running in a VM, or not stored in BIOS", 0, "Windows Activation", 64)
+        }
+        else {
+            #Key is not null, so display it in a popup
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("Windows Activation Key: " + $HardwareKey + "`n`nKey Copied to Clipboard.", 0, "Windows Activation Key", 64)
+        }
         
     })
 $menuWindowsActivation.BackColor = $BGcolor
