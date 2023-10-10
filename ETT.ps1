@@ -15,10 +15,10 @@
 .AUTHOR
     Eli Weitzman
 .NOTES
-    Version:        1.0
+    Version:        1.1
     Creation Date:  12-26-22
-    Last Updated:   5-21-23
-    Purpose/Change: Admin conditional fixes
+    Last Updated:   9-23-23
+    Purpose/Change: 
 
 .LICENSE
     BSD 3-Clause License
@@ -65,6 +65,10 @@ $adminmode = $false
 $BrandColor = '#023a24' #Set the color of the form, currently populated with a hex value.
 $LogoLocation = $null #If you want to use a custom logo, set the path here. Otherwise, leave as $null
 
+#ETT UI Options
+$backgroundImagePath = "" #Set this to a web URL or local path to change the BG image of ETT
+$ettHeaderTextColor = [System.Drawing.Color]::FromName("White")#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
+
 #Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 #RAM Check
 $ramCheckActive = $false
@@ -77,6 +81,31 @@ $drivespaceMinimum = 20 #SET MINIMUM DRIVESPACE IN GB
 #Windows Version Check
 $winverCheckActive = $false
 $winverTarget = '22h2' #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
+
+<#Notification Framework - COMING IN 1.2.1
+
+#Set ticketing system - CHANGE THIS TO MATCH YOUR PREFERENCE (Jira or ServiceNow or Email. Null will disable)
+$ticketType = $null
+
+#IF Jira is selected, set the Jira URL and issue type here
+$jiraURL = $null
+$jiraIssueType = $null
+$jiraProject = $null
+
+
+#IF ServiceNow is selected, set the ServiceNow URL, token, and table here
+$SNuri = $null
+$SNtoken = $null
+
+#For email, set the SMTP server, port, and credentials here (if required), as well as the email address to send to
+$emailServer = $null
+$emailPort = $null
+$emailCreds = $null
+$emailSSL = $null
+$emailFrom = $null
+$emailTo = $null
+#>
+
 
 ## END INITIAL FLAGS
 
@@ -121,11 +150,11 @@ $LoadingForm.Text = "Loading ETT..."
 $LoadingForm.Width = 320
 $LoadingForm.Height = 125
 $LoadingForm.StartPosition = "CenterScreen"
-$LoadingForm.FormBorderStyle = "Fixed3D"
 $LoadingForm.MaximizeBox = $false
 $LoadingForm.MinimizeBox = $false
 $LoadingForm.ShowIcon = $false
 $LoadingForm.TopMost = $true
+$LoadingForm.AutoScale = $true
 $LoadingForm.BackColor = $BGcolor
 
 #Loading Label
@@ -142,7 +171,7 @@ $LoadingLabel.TextAlign = "MiddleCenter"
 #Loading Progress Bar
 $LoadingProgressBar = New-Object System.Windows.Forms.ProgressBar
 $LoadingProgressBar.Location = New-Object System.Drawing.Point(10, 40)
-$LoadingProgressBar.Size = New-Object System.Drawing.Size(280, 20)
+$LoadingProgressBar.Size = New-Object System.Drawing.Size(284, 20)
 $LoadingProgressBar.Style = "Marquee"
 $LoadingProgressBar.MarqueeAnimationSpeed = 10
 $LoadingProgressBar.TabIndex = 1
@@ -259,6 +288,7 @@ function ADLookup {
     $ADForm.MinimizeBox = $false
     $ADForm.ShowIcon = $false
     $ADForm.TopMost = $true
+    $ADForm.BackColor = $BGcolor
 
     #Label next to Search Field - Call it "Search Query:"
     $SearchLabel = New-Object System.Windows.Forms.Label
@@ -267,7 +297,7 @@ function ADLookup {
     $SearchLabel.Height = 20
     $SearchLabel.Text = "Search Query:"
     $SearchLabel.Font = New-Object System.Drawing.Font("Arial", 11)
-    $SearchLabel.ForeColor = "Black"
+    $SearchLabel.ForeColor = $TextColor
     $SearchLabel.TabIndex = 0
     $SearchLabel.TextAlign = "MiddleLeft"
     $SearchLabel.UseMnemonic = $false
@@ -319,8 +349,8 @@ function ADLookup {
     $SearchButton.Height = 23
     $SearchButton.Text = "Search"
     $SearchButton.Font = New-Object System.Drawing.Font("Arial", 10)
-    $SearchButton.BackColor = "White"
-    $SearchButton.ForeColor = "Black"
+    $SearchButton.BackColor = $BrandColor
+    $SearchButton.ForeColor = $ButtonText
     $SearchButton.FlatStyle = "Flat"
     $SearchButton.TabIndex = 1
     $ADForm.Controls.Add($SearchButton)
@@ -332,7 +362,7 @@ function ADLookup {
     $DomainLabel.Height = 20
     $DomainLabel.Text = "Domain:"
     $DomainLabel.Font = New-Object System.Drawing.Font("Arial", 11)
-    $DomainLabel.ForeColor = "Black"
+    $DomainLabel.ForeColor = $TextColor
     $DomainLabel.TabIndex = 0
     $DomainLabel.TextAlign = "MiddleLeft"
     $DomainLabel.UseMnemonic = $false
@@ -534,6 +564,17 @@ function LAPSTool {
     $windowsLaps.height = 10
     $windowsLaps.location = New-Object System.Drawing.Point(17, 60)
 
+    #To the right of the checkbox for using Windows LAPS, add a LAPS Azure AD option checkbox
+    $azureLaps = New-Object system.Windows.Forms.CheckBox
+    $azureLaps.text = "Use Azure AD LAPS (ALPHA)"
+    $azureLaps.AutoSize = $true
+    $azureLaps.width = 25
+    $azureLaps.height = 10
+    $azureLaps.location = New-Object System.Drawing.Point(150, 60)
+    #Disable and Hide Azure LAPS until it is ready for release and tested
+    $azureLaps.Enabled = $false
+    $azureLaps.Visible = $false
+
     #Checkbox for using alternate credentials
     $altCreds = New-Object system.Windows.Forms.CheckBox
     $altCreds.text = "Use Alternate Credentials"
@@ -624,7 +665,7 @@ function LAPSTool {
     $lapsStart.location = New-Object System.Drawing.Point(154, 251)
     $lapsStart.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
     $lapsStart.BackColor = $BoxColor
-    $lapsStart.ForeColor = $ButtonText
+    $lapsStart.ForeColor = $TextColor
     $lapsStart.Add_Click({ 
             #First, check if Windows LAPS is checked
             if ($windowsLaps.Checked -eq $false) {
@@ -632,10 +673,10 @@ function LAPSTool {
                 try {
                     Get-ADUser -Identity $env:USERNAME -ErrorAction SilentlyContinue
                     if ($altCreds.Checked -eq $true) {
-        
+    
                         #IF Windows LAPS is off, alternate credentials is on, run the command with alternate credentials
                         $output = Get-ADComputer $hostname -Server $domain -Credential (Get-Credential -Credential $usernameInput.Text) -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
-            
+        
                         #If the output is null, the computer is not in AD
                         if ($null -eq $output) {
                             $wshell = New-Object -ComObject Wscript.Shell
@@ -644,7 +685,7 @@ function LAPSTool {
                         else {
                             #If the output is not null, the computer is in AD and the password is returned
                             $output | clip
-    
+
                             $wshell = New-Object -ComObject Wscript.Shell
                             $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
                         }
@@ -652,7 +693,7 @@ function LAPSTool {
                     else {
                         #If Windows LAPS is off, and alternate credentials is off, run the command with current credentials
                         $output = Get-ADComputer $hostname -Server $domain -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
-            
+        
                         #If the output is null, the computer is not in AD
                         if ($null -eq $output) {
                             $wshell = New-Object -ComObject Wscript.Shell
@@ -661,7 +702,7 @@ function LAPSTool {
                         else {
                             #If the output is not null, the computer is in AD and the password is returned
                             $output | clip
-    
+
                             $wshell = New-Object -ComObject Wscript.Shell
                             $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
                         }
@@ -682,7 +723,7 @@ function LAPSTool {
                     $altcredCheck = Get-Credential -Credential $usernameInput.Text
                     #IF Windows LAPS is on, alternate credentials is on, run the command with alternate credentials
                     $output = Get-LapsADPassword  $hostnameInput.Text -Credential $altcredCheck -DecryptionCredential $altcredCheck -Domain $domainInput.Text $altcredCheck -AsPlainText
-                
+            
                     #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
                     if ($null -eq $output) {
                         $wshell = New-Object -ComObject Wscript.Shell
@@ -699,7 +740,7 @@ function LAPSTool {
                 else {
                     #If Windows LAPS is on, and alternate credentials is off, run the command with current credentials
                     $output = Get-LapsADPassword $hostnameInput.Text -AsPlainText -Domain $domainInput.Text | Select-Object -ExpandProperty Password
-                
+            
                     #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
                     if ($null -eq $output) {
                         $wshell = New-Object -ComObject Wscript.Shell
@@ -713,6 +754,32 @@ function LAPSTool {
                         $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
                     }
                 }
+
+                #Add new case, if the Windows LAPS AD checkbox is checked, use Get-LAPSAADPassword
+
+                if ($azureLaps.Checked -eq $true) {
+                    #Azure LAPS is on, so we now need to connect to MS Graph API and get the password
+                    #First, get the Azure AD Tenant ID
+                    $tenantID = Read-Host -Prompt "Enter the Azure AD Tenant ID"
+                    $clientID = Read-Host -Prompt "Enter the Azure AD Client ID"
+
+                    #Connect to the MS Graph API
+                    Connect-MgGraph -TenantId $tenantID -ClientId $clientID
+                    #Get the password
+                    $lapsResult = Get-LapsAADPassword -DeviceIds $hostnameInput.Text -AsPlainText
+                    #If the output is null, the computer is not in Azure AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
+                    if ($null -eq $lapsResult) {
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $wshell.Popup("Computer not found in Azure AD", 0, "Error", 0x1)
+                    }
+                    else {
+                        #If the output is not null, the computer is in Azure AD and the password is returned
+                        $lapsResult | clip
+    
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $wshell.Popup("Password for $hostname is $lapsResult. Copied to clipboard.", 0, "Password", 0x0)
+                    }
+                }
             }
         })
     #Add keypress event to start button
@@ -720,10 +787,11 @@ function LAPSTool {
     $LapsForm.Add_KeyDown({ if ($_.KeyCode -eq "Enter") { $lapsStart.PerformClick() } })
 
     #Print the above GUI applets in the box
-    $LapsForm.controls.AddRange(@($Lapslogo, $domainInput, $domainLabel, $titleTag, $hostnameLabel, $hostnameInput, $usernameInfo, $usernameInput, $lapsStart, $windowsLaps, $altCreds))
+    $LapsForm.controls.AddRange(@($Lapslogo, $domainInput, $domainLabel, $titleTag, $hostnameLabel, $hostnameInput, $usernameInfo, $usernameInput, $lapsStart, $windowsLaps, $altCreds, $azureLaps))
 
     #SHOW ME THE MONEY
     [void]$LapsForm.ShowDialog()
+
 }
 
 
@@ -791,10 +859,111 @@ Storage: $drivespace
 Storage Type: $drivetype
 "@
 
+function notificationPush {
+    param (
+        #Get message body
+        [Parameter(Mandatory=$true)]
+        [string]$messageBody
+    )
+    #Create notification framework
+    if ($ticketType = "Jira") {
+        #Create a title for the ticket using the current time
+        $ticketTitle = "ETT Report " + (Get-Date -Format "MM/dd/yyyy HH:mm:ss") + " for " + $hostname
+
+        #Assume the ticket body is the device info dump
+        $ticketBody = $messageBody
+
+        #Create a JSON object for the ticket
+        $jiraJSON = @"
+{
+    "fields": {
+       "project":
+       {
+          "key": "$jiraProject"
+       },
+       "summary": "$ticketTitle",
+       "description": "$ticketBody",
+       "issuetype": {
+          "name": "$jiraIssueType"
+         }
+    }
+
+"@
+    
+        #Send the ticket to Jira
+        Invoke-RestMethod -Uri $jiraURL -Method Post -Headers $jiraHeaders -Body $jiraJSON -ContentType "application/json"
+
+    }
+    elseif ($ticketType = "ServiceNow") {
+    
+        #Create a title for the ticket using the current time
+        $ticketTitle = "ETT Report " + (Get-Date -Format "MM/dd/yyyy HH:mm:ss") + " for " + $hostname
+
+        #Assume the ticket body is the device info dump
+        $ticketBody = $messageBody
+
+        # Define headers
+        $headers = @{
+            Authorization  = "Bearer $SNtoken"
+            "Content-Type" = "application/json"
+        }
+
+        # Define the body
+        $body = @{
+            short_description = $ticketTitle
+            description       = $ticketBody
+            urgency           = 1 # 1 - High, 2 - Medium, 3 - Low
+            impact            = 1 # 1 - High, 2 - Medium, 3 - Low
+        } | ConvertTo-Json
+
+
+        # Send the request
+        Invoke-RestMethod -Uri $SNuri -Method Post -Body $body -Headers $headers
+
+    }
+    elseif ($ticketType = "Email") {
+        #Create a title for the ticket using the current time
+        $ticketTitle = "ETT Report " + (Get-Date -Format "MM/dd/yyyy HH:mm:ss") + " for " + $hostname
+
+        #Assume the ticket body is the device info dump
+        $ticketBody = $messageBody
+
+        #Send the ticket to email
+        if ($emailSSL -eq $true) {
+            Send-MailMessage -To $emailTo -From $emailFrom -Subject $ticketTitle -Body $ticketBody -SmtpServer $emailServer -Port $emailPort -UseSsl -Credential $emailCreds
+        }
+        elseif ($emailSSL -eq $false) {
+            Send-MailMessage -To $emailTo -From $emailFrom -Subject $ticketTitle -Body $ticketBody -SmtpServer $emailServer -Port $emailPort -Credential $emailCreds
+        }
+        elseif ($null -eq $emailSSL) {
+            Send-MailMessage -To $emailTo -From $emailFrom -Subject $ticketTitle -Body $ticketBody -SmtpServer $emailServer -Port $emailPort
+        }
+        elseif ($null -eq $emailPort) {
+            Send-MailMessage -To $emailTo -From $emailFrom -Subject $ticketTitle -Body $ticketBody -SmtpServer $emailServer
+        }
+        elseif ($null -eq $emailServer) {
+            Send-MailMessage -To $emailTo -From $emailFrom -Subject $ticketTitle -Body $ticketBody
+        }
+        elseif ($null -eq $emailFrom) {
+            Send-MailMessage -To $emailTo -Subject $ticketTitle -Body $ticketBody -SmtpServer $emailServer
+        }
+        elseif ($null -eq $emailTo) {
+            #Return an error if the emailTo field is null
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("Email To field is null. Please check your configuration.", 0, "Error", 0x1)
+        }
+
+    }
+    else {
+        #Do nothing
+    }
+    
+}
+
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
 $ETT.ClientSize = New-Object System.Drawing.Point(519, 330)
-$ETT.text = "Eli's Enterprise Tech Tool V1.0"
+$ETT.text = "Eli's Enterprise Tech Tool V1.1"
 $ETT.StartPosition = 'CenterScreen'
 $ETT.MaximizeBox = $false
 $ETT.MaximumSize = $ETT.Size
@@ -802,6 +971,16 @@ $ETT.MinimumSize = $ETT.Size
 $ETT.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($PSHOME + "\powershell.exe")
 $ETT.TopMost = $false
 $ETT.BackColor = $BGcolor
+
+#Check to see if we have a BG Image, if we do, apply it.
+if($backgroundImagePath -ne "")
+{
+    $wc = New-Object System.Net.WebClient
+    $wcStream = $wc.OpenRead($backgroundImagePath)
+    $Image = [system.drawing.image]::FromStream($wcStream)
+    $ETT.BackgroundImage = $Image
+    $ETT.BackgroundImageLayout = [System.Windows.Forms.ImageLayout]::Stretch
+}
 
 #Import and load in logo icon
 $Logo = New-Object system.Windows.Forms.PictureBox
@@ -816,6 +995,7 @@ if ($null -eq $LogoLocation) {
 
 $Heading = New-Object system.Windows.Forms.Label
 $Heading.text = "Enterprise Tech Tool"
+$Heading.BackColor = [System.Drawing.Color]::FromName("Transparent")
 $Heading.AutoSize = $true
 $Heading.width = 25
 $Heading.height = 10
@@ -829,6 +1009,10 @@ else {
 
 $Heading.Font = New-Object System.Drawing.Font('Segoe UI', 25, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
 $Heading.ForeColor = $TextColor
+if($null -ne $ETT.BackgroundImage)
+{
+    $Heading.ForeColor = $ettHeaderTextColor
+}
 
 #Create Toast Notification Stack
 $ToastStack = New-Object System.Windows.Forms.NotifyIcon
@@ -994,6 +1178,7 @@ $cpuInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $adminInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoPrint = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoClipboard = New-Object System.Windows.Forms.ToolStripMenuItem
+$deviceInfoTicket = New-Object System.Windows.Forms.ToolStripMenuItem
 
 #HELP TAB
 $menuHelp = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1015,8 +1200,15 @@ $menuRebootQuick = New-Object System.Windows.Forms.ToolStripMenuItem
 #AD Tab
 $menuAD = New-Object System.Windows.Forms.ToolStripMenuItem
 
+#Windows Tools
+$menuWindowsTools = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuWindowsUpdateCheck = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuWindowsActivation = New-Object System.Windows.Forms.ToolStripMenuItem
+
+#SCCM Tools
+$sccmClientTools = New-Object System.Windows.Forms.ToolStripMenuItem
+
 #One-Off Tabs
-$menuFeatures = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuExit = New-Object System.Windows.Forms.ToolStripMenuItem
 
 #Keyboard Shortcuts
@@ -1236,6 +1428,28 @@ $deviceInfoClipboard.ForeColor = $TextColor
 $deviceInfoClipboard.ToolTipText = "Copies device info to clipboard." + "`nClick to copy device info to clipboard."
 $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoClipboard)
 
+#Device Info Ticket
+if ($null -eq $ticketType){
+    #If ticket type is null, do nothing, and disable the button
+    $deviceInfoTicket.Text = "Send Device Info to Ticketing System"
+    $deviceInfoTicket.BackColor = $BGcolor
+    $deviceInfoTicket.ForeColor = $TextColor
+    $deviceInfoTicket.Enabled = $false
+    $deviceInfoTicket.ToolTipText = "Sends device info to ticketing system. Not configured presently. Coming in 1.2.1"
+    $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoTicket)
+}else{
+    #If ticket type is not null, run the ticketing function
+    $deviceInfoTicket.Text = "Send Device Info to $ticketType"
+    $deviceInfoTicket.Add_Click({
+            #Run the ticketing function
+            notificationPush -messageBody $deviceInfo
+        })
+    $deviceInfoTicket.BackColor = $BGcolor
+    $deviceInfoTicket.ForeColor = $TextColor
+    $deviceInfoTicket.ToolTipText = "Sends device info to $ticketType." + "`nClick to send device info to $ticketType."
+    $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoTicket)
+}
+
 #Help Tab
 $menuHelp.Text = "Help"
 $outputsuppressed = $menu.Items.Add($menuHelp)
@@ -1432,18 +1646,99 @@ $menuAD.Add_Click({
     })
 $outputsuppressed = $menu.Items.Add($menuAD)
 
-#Features List Button - Displays a list of features
-$menuFeatures.Text = "Features"
-$menuFeatures.Add_Click({
-        $wshell = New-Object -ComObject Wscript.Shell
-        $wshell.Popup("Current Features:
-    - Auto-elevate to admin
-    - Clear last Windows login
-    - Check for app updates thru WinGet
-    - Retreive Local Admin Passwords thru LAPS
-    - Force Policy Sync", 0, "Functions", 64)
+#Windows Tools Tab
+$menuWindowsTools.Text = "Windows"
+$outputsuppressed = $menu.Items.Add($menuWindowsTools)
+
+#Windows Update Check Button - Checks for Windows Updates
+$menuWindowsUpdateCheck.Text = "Check for Windows Updates"
+$menuWindowsUpdateCheck.Add_Click({
+        #Check for Windows Updates
+        $updates = (New-Object -ComObject Microsoft.Update.Session).CreateupdateSearcher().Search("IsHidden=0 and IsInstalled=0").Updates | Select-Object Title
+        #Check if updates are available, if blank then no updates are available
+        if ($updates -eq $null) {
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("No updates available.", 0, "Windows Updates", 64)
+        }
+        else {
+            #Updates are available, so display them in a popup
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("Updates Available:" + "`n" + $updates, 0, "Windows Updates", 64)
+        }
     })
-$outputsuppressed = $menu.Items.Add($menuFeatures)
+$menuWindowsUpdateCheck.BackColor = $BGcolor
+$menuWindowsUpdateCheck.ForeColor = $TextColor
+$outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsUpdateCheck)
+
+#Windows Activation Button - Windows Activation Key
+$menuWindowsActivation.Text = "Get Windows Activation Key"
+$menuWindowsActivation.Add_Click({
+        $HardwareKey = (Get-WmiObject -query 'select * from SoftwareLicensingService' | Select OA3xOriginalProductKey).OA3xOriginalProductKey
+        
+        #Verify that the key is not null
+        if ($HardwareKey -eq $null -or $HardwareKey -eq "") {
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("No Windows Activation Key found in WMI." + "`n`nThis could be the result of running in a VM, or not stored in BIOS", 0, "Windows Activation", 64)
+        }
+        else {
+            #Key is not null, so display it in a popup
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("Windows Activation Key: " + $HardwareKey + "`n`nKey Copied to Clipboard.", 0, "Windows Activation Key", 64)
+        }
+        
+    })
+$menuWindowsActivation.BackColor = $BGcolor
+$menuWindowsActivation.ForeColor = $TextColor
+$outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsActivation)
+
+#SCCM Functions Button - Displays a list of SCCM Client functions if the client is present on the machine
+#Check to see if the SCCM client is installed and we have the required WMI class
+$sccmClass = Get-WmiObject -Class "SMS_Client" -List -Namespace "root\CCM" -ErrorAction SilentlyContinue
+$sccmClassExists = $sccmClass -ne $null
+
+#Create the SCCM Trigger Schedule Table
+$sccmTSTable = [ordered]@{}
+$sccmTSTable.Add("Application Deployment Evaluation Cycle", "{00000000-0000-0000-0000-000000000121}")
+$sccmTSTable.Add("Discovery Data Collection Cycle", "{00000000-0000-0000-0000-000000000103}")
+$sccmTSTable.Add("File Collection Cycle", "{00000000-0000-0000-0000-000000000104}")
+$sccmTSTable.Add("Hardware Inventory Cycle", "{00000000-0000-0000-0000-000000000001}")
+$sccmTSTable.Add("Machine Policy Retrieval", "{00000000-0000-0000-0000-000000000021}")
+$sccmTSTable.Add("Machine Policy Evaluation Cycle", "{00000000-0000-0000-0000-000000000022}")
+$sccmTSTable.Add("Software Inventory Cycle", "{00000000-0000-0000-0000-000000000002}" )
+$sccmTSTable.Add("Software Metering Usage Report Cycle", "{00000000-0000-0000-0000-000000000106}")
+$sccmTSTable.Add("Software Updates Deployment Evaluation Cycle", "{00000000-0000-0000-0000-000000000114}")
+$sccmTSTable.Add("User Policy Retrieval", "{00000000-0000-0000-0000-000000000026}")
+$sccmTSTable.Add("User Policy Evaluation Cycle", "{00000000-0000-0000-0000-000000000027}")
+$sccmTSTable.Add("Windows Installer Source List Update Cycle", "{00000000-0000-0000-0000-000000000107}")
+
+#SCCM Trigger helper function
+function TriggerSCCMClientFunction {
+    param (
+        $TriggerScheduleGUID,
+        $TriggerScheduleName
+    )
+    Invoke-CimMethod -Namespace 'root\CCM' -ClassName SMS_Client -MethodName TriggerSchedule -Arguments @{sScheduleID = $TriggerScheduleGUID }
+    $wshell = New-Object -ComObject Wscript.Shell
+    $wshell.Popup("SCCM Client Task $TriggerScheduleName Triggered. The selected task will run and might take several minutes to finish.", 0, "SCCM Client Task", 64)
+}
+
+#SCCM Tools Menu Construction
+#If the SCCM Client is not installed on the computer, the menu option will be unavailable.
+if ($sccmClassExists) {
+    $outputsuppressed = $menu.Items.Add($sccmClientTools)
+}
+$sccmClientTools.Text = "SCCM Tools"
+
+foreach ($key in $($sccmTSTable.Keys)) {
+    $tmpButton = New-Object System.Windows.Forms.ToolStripMenuItem
+    $tmpButton.Text = $key
+    $tmpButton.BackColor = $BGcolor
+    $tmpButton.ForeColor = $TextColor
+    $tmpButton.Add_Click({
+            TriggerSCCMClientFunction -TriggerScheduleGUID $sccmTSTable[$key] -TriggerScheduleName $key
+        })
+    $outputsuppressed = $sccmClientTools.DropDownItems.Add($tmpButton)
+}
 
 #Exit Button
 $menuExit.Text = "Exit"
