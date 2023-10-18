@@ -1,5 +1,7 @@
 # 🚀 Eli's Enterprise Tech Toolkit!
 
+![GitHub](https://img.shields.io/github/license/eliweitzman/enterprisetechtool) ![GitHub all releases](https://img.shields.io/github/downloads/eliweitzman/enterprisetechtool/total) ![GitHub Repo stars](https://img.shields.io/github/stars/eliweitzman/enterprisetechtool) ![GitHub Discussions](https://img.shields.io/github/discussions/eliweitzman/enterprisetechtool)
+
 Welcome to Eli's Enterprise Tech Tool (ETT, or Enterprise Tech Tool, for short). In this project, I hope to combine a bunch of useful sysadmin/helpdesk solutions that could be potentially helpful in general field work. ETT is an all-in-one power tool for Windows, built as a PowerShell script. Designed with IT professionals in mind, this application is customizable, and feature-packed with tons of admin tools to make life easier. Most of these projects are made from ideas I've had while at work, but hopefully some new functions come about soon!
 
 ## Features
