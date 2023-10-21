@@ -1,5 +1,7 @@
 # 🚀 Eli's Enterprise Tech Toolkit!
 
+![GitHub](https://img.shields.io/github/license/eliweitzman/enterprisetechtool) ![GitHub all releases](https://img.shields.io/github/downloads/eliweitzman/enterprisetechtool/total) ![GitHub Repo stars](https://img.shields.io/github/stars/eliweitzman/enterprisetechtool) ![GitHub Discussions](https://img.shields.io/github/discussions/eliweitzman/enterprisetechtool)
+
 Welcome to Eli's Enterprise Tech Tool (ETT, or Enterprise Tech Tool, for short). In this project, I hope to combine a bunch of useful sysadmin/helpdesk solutions that could be potentially helpful in general field work. ETT is an all-in-one power tool for Windows, built as a PowerShell script. Designed with IT professionals in mind, this application is customizable, and feature-packed with tons of admin tools to make life easier. Most of these projects are made from ideas I've had while at work, but hopefully some new functions come about soon!
 
 ## Features
@@ -53,6 +55,26 @@ ETT can run in a few different ways, depending on preference, and on your own pe
 | Stock EXE Version | A pre-compiled stock version of ETT, either with Admin mode on or off. Able to bypass execution policy. |
 | Modified PS Script | Downloading the PS1 file, and adjusting the feature flags (indicated below). |
 | Modified EXE | Modifying the flags, and compiling it as an EXE for use. Able to bypass execution policy.|
+
+## Install Methods
+
+1. Using the Windows Package Manager (ETT-base, Machine-wide only... [info](https://github.com/eliweitzman/EnterpriseTechTool/edit/main/README.md#runtime-options))
+
+```
+winget install --id=EliWeitzman.ETT
+```
+
+2. Self-extracting Installer (Admin Mode and Regular)
+
+Simply run the latest release's ETT.Installer or ETT-Admin.Installer
+
+_Note: Currently, only the ETT.Installer is whitelisted by Microsoft Defender SmartScreen. ETT-Admin will prompt Defender prior to download and install as of now ([Clearance WIP](https://github.com/eliweitzman/EnterpriseTechTool/issues/35))._
+
+3. Portable Mode
+
+A single, standalone EXE application, portable enough to fit on a flash drive! 
+
+_Note: Portable application is not yet whitelisted by SmartScreen, but approval is currently [in-progress](https://github.com/eliweitzman/EnterpriseTechTool/issues/35)_
 
 
 ## Optimal Environment
