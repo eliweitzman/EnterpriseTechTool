@@ -58,10 +58,16 @@ ETT can run in a few different ways, depending on preference, and on your own pe
 
 ## Install Methods
 
-1. Using the Windows Package Manager (ETT-base, Machine-wide only... [info](https://github.com/eliweitzman/EnterpriseTechTool/edit/main/README.md#runtime-options))
+1. Using the Windows Package Manager (Machine-wide only... [info](https://github.com/eliweitzman/EnterpriseTechTool/edit/main/README.md#runtime-options))
 
+Standard Install:
 ```
 winget install --id=EliWeitzman.ETT
+```
+
+Admin-Mode Install:
+```
+winget install --id=EliWeitzman.ETT-Admin
 ```
 
 2. Self-extracting Installer (Admin Mode and Regular)
