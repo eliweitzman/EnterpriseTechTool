@@ -566,14 +566,85 @@ function LAPSTool {
 
     #To the right of the checkbox for using Windows LAPS, add a LAPS Azure AD option checkbox
     $azureLaps = New-Object system.Windows.Forms.CheckBox
-    $azureLaps.text = "Use Azure AD LAPS (ALPHA)"
+    $azureLaps.text = "Use Azure AD LAPS"
     $azureLaps.AutoSize = $true
     $azureLaps.width = 25
     $azureLaps.height = 10
     $azureLaps.location = New-Object System.Drawing.Point(150, 60)
-    #Disable and Hide Azure LAPS until it is ready for release and tested
-    $azureLaps.Enabled = $false
-    $azureLaps.Visible = $false
+
+    #IF Azure LAPS is checked, disable the Windows LAPS checkbox, and domain input box
+    $azureLaps.Add_CheckStateChanged({
+            if ($azureLaps.Checked -eq $true) {
+                #Re-enable the start button if it was disabled by RSAT not being installed
+                $lapsStart.Enabled = $true
+
+                $windowsLaps.Checked = $false
+                $windowsLaps.Enabled = $false
+                $altCreds.Enabled = $false
+                $altCreds.Checked = $false
+
+                #If azure LAPS is checked, change the domain input box to the Azure AD tenant ID input box
+                $domainLabel.Text = "Tenant ID:"
+                $domainInput.Text = ""
+
+                #Move the domain input box to the right to make room for title text
+                $domainInput.Location = New-Object System.Drawing.Point(90, 114)
+
+                #If Azure LAPS is checked, change the hostname input box to the device ID input box
+                $hostnameLabel.Text = "Device ID:"
+                $hostnameInput.Text = ""
+            
+
+                #Align the username input box with the hostname input box
+                $usernameInfo.Location = New-Object System.Drawing.Point(16, 189)
+
+                #If Azure LAPS is checked, change the username input box to the client ID input box
+                $usernameInfo.Text = "Client ID:"
+                $usernameInput.Text = ""
+                $usernameInput.Enabled = $true
+
+                #Enable the domain input box, and remove the domain from the input box
+                $domainInput.Enabled = $true
+                $domainInput.Text = ""
+
+                #If Azure LAPS is checked, change the start button to say "Get Password"
+                $lapsStart.Text = "Get Password"
+            }
+            else {
+                $windowsLaps.Enabled = $true
+                $domainInput.Enabled = $true
+                $altCreds.Enabled = $true
+
+                #If Azure LAPS is not checked, change the domain input box to the domain input box
+                $domainLabel.Text = "Domain:"
+                $domainInput.Text = $domain
+
+                #Reset the domain input box to the left
+                $domainInput.Location = New-Object System.Drawing.Point(80, 114)
+
+                #If Azure LAPS is not checked, change the hostname input box to the hostname input box
+                $hostnameLabel.Text = "Machine Hostname:"
+                $hostnameInput.Text = ""
+            
+                #If Azure LAPS is not checked, change the username input box to the username input box
+                $usernameInfo.Text = "Your Username:"
+                $usernameInput.Text = $domain + "\" + $env:USERNAME
+                $usernameInput.Enabled = $false
+
+                #If Azure LAPS is not checked, change the start button to say "Start"
+                $lapsStart.Text = "Start"
+
+                #Also, check to see if RSAT is installed. If not, disable the start button
+                if (Get-Module -ListAvailable -Name ActiveDirectory) {
+                    $lapsStart.Enabled = $true
+                }
+                else {
+                    $lapsStart.Enabled = $false
+                    #set text to say RSAT is not installed
+                    $lapsStart.Text = "RSAT Missing"
+                }
+            }
+        })
 
     #Checkbox for using alternate credentials
     $altCreds = New-Object system.Windows.Forms.CheckBox
@@ -604,7 +675,7 @@ function LAPSTool {
 
     #Hostname information label
     $hostnameLabel = New-Object system.Windows.Forms.Label
-    $hostnameLabel.text = "Machine Hostname"
+    $hostnameLabel.text = "Machine Hostname:"
     $hostnameLabel.AutoSize = $true
     $hostnameLabel.width = 25
     $hostnameLabel.height = 10
@@ -642,19 +713,26 @@ function LAPSTool {
     $usernameInput.Text = $domain + "\" + $env:USERNAME
     $usernameInput.Enabled = $false
 
-    #Logic to enable/disable username input box
+    #Logic to enable/disable username input box - if alternate credentials is checked, enable the username input box. If not, disable it, unless Azure LAPS is checked
     $altCreds.Add_CheckStateChanged({
             if ($altCreds.Checked -eq $true) {
                 $usernameInput.Enabled = $true
             }
             else {
-                $usernameInput.Enabled = $false
+                if ($azureLaps.Checked -eq $false) {
+                    $usernameInput.Enabled = $false
+                }
+                else {
+                    $usernameInput.Enabled = $false
+                }
             }
         })
 
-    #Logic to update the username input box when the domain input box is updated
+    #Logic to update the username input box when the domain input box is updated, but only if Azure LAPS is not checked
     $domainInput.Add_TextChanged({
-            $usernameInput.Text = $domainInput.Text + "\" + $env:USERNAME
+            if ($azureLaps.Checked -eq $false) {
+                $usernameInput.Text = $domainInput.Text + "\" + $env:USERNAME
+            }
         })
 
     #Start button that closes window to run
@@ -667,124 +745,136 @@ function LAPSTool {
     $lapsStart.BackColor = $BoxColor
     $lapsStart.ForeColor = $TextColor
     $lapsStart.Add_Click({ 
-            #First, check if Windows LAPS is checked
-            if ($windowsLaps.Checked -eq $false) {
-                #Next, run a test AD query to see if the user has RSAT and entitlements to run the command
-                try {
-                    Get-ADUser -Identity $env:USERNAME -ErrorAction SilentlyContinue
-                    if ($altCreds.Checked -eq $true) {
-    
-                        #IF Windows LAPS is off, alternate credentials is on, run the command with alternate credentials
-                        $output = Get-ADComputer $hostname -Server $domain -Credential (Get-Credential -Credential $usernameInput.Text) -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
-        
-                        #If the output is null, the computer is not in AD
-                        if ($null -eq $output) {
-                            $wshell = New-Object -ComObject Wscript.Shell
-                            $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
-                        }
-                        else {
-                            #If the output is not null, the computer is in AD and the password is returned
-                            $output | clip
+            <#Based on toggle switches, there are a few different ways to run the script
+        1. Standard LAPS, no alternate credentials
+        2. Standard LAPS, alternate credentials
+        3. Windows LAPS, no alternate credentials
+        4. Windows LAPS, alternate credentials
+        5. Azure LAPS (no alternate credentials)
+        #>
 
-                            $wshell = New-Object -ComObject Wscript.Shell
-                            $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
-                        }
+            #If Azure LAPS is checked, run the Azure LAPS process
+            if ($azureLaps.Checked -eq $true -and $altCreds.Checked -eq $false -and $windowsLaps.Checked -eq $false) {
+                #First, get the Azure AD Tenant ID
+                $tenantID = $domainInput.Text
+                $clientID = $usernameInput.Text
+
+
+                #test to see if Microsoft Graph PowerShell module is installed. If not, show a popup and exit
+                if (Get-Module -ListAvailable -Name Microsoft.Graph.Authentication) {
+                    #Next, verify the Azure AD Tenant ID and Client ID and Device ID are not blank
+                    if ($tenantID -eq "" -or $clientID -eq "" -or $hostnameInput.Text -eq "") {
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $wshell.Popup("Tenant ID and Client ID cannot be blank", 0, "Error", 0x1)
                     }
                     else {
-                        #If Windows LAPS is off, and alternate credentials is off, run the command with current credentials
-                        $output = Get-ADComputer $hostname -Server $domain -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
-        
-                        #If the output is null, the computer is not in AD
-                        if ($null -eq $output) {
+                        #Next, actually connect to the MS Graph API
+                        Connect-MgGraph -TenantId $tenantID -ClientId $clientID
+                        #Now, get the password
+                        $lapsResult = (Get-LapsAADPassword -DeviceIds $hostnameInput.Text -IncludePasswords -AsPlainText).Password
+                        #If the output is null, the computer is not in Azure AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
+                        if ($null -eq $lapsResult) {
                             $wshell = New-Object -ComObject Wscript.Shell
-                            $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
+                            $wshell.Popup("Computer not found in Azure AD", 0, "Error", 0x1)
                         }
                         else {
-                            #If the output is not null, the computer is in AD and the password is returned
-                            $output | clip
-
+                            #If the output is not null, the computer is in Azure AD and the password is returned
+                            $lapsResult | clip
+ 
                             $wshell = New-Object -ComObject Wscript.Shell
-                            $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
+                            $wshell.Popup("Password for $hostname is $lapsResult. Copied to clipboard.", 0, "Password", 0x0)
                         }
-                    }       
-                }
-                catch {
-                    #If the user does not have RSAT or entitlements, the command will fail and the user will be notified
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("You do not have the required permissions to run this option. Either RSAT AD Tools, or User Permissions block this route. Use Windows LAPS instead.", 0, "Error", 0x1)
-
-                    #Check the Windows LAPS box to allow the user to run the command without RSAT or entitlements
-                    $windowsLaps.Checked = $true
-                }
-            }
-            elseif ($windowsLaps.Checked -eq $true) {
-                #Next, check if alternate credentials is checked
-                if ($altCreds.Checked -eq $true) {
-                    $altcredCheck = Get-Credential -Credential $usernameInput.Text
-                    #IF Windows LAPS is on, alternate credentials is on, run the command with alternate credentials
-                    $output = Get-LapsADPassword  $hostnameInput.Text -Credential $altcredCheck -DecryptionCredential $altcredCheck -Domain $domainInput.Text $altcredCheck -AsPlainText
-            
-                    #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
-                    if ($null -eq $output) {
-                        $wshell = New-Object -ComObject Wscript.Shell
-                        $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
-                    }
-                    else {
-                        #If the output is not null, the computer is in AD and the password is returned
-                        $output | clip
-
-                        $wshell = New-Object -ComObject Wscript.Shell
-                        $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
                     }
                 }
                 else {
-                    #If Windows LAPS is on, and alternate credentials is off, run the command with current credentials
-                    $output = Get-LapsADPassword $hostnameInput.Text -AsPlainText -Domain $domainInput.Text | Select-Object -ExpandProperty Password
-            
-                    #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
-                    if ($null -eq $output) {
-                        $wshell = New-Object -ComObject Wscript.Shell
-                        $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
-                    }
-                    else {
-                        #If the output is not null, the computer is in AD and the password is returned
-                        $output | clip
-
-                        $wshell = New-Object -ComObject Wscript.Shell
-                        $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
-                    }
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $wshell.Popup("Microsoft Graph PowerShell module not installed. Please install the module and try again.", 0, "Error", 0x1)
                 }
+            }
+            #If Windows LAPS is checked, run the Windows LAPS process
+            if ($windowsLaps.Checked -eq $true -and $altCreds.Checked -eq $false) {
+                $output = Get-LapsADPassword $hostnameInput.Text -AsPlainText -Domain $domainInput.Text | Select-Object -ExpandProperty Password
+            
+                #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
+                if ($null -eq $output) {
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
+                }
+                else {
+                    #If the output is not null, the computer is in AD and the password is returned
+                    $output | clip
 
-                #Add new case, if the Windows LAPS AD checkbox is checked, use Get-LAPSAADPassword
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
+                }
+            }
+            #If Windows LAPS is checked, and alternate credentials are checked, run the Windows LAPS process with alternate credentials
+            if ($windowsLaps.Checked -eq $true -and $altCreds.Checked -eq $true -and $azureLaps.Checked -eq $false) {
+                $altcredCheck = Get-Credential -Credential $usernameInput.Text
+                #IF Windows LAPS is on, alternate credentials is on, run the command with alternate credentials
+                $output = Get-LapsADPassword  $hostnameInput.Text -Credential $altcredCheck -DecryptionCredential $altcredCheck -Domain $domainInput.Text $altcredCheck -AsPlainText
+            
+                #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
+                if ($null -eq $output) {
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
+                }
+                else {
+                    #If the output is not null, the computer is in AD and the password is returned
+                    $output | clip
 
-                if ($azureLaps.Checked -eq $true) {
-                    #Azure LAPS is on, so we now need to connect to MS Graph API and get the password
-                    #First, get the Azure AD Tenant ID
-                    $tenantID = Read-Host -Prompt "Enter the Azure AD Tenant ID"
-                    $clientID = Read-Host -Prompt "Enter the Azure AD Client ID"
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
+                }
+            }
+            #If Windows LAPS is not checked, and alternate credentials are not checked, run the standard LAPS process
+            if ($windowsLaps.Checked -eq $false -and $altCreds.Checked -eq $false -and $azureLaps.Checked -eq $false) {
+                $output = Get-ADComputer $hostname -Server $domain -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
+        
+                #If the output is null, the computer is not in AD
+                if ($null -eq $output) {
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
+                }
+                else {
+                    #If the output is not null, the computer is in AD and the password is returned
+                    $output | clip
 
-                    #Connect to the MS Graph API
-                    Connect-MgGraph -TenantId $tenantID -ClientId $clientID
-                    #Get the password
-                    $lapsResult = Get-LapsAADPassword -DeviceIds $hostnameInput.Text -AsPlainText
-                    #If the output is null, the computer is not in Azure AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
-                    if ($null -eq $lapsResult) {
-                        $wshell = New-Object -ComObject Wscript.Shell
-                        $wshell.Popup("Computer not found in Azure AD", 0, "Error", 0x1)
-                    }
-                    else {
-                        #If the output is not null, the computer is in Azure AD and the password is returned
-                        $lapsResult | clip
-    
-                        $wshell = New-Object -ComObject Wscript.Shell
-                        $wshell.Popup("Password for $hostname is $lapsResult. Copied to clipboard.", 0, "Password", 0x0)
-                    }
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
+                }
+            }
+            #If Windows LAPS is not checked, and alternate credentials are checked, run the standard LAPS process with alternate credentials
+            if ($windowsLaps.Checked -eq $false -and $altCreds.Checked -eq $true -and $azureLaps.Checked -eq $false) {
+                $output = Get-ADComputer $hostname -Server $domain -Credential (Get-Credential -Credential $usernameInput.Text) -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
+        
+                #If the output is null, the computer is not in AD
+                if ($null -eq $output) {
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
+                }
+                else {
+                    #If the output is not null, the computer is in AD and the password is returned
+                    $output | clip
+
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
                 }
             }
         })
     #Add keypress event to start button
     $LapsForm.KeyPreview = $true
     $LapsForm.Add_KeyDown({ if ($_.KeyCode -eq "Enter") { $lapsStart.PerformClick() } })
+
+    #check to see if RSAT is installed. If not, disable the start button
+    if (Get-Module -ListAvailable -Name ActiveDirectory) {
+        $lapsStart.Enabled = $true
+    }
+    else {
+        $lapsStart.Enabled = $false
+        #set text to say RSAT is not installed
+        $lapsStart.Text = "RSAT Missing"
+    }
 
     #Print the above GUI applets in the box
     $LapsForm.controls.AddRange(@($Lapslogo, $domainInput, $domainLabel, $titleTag, $hostnameLabel, $hostnameInput, $usernameInfo, $usernameInput, $lapsStart, $windowsLaps, $altCreds, $azureLaps))
@@ -862,7 +952,7 @@ Storage Type: $drivetype
 function notificationPush {
     param (
         #Get message body
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$messageBody
     )
     #Create notification framework
@@ -973,8 +1063,7 @@ $ETT.TopMost = $false
 $ETT.BackColor = $BGcolor
 
 #Check to see if we have a BG Image, if we do, apply it.
-if($backgroundImagePath -ne "")
-{
+if ($backgroundImagePath -ne "") {
     $wc = New-Object System.Net.WebClient
     $wcStream = $wc.OpenRead($backgroundImagePath)
     $Image = [system.drawing.image]::FromStream($wcStream)
@@ -1009,8 +1098,7 @@ else {
 
 $Heading.Font = New-Object System.Drawing.Font('Segoe UI', 25, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
 $Heading.ForeColor = $TextColor
-if($null -ne $ETT.BackgroundImage)
-{
+if ($null -ne $ETT.BackgroundImage) {
     $Heading.ForeColor = $ettHeaderTextColor
 }
 
@@ -1429,7 +1517,7 @@ $deviceInfoClipboard.ToolTipText = "Copies device info to clipboard." + "`nClick
 $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoClipboard)
 
 #Device Info Ticket
-if ($null -eq $ticketType){
+if ($null -eq $ticketType) {
     #If ticket type is null, do nothing, and disable the button
     $deviceInfoTicket.Text = "Send Device Info to Ticketing System"
     $deviceInfoTicket.BackColor = $BGcolor
@@ -1437,7 +1525,8 @@ if ($null -eq $ticketType){
     $deviceInfoTicket.Enabled = $false
     $deviceInfoTicket.ToolTipText = "Sends device info to ticketing system. Not configured presently. Coming in 1.2.1"
     $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoTicket)
-}else{
+}
+else {
     #If ticket type is not null, run the ticketing function
     $deviceInfoTicket.Text = "Send Device Info to $ticketType"
     $deviceInfoTicket.Add_Click({
