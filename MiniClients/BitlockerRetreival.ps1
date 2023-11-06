@@ -13,6 +13,10 @@ $BrandColor = 'Green'
 
 # Dark/Light Mode Logic
 #Dark/Light Parameters
+
+# Get the current theme
+$theme = (Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize").AppsUseLightTheme
+
 # If the theme is 0, it is dark mode
 if ($theme -eq 0) {
     #DARK MODE
@@ -36,7 +40,7 @@ Add-Type -AssemblyName System.Windows.Forms
 
 #Create box
 $BForm = New-Object system.Windows.Forms.Form
-$BForm.ClientSize = New-Object System.Drawing.Point(500, 280)
+$BForm.ClientSize = New-Object System.Drawing.Point(500, 200)
 $BForm.text = "BitLocker Retreival"
 $BForm.TopMost = $true
 $BForm.BackColor = $BGcolor
@@ -137,45 +141,34 @@ $BSubmit.Add_Click({
             return
         }
 
+        $ADComputer = Get-ADComputer -Identity $hostname
+
         try {
-            $ADComputer = Get-ADComputer -Identity $hostname -ErrorAction Stop
+            
+            #Create LDAP path
+            $LDAPPath = "AD:\" + $ADComputer.DistinguishedName
+
+            #Generate LDAP Object
+            $LDAPObj = Get-ChildItem $LDAPPath | Where-Object { $_.ObjectClass -eq "msFVE-RecoveryInformation" }
+
+            #Adapt AD Query
+            $LDAPPath = "AD:\", $LDAPObj.DistinguishedName -join ""
+
+            #Get Bitlocker Recovery Key
+            $pw = Get-Item $LDAPObj -properties "msFVE-RecoveryPassword"
+            $recoveryPassword = $pw."msFVE-RecoveryPassword"
         }
         catch {
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Hostname not found in AD", 0, "Error", 0x1)
+            $recoveryPassword = "Error: Computer not found"
         }
 
-        #Create LDAP path
-        $LDAPPath = "LDAP://" + $ADComputer.DistinguishedName
+        
+        #Copy to clipboard
+        $recoveryPassword | clip
 
-        #Generate LDAP Object
-        $LADPObj = Get-ChildItem $LDAPPath | Where-Object { $_.ObjectClass -eq "msFVE-RecoveryInformation" }
-
-        #Adapt AD Query
-        $LDAPPath = "AD:\", $LDAPObj.DistinguishedName -join ""
-
-        #Get Bitlocker Recovery Key
-        $pw = Get-Item $LDAPObj -properties "msFVE-RecoveryPassword"
-        $recoveryPassword = $pw."msFVE-RecoveryPassword"
-
-        #Check if LDAP Object is empty
-        if ($LADPObj -eq $null) {
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("No Bitlocker Recovery Key found", 0, "Error", 0x1)
-        }
-
-        #Check if Bitlocker Recovery Key is empty
-        elseif ($recoveryPassword -eq $null) {
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("No Bitlocker Recovery Key found", 0, "Error", 0x1)
-        }
-
-        #If Bitlocker Recovery Key is found, display it
-        else {
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Bitlocker Recovery Key: " + $recoveryPassword + "`n`nResult Copied to Clipboard", 0, "Bitlocker Recovery Key", 0x0)
-            $recoveryPassword | clip
-        }
+        #Wshell popup window with password, and show on top
+        $wshell = New-Object -ComObject wscript.shell
+        $wshell.popup("BitLocker Key: " + $recoveryPassword + "`nResult copied to clipboard.", 0, "Bitlocker Key", 0x00000040)
 
     })
 
