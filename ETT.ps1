@@ -1705,9 +1705,9 @@ $menuWiFiDiag.Add_Click({
             Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
         }
         else {
-            #Admin mode is not enabled
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Admin mode is not enabled. Please enable adminmode flag and reboot script. If compiled, this requires a version of the application with adminmode flag turned on.", 0, "Windows Wi-Fi Diagnostics", 64)     
+            #Admin mode is not enabled, run in a sub-process shell
+            Start-Process powershell.exe -Verb runAs -ArgumentList "-command netsh wlan show wlanreport" -PassThru -Wait
+            Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
         }
     })
 $menuWiFiDiag.BackColor = $BGcolor
