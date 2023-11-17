@@ -1283,6 +1283,7 @@ $menuSFCScan = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuSuspendBitlocker = New-Object System.Windows.Forms.ToolStripMenuItem
 #$menuRenameComputer = New-Object System.Windows.Forms.ToolStripMenuItem - Commented out until I can figure out how to make it work
 $menuTestNet = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuWiFiDiag = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuRebootQuick = New-Object System.Windows.Forms.ToolStripMenuItem
 
 #AD Tab
@@ -1328,6 +1329,10 @@ $menuSuspendBitlocker.ShortcutKeyDisplayString = "CTRL + SHIFT + B"
 #CTRL + Shift + T to run menuTestNet
 $menuTestNet.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::T
 $menuTestNet.ShortcutKeyDisplayString = "CTRL + SHIFT + T"
+
+#CTRL + Shift + W to run menuWiFiDiag
+$menuWiFiDiag.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::W
+$menuWiFiDiag.ShortcutKeyDisplayString = "CTRL + SHIFT + W"
 
 #CTRL + Shift + Q to run menuRebootQuick
 $menuRebootQuick.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::Q
@@ -1690,6 +1695,24 @@ $menuTestNet.Add_Click({
 $menuTestNet.BackColor = $BGcolor
 $menuTestNet.ForeColor = $TextColor
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuTestNet)
+
+#WiFi Diagnostics Button - Tests WiFi Connection
+$menuWiFiDiag.Text = "Launch Wi-Fi Diagnostics"
+$menuWiFiDiag.Add_Click({
+        #Test Wi-Fi
+        if ($adminmode -eq "True") {
+            Start-Process cmd.exe -ArgumentList "/K netsh wlan show wlanreport" -PassThru -Wait
+            Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
+        }
+        else {
+            #Admin mode is not enabled
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("Admin mode is not enabled. Please enable adminmode flag and reboot script. If compiled, this requires a version of the application with adminmode flag turned on.", 0, "Windows Wi-Fi Diagnostics", 64)     
+        }
+    })
+$menuWiFiDiag.BackColor = $BGcolor
+$menuWiFiDiag.ForeColor = $TextColor
+$outputsuppressed = $menuFunctions.DropDownItems.Add($menuWiFiDiag)
 
 #Quick Reboot Button - Reboots the computer
 $menuRebootQuick.Text = "Quick Reboot"
