@@ -794,6 +794,160 @@ function LAPSTool {
 
 }
 
+function bitlockerTool {
+    #Test RSAT AD Tools is installed
+    if (Get-Command -Name Get-ADComputer -ErrorAction SilentlyContinue) {
+        #RSAT is installed
+        $RSATStatus = "Installed"
+    }
+    else {
+        #RSAT is not installed
+        $RSATStatus = "Not Installed"
+    }
+
+    # Import the module
+    Add-Type -AssemblyName System.Windows.Forms
+    [System.Windows.Forms.Application]::EnableVisualStyles()
+
+    #Create box
+    $BForm = New-Object system.Windows.Forms.Form
+    $BForm.ClientSize = New-Object System.Drawing.Point(500, 200)
+    $BForm.text = "BitLocker Retreival"
+    $BForm.TopMost = $true
+    $BForm.BackColor = $BGcolor
+    $BForm.MaximizeBox = $false
+    $BForm.MaximumSize = $BForm.Size
+    $BForm.MinimumSize = $BForm.Size
+
+    #Title for box
+    $BTitle = New-Object system.Windows.Forms.Label
+    $BTitle.text = "Bitlocker Retreival"
+    $BTitle.AutoSize = $true
+    $BTitle.width = 25
+    $BTitle.height = 10
+    $BTitle.location = New-Object System.Drawing.Point(88, 10)
+    $BTitle.Font = New-Object System.Drawing.Font('Segoe UI', 16, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+    $BTitle.ForeColor = $TextColor
+    $BForm.Controls.Add($BTitle)
+
+    #Logo (sourced from WinAero gal)
+    $BLogo = New-Object system.Windows.Forms.PictureBox
+    $BLogo.width = 75
+    $BLogo.height = 75
+    $BLogo.location = New-Object System.Drawing.Point(375, 17)
+    $BLogo.imageLocation = "https://winaero.com/blog/wp-content/uploads/2020/04/BitLocker-Big-256-Icon-2.png"
+    $BLogo.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::zoom
+    $BForm.Controls.Add($BLogo)
+
+    #Hostname INPUT FIELD and LABEL
+    $BHostname = New-Object system.Windows.Forms.Label
+    $BHostname.text = "Hostname:"
+    $BHostname.AutoSize = $true
+    $BHostname.width = 25
+    $BHostname.height = 10
+    $BHostname.location = New-Object System.Drawing.Point(16, 60)
+    $BHostname.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+    $BHostname.ForeColor = $TextColor
+    $BForm.Controls.Add($BHostname)
+
+    $BHostnameInput = New-Object system.Windows.Forms.TextBox
+    $BHostnameInput.multiline = $false
+    $BHostnameInput.width = 269
+    $BHostnameInput.height = 20
+    $BHostnameInput.location = New-Object System.Drawing.Point(90, 60)
+    $BHostnameInput.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
+    $BHostname = $BHostnameInput.Text
+    $BForm.Controls.Add($BHostnameInput)
+
+    #Username INPUT FIELD and LABEL
+    $BUsername = New-Object system.Windows.Forms.Label
+    $BUsername.text = "Username:"
+    $BUsername.AutoSize = $true
+    $BUsername.width = 25
+    $BUsername.height = 10
+    $BUsername.location = New-Object System.Drawing.Point(16, 90)
+    $BUsername.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+    $BUsername.ForeColor = $TextColor
+    $BForm.Controls.Add($BUsername)
+
+    $BUsernameInput = New-Object system.Windows.Forms.TextBox
+    $BUsernameInput.multiline = $false
+    $BUsernameInput.width = 269
+    $BUsernameInput.height = 20
+    $BUsernameInput.location = New-Object System.Drawing.Point(90, 90)
+    $BUsernameInput.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
+    $BUsername = $BUsernameInput.Text
+    $BForm.Controls.Add($BUsernameInput)
+
+    #Set default username to current user
+    $BUsernameInput.Text = (whoami.exe)
+
+    #Submit button
+    $BSubmit = New-Object system.Windows.Forms.Button
+    $BSubmit.text = "Submit"
+    $BSubmit.width = 60
+    $BSubmit.height = 30
+    $BSubmit.location = New-Object System.Drawing.Point(90, 120)
+    $BSubmit.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+    $BSubmit.ForeColor = $TextColor
+    $BSubmit.BackColor = $BoxColor
+
+    #If RSAT is not installed, disable button
+    if ($RSATStatus -eq "Not Installed") {
+        $BSubmit.Enabled = $false
+        $BSubmit.BackColor = 'Gray'
+        $BSubmit.ForeColor = 'Black'
+        $BSubmit.Text = "RSAT Not Installed"
+    }
+
+    $BSubmit.Add_Click({
+            $hostname = $BHostnameInput.Text
+
+            #Check if hostname is empty
+            if ($hostname -eq "") {
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("Hostname cannot be empty", 0, "Error", 0x1)
+
+                #Stop action
+                return
+            }
+
+            $ADComputer = Get-ADComputer -Identity $hostname
+
+            try {
+            
+                #Create LDAP path
+                $LDAPPath = "AD:\" + $ADComputer.DistinguishedName
+
+                #Generate LDAP Object
+                $LDAPObj = Get-ChildItem $LDAPPath | Where-Object { $_.ObjectClass -eq "msFVE-RecoveryInformation" }
+
+                #Adapt AD Query
+                $LDAPPath = "AD:\", $LDAPObj.DistinguishedName -join ""
+
+                #Get Bitlocker Recovery Key
+                $pw = Get-Item $LDAPObj -properties "msFVE-RecoveryPassword"
+                $recoveryPassword = $pw."msFVE-RecoveryPassword"
+            }
+            catch {
+                $recoveryPassword = "Error: Computer not found"
+            }
+
+        
+            #Copy to clipboard
+            $recoveryPassword | clip
+
+            #Wshell popup window with password, and show on top
+            $wshell = New-Object -ComObject wscript.shell
+            $wshell.popup("BitLocker Key: " + $recoveryPassword + "`nResult copied to clipboard.", 0, "Bitlocker Key", 0x00000040)
+
+        })
+
+    $BForm.Controls.Add($BSubmit)
+
+    #Show Form
+    $BForm.ShowDialog()
+}
 
 #Device Compliance Checks
 #RAM Check
@@ -862,7 +1016,7 @@ Storage Type: $drivetype
 function notificationPush {
     param (
         #Get message body
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$messageBody
     )
     #Create notification framework
@@ -973,8 +1127,7 @@ $ETT.TopMost = $false
 $ETT.BackColor = $BGcolor
 
 #Check to see if we have a BG Image, if we do, apply it.
-if($backgroundImagePath -ne "")
-{
+if ($backgroundImagePath -ne "") {
     $wc = New-Object System.Net.WebClient
     $wcStream = $wc.OpenRead($backgroundImagePath)
     $Image = [system.drawing.image]::FromStream($wcStream)
@@ -1009,8 +1162,7 @@ else {
 
 $Heading.Font = New-Object System.Drawing.Font('Segoe UI', 25, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
 $Heading.ForeColor = $TextColor
-if($null -ne $ETT.BackgroundImage)
-{
+if ($null -ne $ETT.BackgroundImage) {
     $Heading.ForeColor = $ettHeaderTextColor
 }
 
@@ -1196,6 +1348,7 @@ $menuSuspendBitlocker = New-Object System.Windows.Forms.ToolStripMenuItem
 #$menuRenameComputer = New-Object System.Windows.Forms.ToolStripMenuItem - Commented out until I can figure out how to make it work
 $menuTestNet = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuRebootQuick = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuBitlockerRetreive = New-Object System.Windows.Forms.ToolStripMenuItem
 
 #AD Tab
 $menuAD = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1429,7 +1582,7 @@ $deviceInfoClipboard.ToolTipText = "Copies device info to clipboard." + "`nClick
 $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoClipboard)
 
 #Device Info Ticket
-if ($null -eq $ticketType){
+if ($null -eq $ticketType) {
     #If ticket type is null, do nothing, and disable the button
     $deviceInfoTicket.Text = "Send Device Info to Ticketing System"
     $deviceInfoTicket.BackColor = $BGcolor
@@ -1437,7 +1590,8 @@ if ($null -eq $ticketType){
     $deviceInfoTicket.Enabled = $false
     $deviceInfoTicket.ToolTipText = "Sends device info to ticketing system. Not configured presently. Coming in 1.2.1"
     $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoTicket)
-}else{
+}
+else {
     #If ticket type is not null, run the ticketing function
     $deviceInfoTicket.Text = "Send Device Info to $ticketType"
     $deviceInfoTicket.Add_Click({
@@ -1629,6 +1783,14 @@ $menuRenameComputer.Add_Click({
     })
 $menuFunctions.DropDownItems.Add($menuRenameComputer)
 #>
+
+$menuBitlockerRetreive.Text = "Retrieve BitLocker Key"
+$menuBitlockerRetreive.Add_Click({
+    bitlockerTool
+})
+$menuBitlockerRetreive.BackColor = $BGcolor
+$menuBitlockerRetreive.ForeColor = $TextColor
+$outputsuppressed = $menuFunctions.DropDownItems.Add($menuBitlockerRetreive)
 
 #AD Tab
 $menuAD.Text = "AD Lookup"
