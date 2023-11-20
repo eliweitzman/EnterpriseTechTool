@@ -911,23 +911,11 @@ function bitlockerTool {
                 #Stop action
                 return
             }
-
-            $ADComputer = Get-ADComputer -Identity $hostname
-
-            try {
             
-                #Create LDAP path
-                $LDAPPath = "AD:\" + $ADComputer.DistinguishedName
-
-                #Generate LDAP Object
-                $LDAPObj = Get-ChildItem $LDAPPath | Where-Object { $_.ObjectClass -eq "msFVE-RecoveryInformation" }
-
-                #Adapt AD Query
-                $LDAPPath = "AD:\", $LDAPObj.DistinguishedName -join ""
-
-                #Get Bitlocker Recovery Key
-                $pw = Get-Item $LDAPObj -properties "msFVE-RecoveryPassword"
-                $recoveryPassword = $pw."msFVE-RecoveryPassword"
+            try {
+                $ADComputer = Get-ADComputer -Identity $hostname
+                $bitlockerObj = Get-ADObject -Filter {objectclass -eq 'msFVE-RecoveryInformation'} -SearchBase $ADComputer.DistinguishedName -Properties 'msFVE-RecoveryPassword'
+                $recoveryPassword = $bitlockerObj | Select -ExpandProperty msFVE-RecoveryPassword
             }
             catch {
                 $recoveryPassword = "Error: Computer not found"
