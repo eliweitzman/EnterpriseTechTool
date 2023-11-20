@@ -1868,9 +1868,14 @@ $menuWiFiDiag.Add_Click({
             Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
         }
         else {
-            #Admin mode is not enabled, run in a sub-process shell
-            Start-Process powershell.exe -Verb runAs -ArgumentList "-command netsh wlan show wlanreport" -PassThru -Wait
-            Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
+            #Admin mode is not enabled, run in a sub-process shell, but catch if UAC is not accepted and do nothing
+            try {
+                Start-Process powershell.exe -Verb runAs -ArgumentList "-command netsh wlan show wlanreport" -PassThru -Wait
+                Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
+            }
+            catch {
+                #Do nothing...
+            }
         }
     })
 $menuWiFiDiag.BackColor = $BGcolor
