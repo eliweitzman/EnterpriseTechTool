@@ -142,6 +142,24 @@ if ($adminmode -eq $true) {
     }
 }
 
+#Import Drawing API for Shield Icon
+Add-Type -AssemblyName System.Drawing
+$shieldIconBase64 = "AAABAAEAECAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAR0dHYEdHR2AAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABHR0cQR0dHv0dHR/9HR0f/R0dHv0dHRxAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABHR0cwR0dH70VWXv86ndD/pFgS/1dKPv9HR0fvR0dH
+MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABHR0cwR0dH70JsgP83tPP/Nrv+/8ReAP+7XAT/bk4x/0dHR+9HR0cwAAAAAAAAAAAAAAAAAAAAAAAAAABHR0cwR0dH70JzjP84vf7/N7z+/za7/v/EXwD/xF
+4A/8NdAP92Tyz/R0dH70dHRzAAAAAAAAAAAAAAAAAAAAAAR0dHz0Vdaf85vv7/OL3+/zi9/v83vP7/xWAA/8RfAP/EXgD/w10A/15LOv9HR0fPAAAAAAAAAAAAAAAAR0dHYEdHR/89qdz/Or/+/zm+/v84vf7/
+OL3+/8VhAP/FYAD/xF8A/8ReAP+sWQ3/R0dH/0dHR2AAAAAAAAAAAEdHR69DdIz/O8D+/zq//v86v/7/Ob7+/zi9/v/GYwD/xWEA/8VgAP/EXwD/xF4A/3ZPLP9HR0evAAAAAAAAAABHR0f/oV8W/8lpAP/IaQ
+D/yGcA/8dmAP/HZQD/OL3+/zi9/v83vP7/Nrv+/za7/v87lsX/R0dH/wAAAAAAAAAAR0dH/6ljEv/JawD/yWkA/8hpAP/IZwD/x2YA/zm+/v84vf7/OL3+/ze8/v82u/7/Op7Q/0dHR/8AAAAAAAAAAEdHR//K
+bQD/ymwA/8lrAP/JaQD/yGkA/8hnAP86v/7/Ob7+/zi9/v84vf7/N7z+/za7/v9HR0f/AAAAAAAAAABHR0f/y24A/8ptAP/KbAD/yWsA/8lpAP/IaQD/Or/+/zq//v85vv7/OL3+/zi9/v83vP7/R0dH/wAAAA
+AAAAAAR0dH/4lbJP+qZBL/ym0A/8psAP/JawD/yWkA/zvA/v86v/7/Or/+/zm+/v88oND/P4Kj/0dHR/8AAAAAAAAAAEdHR79HR0fPR0dH/1hMPv+ZXxv/ymwA/8lrAP88wP7/O8D+/z+Suf9FVl7/R0dH/0dH
+R89HR0e/AAAAAAAAAAAAAAAAAAAAAEdHRyBHR0efR0dH/2hQNf+hYBb/QJvF/0Rldf9HR0f/R0dHn0dHRyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEdHR0BHR0e/R0dH/0dHR/9HR0e/R0dHMA
+AAAAAAAAAAAAAAAAAAAAAAAAAA/n/+//gf5//wD0f/4AcAAMADAADAA0f/gAEA/4ABAP+AAQD/gAEA/4ABAP+AAQD/gAEA/4ABAP/gB/7/+B/+/w=="
+$shieldIconBytes = [Convert]::FromBase64String($shieldIconBase64)
+$shieldMemoryStream = New-Object IO.MemoryStream($shieldIconBytes, 0, $shieldIconBytes.Length)
+$shieldMemoryStream.Write($shieldIconBytes,0,$shieldIconBytes.Length)
+$shieldIcon = [System.Drawing.Image]::FromStream($shieldMemoryStream, $true)
+
+
 #Capture Machine Info, and make a loading screen
 
 #Loading Screen
@@ -1656,6 +1674,7 @@ $menuSFCScan.Add_Click({
     })
 $menuSFCScan.BackColor = $BGcolor
 $menuSFCScan.ForeColor = $TextColor
+$menuSFCScan.Image = $shieldIcon
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuSFCScan)
 
 #Suspend BitLocker Button - Suspends BitLocker for one reboot
@@ -1684,6 +1703,7 @@ $menuSuspendBitLocker.Add_Click({
     })
 $menuSuspendBitLocker.BackColor = $BGcolor
 $menuSuspendBitLocker.ForeColor = $TextColor
+$menuSuspendBitlocker.Image = $shieldIcon
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuSuspendBitLocker)
 
 #Test Network Button - Tests network connectivity
@@ -1712,6 +1732,7 @@ $menuWiFiDiag.Add_Click({
     })
 $menuWiFiDiag.BackColor = $BGcolor
 $menuWiFiDiag.ForeColor = $TextColor
+$menuWiFiDiag.Image = $shieldIcon
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuWiFiDiag)
 
 #Quick Reboot Button - Reboots the computer
