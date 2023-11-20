@@ -56,6 +56,32 @@ ETT can run in a few different ways, depending on preference, and on your own pe
 | Modified PS Script | Downloading the PS1 file, and adjusting the feature flags (indicated below). |
 | Modified EXE | Modifying the flags, and compiling it as an EXE for use. Able to bypass execution policy.|
 
+## Install Methods
+
+1. Using the Windows Package Manager (Machine-wide only... [info](https://github.com/eliweitzman/EnterpriseTechTool/edit/main/README.md#runtime-options))
+
+Standard Install:
+```
+winget install --id=EliWeitzman.ETT
+```
+
+Admin-Mode Install:
+```
+winget install --id=EliWeitzman.ETT-Admin
+```
+
+2. Self-extracting Installer (Admin Mode and Regular)
+
+Simply run the latest release's ETT.Installer or ETT-Admin.Installer
+
+_Note: Currently, only the ETT.Installer is whitelisted by Microsoft Defender SmartScreen. ETT-Admin will prompt Defender prior to download and install as of now ([Clearance WIP](https://github.com/eliweitzman/EnterpriseTechTool/issues/35))._
+
+3. Portable Mode
+
+A single, standalone EXE application, portable enough to fit on a flash drive! 
+
+_Note: Portable application is not yet whitelisted by SmartScreen, but approval is currently [in-progress](https://github.com/eliweitzman/EnterpriseTechTool/issues/35)_
+
 
 ## Optimal Environment
 

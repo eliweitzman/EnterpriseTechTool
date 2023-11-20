@@ -8,7 +8,7 @@ Due to the nature of the application being effectively just a PowerShell script,
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.0     | :white_check_mark: |
+| 1.x     | :white_check_mark: |
 
 ## User Assumptions
 
