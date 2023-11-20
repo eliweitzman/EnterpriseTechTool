@@ -15,9 +15,9 @@
 .AUTHOR
     Eli Weitzman
 .NOTES
-    Version:        1.1
+    Version:        1.2
     Creation Date:  12-26-22
-    Last Updated:   9-23-23
+    Last Updated:   
     Purpose/Change: 
 
 .LICENSE
@@ -1071,7 +1071,7 @@ function notificationPush {
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
 $ETT.ClientSize = New-Object System.Drawing.Point(519, 330)
-$ETT.text = "Eli's Enterprise Tech Tool V1.1"
+$ETT.text = "Eli's Enterprise Tech Tool V1.2"
 $ETT.StartPosition = 'CenterScreen'
 $ETT.MaximizeBox = $false
 $ETT.MaximumSize = $ETT.Size
