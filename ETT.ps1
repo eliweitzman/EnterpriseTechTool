@@ -1771,11 +1771,11 @@ $outputsuppressed = $menu.Items.Add($menuFunctions)
 $launchDriverUpdater.Text = "Launch Driver Updater (CLI)"
 $launchDriverUpdater.Add_Click({
         #Launch Driver Updater
-        if ($manufacturer -eq "Dell Inc.") {
+        if (($manufacturer -eq "Dell Inc.") -and (Test-Path -Path "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe")) {
             #Uses Dell Command Update CLI to update drivers
             Start-Process -Filepath "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe" -ArgumentList "/applyUpdates -outputLog=C:\Temp\dellUpdateOutput.log" -WorkingDirectory "C:\Program Files (x86)\Dell\CommandUpdate" -PassThru -Verb RunAs
         }
-        elseif ($manufacturer -eq "LENOVO") {
+        elseif (($manufacturer -eq "LENOVO") -and (Test-Path -Path "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe")) {
             #Uses Lenovo System Update CLI trigger to update drivers
             Start-Process "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe" -ArgumentList "/CM -search C -action INSTALL -includerebootpackages 1,3,4 -noreboot" -WorkingDirectory "C:\Program Files (x86)\Lenovo\System Update" -PassThru -Verb RunAs
             $wshell = New-Object -ComObject Wscript.Shell
@@ -1794,10 +1794,10 @@ $outputsuppressed = $menuFunctions.DropDownItems.Add($launchDriverUpdater)
 $launchDriverUpdaterGUI.Text = "Launch Driver Updater (GUI)"
 $launchDriverUpdaterGUI.Add_Click({
         #Launch Driver Updater
-        if ($manufacturer -eq "Dell Inc.") {
+        if (($manufacturer -eq "Dell Inc.") -and (Test-Path -Path "C:\Program Files\Dell\CommandUpdate\DellCommandUpdate.exe")) {
             Start-Process "C:\Program Files\Dell\CommandUpdate\DellCommandUpdate.exe"
         }
-        elseif ($manufacturer -eq "LENOVO") {
+        elseif (($manufacturer -eq "LENOVO") -and (Test-Path -Path "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe")) {
             Start-Process "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe"
         }
         else {
