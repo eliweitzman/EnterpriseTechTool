@@ -15,9 +15,9 @@
 .AUTHOR
     Eli Weitzman
 .NOTES
-    Version:        1.2
+    Version:        1.2.1
     Creation Date:  12-26-22
-    Last Updated:   
+    Last Updated:   11-22-23
     Purpose/Change: 
 
 .LICENSE
@@ -1213,7 +1213,7 @@ function notificationPush {
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
 $ETT.ClientSize = New-Object System.Drawing.Point(519, 330)
-$ETT.text = "Eli's Enterprise Tech Tool V1.2"
+$ETT.text = "Eli's Enterprise Tech Tool V1.2.1"
 $ETT.StartPosition = 'CenterScreen'
 $ETT.MaximizeBox = $false
 $ETT.MaximumSize = $ETT.Size
@@ -1784,6 +1784,7 @@ $launchDriverUpdater.Add_Click({
         else {
             #Open MS Settings - Windows Update deeplink
             Start-Process ms-settings:windowsupdate-action
+            Start-Process ms-settings:windowsupdate-optionalupdates
         }
     })
 $launchDriverUpdater.BackColor = $BGcolor
@@ -1801,8 +1802,11 @@ $launchDriverUpdaterGUI.Add_Click({
             Start-Process "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe"
         }
         else {
-            #Open MS Settings - Windows Update deeplink
+            #Open MS Settings - Windows Update deeplink and 1 second popup to notify user
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("Driver Updater not found. Opening Windows Update.", 0, "Driver Updater", 64)
             Start-Process ms-settings:windowsupdate-action
+            Start-Process ms-settings:windowsupdate-optionalupdates
         }
     })
 $launchDriverUpdaterGUI.BackColor = $BGcolor
