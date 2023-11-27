@@ -59,7 +59,7 @@ Add-Type -AssemblyName System.Windows.Forms
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
 #Admin mode - if auto-elevate is enabled, this will be set to $true
-$adminmode = $false
+$adminmode = $true
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
 $BrandColor = '#023a24' #Set the color of the form, currently populated with a hex value.
@@ -1821,7 +1821,6 @@ $menuSFCScan.Add_Click({
     })
 $menuSFCScan.BackColor = $BGcolor
 $menuSFCScan.ForeColor = $TextColor
-$menuSFCScan.Image = $shieldIcon
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuSFCScan)
 
 #Suspend BitLocker Button - Suspends BitLocker for one reboot
@@ -1850,7 +1849,6 @@ $menuSuspendBitLocker.Add_Click({
     })
 $menuSuspendBitLocker.BackColor = $BGcolor
 $menuSuspendBitLocker.ForeColor = $TextColor
-$menuSuspendBitlocker.Image = $shieldIcon
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuSuspendBitLocker)
 
 #Test Network Button - Tests network connectivity
@@ -1884,7 +1882,6 @@ $menuWiFiDiag.Add_Click({
     })
 $menuWiFiDiag.BackColor = $BGcolor
 $menuWiFiDiag.ForeColor = $TextColor
-$menuWiFiDiag.Image = $shieldIcon
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuWiFiDiag)
 
 #Quick Reboot Button - Reboots the computer
@@ -2037,6 +2034,13 @@ foreach ($key in $($sccmTSTable.Keys)) {
 $menuExit.Text = "Exit"
 $menuExit.Add_Click({ $ETT.Close() })
 $outputsuppressed = $menu.Items.Add($menuExit)
+
+#For non-admin mode, show the UAC shield on the buttons that require admin mode
+if ($adminmode -eq $false) {
+    $menuWiFiDiag.Image = $shieldIcon
+    $menuSFCScan.Image = $shieldIcon
+    $menuSuspendBitlocker.Image = $shieldIcon
+}
 
 #Add all buttons and functions to the GUI menu
 $ETT.controls.AddRange(@($Logo, $Heading, $ClearLastLogin, $Lapspw, $appUpdate, $PolicyPatch, $menu))
