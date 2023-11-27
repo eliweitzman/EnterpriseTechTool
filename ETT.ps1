@@ -1458,6 +1458,9 @@ $menuWindowsActivation = New-Object System.Windows.Forms.ToolStripMenuItem
 #SCCM Tools
 $sccmClientTools = New-Object System.Windows.Forms.ToolStripMenuItem
 
+#SECURITY TAB
+$menuSecurity = New-Object System.Windows.Forms.ToolStripMenuItem
+
 #One-Off Tabs
 $menuExit = New-Object System.Windows.Forms.ToolStripMenuItem
 
@@ -2029,6 +2032,26 @@ foreach ($key in $($sccmTSTable.Keys)) {
         })
     $outputsuppressed = $sccmClientTools.DropDownItems.Add($tmpButton)
 }
+
+#Security TAB Construction
+$menuSecurity.Text = "Security"
+$outputsuppressed = $menu.Items.Add($menuSecurity)
+
+$hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
+$hostsComplient = $true
+$hostsText = "Host File Integrity: Unmodified"
+if($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085")
+{
+    $hostsComplient = $false
+    $hostsText = "Host File Integrity: Modified"
+}
+
+$hostsChkButton = New-Object System.Windows.Forms.ToolStripMenuItem
+$hostsChkButton.Text = $hostsText
+$hostsChkButton.BackColor = $BGcolor
+$hostsChkButton.ForeColor = $TextColor
+$outputsuppressed = $menuSecurity.DropDownItems.Add($hostsChkButton)
+
 
 #Exit Button
 $menuExit.Text = "Exit"
