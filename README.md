@@ -13,7 +13,7 @@ Welcome to Eli's Enterprise Tech Tool (ETT, or Enterprise Tech Tool, for short).
 ### Core Functions
 
 - Clear Last Windows Session Login
-- Retreive Microsoft and Windows LAPS passwords from On-Prem AD (Azure AD Windows LAPS coming soon!)
+- Retreive Microsoft and Windows LAPS passwords from On-Prem AD (Azure AD Windows LAPS now available!)
 - Update all apps (using Windows Package Manager)
 - Update Device Policy (gpupdate)
 - System-aware dark/light mode!
