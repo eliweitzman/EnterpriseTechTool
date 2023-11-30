@@ -62,7 +62,7 @@ $ETTVersion = "1.2.1"
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
 #Admin mode - if auto-elevate is enabled, this will be set to $true
-$adminmode = $true
+$adminmode = $false
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
 $BrandColor = '#023a24' #Set the color of the form, currently populated with a hex value.
@@ -125,7 +125,14 @@ else
 $installType = "Portable"
 if (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\Eli's Enterprise Tech Toolkit") -or ($ScriptPath -eq "C:\Program Files (x86)\Eli's Enterprise Tech Toolkit"))
 {
+    #ETT Regular Install
     $installType = "Installed"
+    $installVariant = "Regular"
+}elseif (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\ETT-Admin")-or ($ScriptPath -eq "C:\Program Files (x86)\ETT-Admin"))
+{
+    #ETT Admin Install
+    $installType = "Installed"
+    $installVariant = "Admin"
 }
 
 #Check for updates
@@ -144,7 +151,33 @@ $githubVersion = [System.Version]::new($latestTag)
 
 if($applicationVersion -lt $githubVersion)
 {
-    # TODO update logic here
+    #validate installation method, and segment options
+    if (($installType -eq "Installed") -and ($installVariant -eq "Regular")) {
+        #This is for if an application was installed with Winget, or with the self-extracting installer, and is a regular ETT variant
+        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
+        if ($updatePrompt -eq "Yes") {
+            winget.exe upgrade --id=EliWeitzman.ETT
+        }else{
+            #Do nothing
+        }
+    }elseif (($installType -eq "Installed") -and ($installVariant -eq "Admin")) {
+        #This is for if an application was installed with Winget, or with the self-extracting installer, and is an admin ETT variant
+        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
+        if ($updatePrompt -eq "Yes") {
+            winget.exe upgrade --id=EliWeitzman.ETT-Admin
+        }else{
+            #Do nothing
+        }
+    }elseif ($installType -eq "Portable") {
+        #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
+        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
+        if ($updatePrompt -eq "Yes") {
+            Start-Process "https://github.com/eliweitzman/EnterpriseTechTool"
+        }else{
+            #Do nothing
+        }
+
+    }
 }
 
 #Determine Dark/Light Mode
