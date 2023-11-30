@@ -55,6 +55,9 @@
 Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
+#Build Variables
+$ETTVersion = "1.2.1"
+
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
@@ -108,6 +111,41 @@ $emailTo = $null
 
 
 ## END INITIAL FLAGS
+
+#Check Execution Path
+if ($MyInvocation.MyCommand.CommandType -eq "ExternalScript")
+{ # Powershell script
+	$ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
+}
+else
+{ # PS2EXE compiled script
+	$ScriptPath = Split-Path -Parent -Path ([Environment]::GetCommandLineArgs()[0])
+}
+
+$installType = "Portable"
+if (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\Eli's Enterprise Tech Toolkit") -or ($ScriptPath -eq "C:\Program Files (x86)\Eli's Enterprise Tech Toolkit"))
+{
+    $installType = "Installed"
+}
+
+#Check for updates
+
+# GitHub API endpoint for tags
+$apiUrl = "https://api.github.com/repos/eliweitzman/EnterpriseTechTool/tags"
+# Make a web request to the GitHub API
+$response = Invoke-RestMethod -Uri $apiUrl -Method Get
+
+# Extract the name of the latest tag
+$latestTag = $response[0].name
+
+#Check the tag against our current application version
+$applicationVersion = [System.Version]::new($ETTVersion)
+$githubVersion = [System.Version]::new($latestTag)
+
+if($applicationVersion -lt $githubVersion)
+{
+    # TODO update logic here
+}
 
 #Determine Dark/Light Mode
 # Get the current theme
@@ -1213,7 +1251,7 @@ function notificationPush {
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
 $ETT.ClientSize = New-Object System.Drawing.Point(519, 330)
-$ETT.text = "Eli's Enterprise Tech Tool V1.2.1"
+$ETT.text = "Eli's Enterprise Tech Tool V$ETTVersion"
 $ETT.StartPosition = 'CenterScreen'
 $ETT.MaximizeBox = $false
 $ETT.MaximumSize = $ETT.Size
