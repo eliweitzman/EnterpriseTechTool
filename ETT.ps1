@@ -201,17 +201,8 @@ else {
     $BoxColor = $BrandColor
 }
 
-#Admin Mode Auto-Elevate - If enabled, will auto-elevate to admin if not already running as admin. This will involve a UAC prompt.
-
-if ($adminmode -eq $true) {
-    if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
-        if ([int](Get-CimInstance -Class Win32_OperatingSystem | Select-Object -ExpandProperty BuildNumber) -ge 6000) {
-            $Command = "-File `"" + $MyInvocation.MyCommand.Path + "`" " + $MyInvocation.UnboundArguments
-            Start-Process -FilePath PowerShell.exe -Verb RunAs -ArgumentList $Command
-            Exit
-        }
-    }
-}
+# Check if the script is running with administrator privileges
+$adminmode = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 #Import Drawing API for Shield Icon
 Add-Type -AssemblyName System.Drawing
@@ -1284,7 +1275,7 @@ function notificationPush {
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
 $ETT.ClientSize = New-Object System.Drawing.Point(519, 330)
-$ETT.text = "Eli's Enterprise Tech Tool V$ETTVersion"
+$ETT.text = "Eli's Enterprise Tech Tool V$ETTVersion AdminMode: $adminmode"
 $ETT.StartPosition = 'CenterScreen'
 $ETT.MaximizeBox = $false
 $ETT.MaximumSize = $ETT.Size
