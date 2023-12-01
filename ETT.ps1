@@ -151,32 +151,24 @@ $githubVersion = [System.Version]::new($latestTag)
 
 if($applicationVersion -lt $githubVersion)
 {
-    #validate installation method, and segment options
-    if (($installType -eq "Installed") -and ($installVariant -eq "Regular")) {
+    $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
+    if ($updatePrompt -eq "Yes") 
+    {
         #This is for if an application was installed with Winget, or with the self-extracting installer, and is a regular ETT variant
-        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
-        if ($updatePrompt -eq "Yes") {
+        if (($installType -eq "Installed") -and ($installVariant -eq "Regular")) 
+        {
             winget.exe upgrade --id=EliWeitzman.ETT
-        }else{
-            #Do nothing
         }
-    }elseif (($installType -eq "Installed") -and ($installVariant -eq "Admin")) {
         #This is for if an application was installed with Winget, or with the self-extracting installer, and is an admin ETT variant
-        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
-        if ($updatePrompt -eq "Yes") {
+        elseif (($installType -eq "Installed") -and ($installVariant -eq "Admin")) 
+        {
             winget.exe upgrade --id=EliWeitzman.ETT-Admin
-        }else{
-            #Do nothing
         }
-    }elseif ($installType -eq "Portable") {
         #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
-        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
-        if ($updatePrompt -eq "Yes") {
+        elseif ($installType -eq "Portable") 
+        {
             Start-Process "https://github.com/eliweitzman/EnterpriseTechTool"
-        }else{
-            #Do nothing
         }
-
     }
 }
 
