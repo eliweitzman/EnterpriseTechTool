@@ -128,11 +128,6 @@ if (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\Eli's Enterp
     #ETT Regular Install
     $installType = "Installed"
     $installVariant = "Regular"
-}elseif (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\ETT-Admin")-or ($ScriptPath -eq "C:\Program Files (x86)\ETT-Admin"))
-{
-    #ETT Admin Install
-    $installType = "Installed"
-    $installVariant = "Admin"
 }
 
 #Check for updates
@@ -158,11 +153,6 @@ if($applicationVersion -lt $githubVersion)
         if (($installType -eq "Installed") -and ($installVariant -eq "Regular")) 
         {
             winget.exe upgrade --id=EliWeitzman.ETT
-        }
-        #This is for if an application was installed with Winget, or with the self-extracting installer, and is an admin ETT variant
-        elseif (($installType -eq "Installed") -and ($installVariant -eq "Admin")) 
-        {
-            winget.exe upgrade --id=EliWeitzman.ETT-Admin
         }
         #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
         elseif ($installType -eq "Portable") 
