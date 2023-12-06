@@ -113,18 +113,17 @@ $emailTo = $null
 ## END INITIAL FLAGS
 
 #Check Execution Path
-if ($MyInvocation.MyCommand.CommandType -eq "ExternalScript")
-{ # Powershell script
-	$ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
+if ($MyInvocation.MyCommand.CommandType -eq "ExternalScript") {
+    # Powershell script
+    $ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
 }
-else
-{ # PS2EXE compiled script
-	$ScriptPath = Split-Path -Parent -Path ([Environment]::GetCommandLineArgs()[0])
+else {
+    # PS2EXE compiled script
+    $ScriptPath = Split-Path -Parent -Path ([Environment]::GetCommandLineArgs()[0])
 }
 
 $installType = "Portable"
-if (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\Eli's Enterprise Tech Toolkit") -or ($ScriptPath -eq "C:\Program Files (x86)\Eli's Enterprise Tech Toolkit"))
-{
+if (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\Eli's Enterprise Tech Toolkit") -or ($ScriptPath -eq "C:\Program Files (x86)\Eli's Enterprise Tech Toolkit")) {
     #ETT Regular Install
     $installType = "Installed"
     $installVariant = "Regular"
@@ -144,19 +143,15 @@ $latestTag = $response[0].name
 $applicationVersion = [System.Version]::new($ETTVersion)
 $githubVersion = [System.Version]::new($latestTag)
 
-if($applicationVersion -lt $githubVersion)
-{
+if ($applicationVersion -lt $githubVersion) {
     $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
-    if ($updatePrompt -eq "Yes") 
-    {
+    if ($updatePrompt -eq "Yes") {
         #This is for if an application was installed with Winget, or with the self-extracting installer, and is a regular ETT variant
-        if (($installType -eq "Installed") -and ($installVariant -eq "Regular")) 
-        {
+        if (($installType -eq "Installed") -and ($installVariant -eq "Regular")) {
             winget.exe upgrade --id=EliWeitzman.ETT
         }
         #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
-        elseif ($installType -eq "Portable") 
-        {
+        elseif ($installType -eq "Portable") {
             Start-Process "https://github.com/eliweitzman/EnterpriseTechTool"
         }
     }
@@ -200,7 +195,7 @@ R89HR0e/AAAAAAAAAAAAAAAAAAAAAEdHRyBHR0efR0dH/2hQNf+hYBb/QJvF/0Rldf9HR0f/R0dHn0dH
 AAAAAAAAAAAAAAAAAAAAAAAAAA/n/+//gf5//wD0f/4AcAAMADAADAA0f/gAEA/4ABAP+AAQD/gAEA/4ABAP+AAQD/gAEA/4ABAP/gB/7/+B/+/w=="
 $shieldIconBytes = [Convert]::FromBase64String($shieldIconBase64)
 $shieldMemoryStream = New-Object IO.MemoryStream($shieldIconBytes, 0, $shieldIconBytes.Length)
-$shieldMemoryStream.Write($shieldIconBytes,0,$shieldIconBytes.Length)
+$shieldMemoryStream.Write($shieldIconBytes, 0, $shieldIconBytes.Length)
 $shieldIcon = [System.Drawing.Image]::FromStream($shieldMemoryStream, $true)
 
 
@@ -1066,7 +1061,7 @@ function bitlockerTool {
             
             try {
                 $ADComputer = Get-ADComputer -Identity $hostname
-                $bitlockerObj = Get-ADObject -Filter {objectclass -eq 'msFVE-RecoveryInformation'} -SearchBase $ADComputer.DistinguishedName -Properties 'msFVE-RecoveryPassword'
+                $bitlockerObj = Get-ADObject -Filter { objectclass -eq 'msFVE-RecoveryInformation' } -SearchBase $ADComputer.DistinguishedName -Properties 'msFVE-RecoveryPassword'
                 $recoveryPassword = $bitlockerObj | Select -ExpandProperty msFVE-RecoveryPassword
             }
             catch {
@@ -1961,8 +1956,8 @@ $menuFunctions.DropDownItems.Add($menuRenameComputer)
 
 $menuBitlockerRetreive.Text = "Retrieve BitLocker Key"
 $menuBitlockerRetreive.Add_Click({
-    bitlockerTool
-})
+        bitlockerTool
+    })
 $menuBitlockerRetreive.BackColor = $BGcolor
 $menuBitlockerRetreive.ForeColor = $TextColor
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuBitlockerRetreive)
@@ -1989,7 +1984,13 @@ $outputsuppressed = $menu.Items.Add($menuWindowsTools)
 
 #Windows Update Check Button - Checks for Windows Updates
 $menuWindowsUpdateCheck.Text = "Check for Windows Updates"
-$menuWindowsUpdateCheck.Add_Click({
+$menuWindowsUpdateCheck.BackColor = $BGcolor
+$menuWindowsUpdateCheck.ForeColor = $TextColor
+
+#Add sub-menu items to Windows Update Check Button - Full Sweep
+$menuWindowsUpdateCheckFullSweep = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuWindowsUpdateCheckFullSweep.Text = "Full Sweep"
+$menuWindowsUpdateCheckFullSweep.Add_Click({
         #Check for Windows Updates
         $updates = (New-Object -ComObject Microsoft.Update.Session).CreateupdateSearcher().Search("IsHidden=0 and IsInstalled=0").Updates | Select-Object Title
         #Check if updates are available, if blank then no updates are available
@@ -2001,10 +2002,75 @@ $menuWindowsUpdateCheck.Add_Click({
             #Updates are available, so display them in a popup
             $wshell = New-Object -ComObject Wscript.Shell
             $wshell.Popup("Updates Available:" + "`n" + $updates, 0, "Windows Updates", 64)
-        }
+
+            #Next, prompt to install updates
+            if ($wshell.Popup("Would you like to install these updates?", 0, "Windows Updates", 4 + 32) -eq 6) {
+                #Install updates
+                $updateSession = New-Object -ComObject Microsoft.Update.Session
+                $updateSearcher = $updateSession.CreateUpdateSearcher()
+                $result = $updateSearcher.Search("IsHidden=0 and IsInstalled=0")
+                $result.Updates | ForEach-Object {
+                    $_.AcceptEula()
+                    $downloader = $updateSession.CreateUpdateDownloader()
+                    $downloader.Updates = $_
+                    $downloader.Download()
+                    $installer = New-Object -ComObject Microsoft.Update.Installer
+                    $installer.Updates = $_
+                    $installer.Install()
+                }
+        }}
     })
-$menuWindowsUpdateCheck.BackColor = $BGcolor
-$menuWindowsUpdateCheck.ForeColor = $TextColor
+$menuWindowsUpdateCheckFullSweep.BackColor = $BGcolor
+$menuWindowsUpdateCheckFullSweep.ForeColor = $TextColor
+$outputsuppressed = $menuWindowsUpdateCheck.DropDownItems.Add($menuWindowsUpdateCheckFullSweep)
+
+#Add sub-menu items to Windows Update Check Button - Defender Definition Updates
+$menuWindowsUpdateCheckDefender = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuWindowsUpdateCheckDefender.Text = "Defender Definition Updates"
+$menuWindowsUpdateCheckDefender.Add_Click({
+        #Check for Windows Defender Definition Updates
+        # Create an instance of the Update Session COM object
+        $updateSession = New-Object -ComObject Microsoft.Update.Session
+
+        # Create an update searcher
+        $updateSearcher = $updateSession.CreateUpdateSearcher()
+
+        # Search for Windows Defender Definition updates
+        $result = $updateSearcher.Search("IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'")
+
+        if ($searchResult.Updates.Count -eq 0) {
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.popup("No Windows Defender Definition updates found.", 0, "Windows Defender Definition Updates", 64)
+        }
+        else {
+            #Updates are available, so display them in a popup
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("Updates Available:" + "`n" + $searchResult.Updates, 0, "Windows Defender Definition Updates", 64)
+
+            #Next, prompt to install updates
+            if ($wshell.Popup("Would you like to install these updates?", 0, "Windows Defender Definition Updates", 4 + 32) -eq 6) {
+                #Install updates
+                $updateSession = New-Object -ComObject Microsoft.Update.Session
+                $updateSearcher = $updateSession.CreateUpdateSearcher()
+                $result = $updateSearcher.Search("IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'")
+                $result.Updates | ForEach-Object {
+                    $_.AcceptEula()
+                    $downloader = $updateSession.CreateUpdateDownloader()
+                    $downloader.Updates = $_
+                    $downloader.Download()
+                    $installer = New-Object -ComObject Microsoft.Update.Installer
+                    $installer.Updates = $_
+                    $installer.Install()
+                }
+            }else {
+                #Do nothing
+            }
+        }
+})
+$menuWindowsUpdateCheckDefender.BackColor = $BGcolor
+$menuWindowsUpdateCheckDefender.ForeColor = $TextColor
+$outputsuppressed = $menuWindowsUpdateCheck.DropDownItems.Add($menuWindowsUpdateCheckDefender)
+
 $outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsUpdateCheck)
 
 #Windows Activation Button - Windows Activation Key
@@ -2084,8 +2150,7 @@ $outputsuppressed = $menu.Items.Add($menuSecurity)
 $hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
 $hostsComplient = $true
 $hostsText = "Host File Integrity: Unmodified"
-if($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085")
-{
+if ($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085") {
     $hostsComplient = $false
     $hostsText = "Host File Integrity: Modified"
 }
