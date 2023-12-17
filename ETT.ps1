@@ -1140,14 +1140,18 @@ else {
 }
 
 #Device Type conversion
-if ($deviceType -eq 1) {
-    $systemType = "Desktop"
-}
-elseif ($devicetype -eq 2) {
-    $systemType = "Laptop"
-}
-else {
-    $systemType = "Unknown"
+#A switch statement to convert the devicetype variable to a human readable format in a new systemType variable
+switch ($devicetype) {
+    0 {$systemType = "Unspecified"}
+    1 {$systemType = "Desktop"}
+    2 {$systemType = "Mobile"}
+    3 {$systemType = "Workstation"}
+    4 {$systemType = "Enterprise Server"}
+    5 {$systemType = "SOHO Server"}
+    6 {$systemType = "Appliance PC"}
+    7 {$systemType = "Performance Server"}
+    8 {$systemType = "Slate"}
+    default {$systemType = "Unknown"}
 }
 
 #Create Device Info Dump
@@ -1270,7 +1274,7 @@ function notificationPush {
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
 $ETT.ClientSize = New-Object System.Drawing.Point(519, 330)
-$ETT.text = "Eli's Enterprise Tech Tool V$ETTVersion AdminMode: $adminmode"
+$ETT.text = "Eli's Enterprise Tech Tool V$ETTVersion"
 $ETT.StartPosition = 'CenterScreen'
 $ETT.MaximizeBox = $false
 $ETT.MaximumSize = $ETT.Size
@@ -1476,6 +1480,7 @@ $menuHostname = New-Object System.Windows.Forms.ToolStripMenuItem
 $windowsVersion = New-Object System.Windows.Forms.ToolStripMenuItem
 $manufacturerInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $modelInfo = New-Object System.Windows.Forms.ToolStripMenuItem
+$devicetypeInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $domainInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $storageInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $ramInfo = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1643,6 +1648,18 @@ $modelInfo.ToolTipText = "Current device model." + "`nClick to copy model to cli
 $modelInfo.BackColor = $BGcolor
 $modelInfo.ForeColor = $TextColor
 $outputsuppressed = $menuInfo.DropDownItems.Add($modelInfo)
+
+#Device Type Info Display
+$devicetypeInfo.Text = "Device Type: " + $systemType
+$devicetypeInfo.Add_Click({
+        Set-Clipboard -Value $systemType
+        $wshell = New-Object -ComObject Wscript.Shell
+        $wshell.Popup("Device Type copied to clipboard", 0, "Device Type Copied", 64)
+    })
+$devicetypeInfo.ToolTipText = "Current device type." + "`nClick to copy device type to clipboard."
+$devicetypeInfo.BackColor = $BGcolor
+$devicetypeInfo.ForeColor = $TextColor
+$outputsuppressed = $menuInfo.DropDownItems.Add($devicetypeInfo)
 
 #Domain Info Display
 $domainInfo.Text = "Domain: " + $domain
@@ -1949,7 +1966,7 @@ $outputsuppressed = $menuFunctions.DropDownItems.Add($menuWiFiDiag)
 $menuBatteryDiagnostic.Text = "Launch Battery Diagnostic"
 $menuBatteryDiagnostic.Add_Click({
         #Test Battery, first check if device is a laptop
-        if ($systemType -eq "Laptop") {
+        if ($systemType -eq "Mobile" -or $systemType -eq "Appliance PC" -or $systemType -eq "Slate") {
             #Device is a laptop, now check if adminmode is enabled
             if ($adminmode -eq "True") {
                 #Check to see if C:\Temp\ exists, if not, create it
