@@ -17,8 +17,8 @@
 .NOTES
     Version:        1.2.1
     Creation Date:  12-26-22
-    Last Updated:   11-22-23
-    Purpose/Change: Webhook test
+    Last Updated:   12-17-23
+    Purpose/Change: Timeout implementation
 
 .LICENSE
     BSD 3-Clause License
@@ -71,6 +71,8 @@ $LogoLocation = $null #If you want to use a custom logo, set the path here. Othe
 #ETT UI Options
 $backgroundImagePath = "" #Set this to a web URL or local path to change the BG image of ETT
 $ettHeaderTextColor = [System.Drawing.Color]::FromName("White")#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
+$timeout = $false #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
+$timeoutLength = 300 #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
 
 #Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 #RAM Check
@@ -2018,7 +2020,8 @@ $menuWindowsUpdateCheckFullSweep.Add_Click({
                     $installer.Updates = $_
                     $installer.Install()
                 }
-        }}
+            }
+        }
     })
 $menuWindowsUpdateCheckFullSweep.BackColor = $BGcolor
 $menuWindowsUpdateCheckFullSweep.ForeColor = $TextColor
@@ -2062,11 +2065,12 @@ $menuWindowsUpdateCheckDefender.Add_Click({
                     $installer.Updates = $_
                     $installer.Install()
                 }
-            }else {
+            }
+            else {
                 #Do nothing
             }
         }
-})
+    })
 $menuWindowsUpdateCheckDefender.BackColor = $BGcolor
 $menuWindowsUpdateCheckDefender.ForeColor = $TextColor
 $outputsuppressed = $menuWindowsUpdateCheck.DropDownItems.Add($menuWindowsUpdateCheckDefender)
@@ -2177,8 +2181,13 @@ if ($adminmode -eq $false) {
 #Add all buttons and functions to the GUI menu
 $ETT.controls.AddRange(@($Logo, $Heading, $ClearLastLogin, $Lapspw, $appUpdate, $PolicyPatch, $menu))
 
-#region Logic 
-
-#endregion
+#Timeout Logic - IF timeout is true, then set a timer to close the form after a specified amount of time - WIP
+if ($timeout -eq $true) {
+    $timeoutTimer = New-Object System.Windows.Forms.Timer
+    #Set the interval to the timeout value (converted to milliseconds)
+    $timeoutTimer.Interval = $timeoutLength * 1000
+    $timeoutTimer.Add_Tick({ $ETT.Close() }) #Close the form when the timer ticks
+    $timeoutTimer.Start() #Start the timer
+}
 
 [void]$ETT.ShowDialog()
