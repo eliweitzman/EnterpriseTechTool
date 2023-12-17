@@ -280,6 +280,10 @@ $LoadingLabel.Text = "Getting CPU Info..."
 $cpuCheck = Get-WmiObject -Class Win32_Processor | Select-Object -ExpandProperty Name
 $outputsuppressed = $LoadingProgressBar.Value = 90
 
+$LoadingLabel.Text = "Getting Device Type..."
+$devicetype = (Get-WmiObject -Class Win32_ComputerSystem -Property PCSystemType).PCSystemType
+$outputsuppressed = $LoadingProgressBar.Value = 95
+
 $LoadingLabel.Text = "Getting Drive Type..."
 $drivetype = Get-PhysicalDisk | Where-Object DeviceID -eq 0 | Select-Object -ExpandProperty MediaType
 $outputsuppressed = $LoadingProgressBar.Value = 100
@@ -1135,6 +1139,17 @@ else {
     $winverCompliant = $true
 }
 
+#Device Type conversion
+if ($deviceType -eq 1) {
+    $systemType = "Desktop"
+}
+elseif ($devicetype -eq 2) {
+    $systemType = "Laptop"
+}
+else {
+    $systemType = "Unknown"
+}
+
 #Create Device Info Dump
 $deviceInfo = @"
 Compliance Status: $complianceStatus
@@ -1146,6 +1161,7 @@ Model: $model
 RAM: $ramCheck GB
 CPU: $cpuCheck
 Domain: $domain
+System Type: $systemType
 Storage: $drivespace
 Storage Type: $drivetype
 "@
@@ -1485,6 +1501,7 @@ $menuSuspendBitlocker = New-Object System.Windows.Forms.ToolStripMenuItem
 #$menuRenameComputer = New-Object System.Windows.Forms.ToolStripMenuItem - Commented out until I can figure out how to make it work
 $menuTestNet = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuWiFiDiag = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuBatteryDiagnostic = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuRebootQuick = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuBitlockerRetreive = New-Object System.Windows.Forms.ToolStripMenuItem
 
@@ -1928,6 +1945,48 @@ $menuWiFiDiag.BackColor = $BGcolor
 $menuWiFiDiag.ForeColor = $TextColor
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuWiFiDiag)
 
+#Battery Diagnostic Button - Tests Battery Health
+$menuBatteryDiagnostic.Text = "Launch Battery Diagnostic"
+$menuBatteryDiagnostic.Add_Click({
+        #Test Battery, first check if device is a laptop
+        if ($systemType -eq "Laptop") {
+            #Device is a laptop, now check if adminmode is enabled
+            if ($adminmode -eq "True") {
+                #Check to see if C:\Temp\ exists, if not, create it
+                if ((Test-Path -path "C:\Temp\") -eq $false) {
+                    New-Item -Path 'C:\Temp\' -ItemType Directory
+                }
+
+                #Adminmode is enabled, so run the battery report
+                Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru-Wait
+                Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
+            }
+            else {
+                #Adminmode is not enabled, so run the battery report in a sub-process shell, but catch if UAC is not accepted and do nothing
+                try {
+                    #Check to see if C:\Temp\ exists, if not, create it
+                    if ((Test-Path -path "C:\Temp\") -eq $false) {
+                        New-Item -Path 'C:\Temp\' -ItemType Directory
+                    }
+
+                    Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru -Verb RunAs -Wait
+                    Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
+                }
+                catch {
+                    #Do nothing...
+                }
+            }
+        }
+        else {
+            #Device is not a laptop, so display a popup
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("This device is not a laptop. No battery report available.", 0, "Battery Diagnostic", 64)
+        }
+    })
+$menuBatteryDiagnostic.BackColor = $BGcolor
+$menuBatteryDiagnostic.ForeColor = $TextColor
+$outputsuppressed = $menuFunctions.DropDownItems.Add($menuBatteryDiagnostic)
+
 #Quick Reboot Button - Reboots the computer
 $menuRebootQuick.Text = "Quick Reboot"
 $menuRebootQuick.Add_Click({
@@ -2176,6 +2235,7 @@ if ($adminmode -eq $false) {
     $menuWiFiDiag.Image = $shieldIcon
     $menuSFCScan.Image = $shieldIcon
     $menuSuspendBitlocker.Image = $shieldIcon
+    $menuBatteryDiagnostic.Image = $shieldIcon
 }
 
 #Add all buttons and functions to the GUI menu
