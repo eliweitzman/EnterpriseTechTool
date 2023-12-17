@@ -1,7 +1,7 @@
 ---
 name: Function Tab request
 about: Suggest a tool for the "Functions" Tab
-title: "[TAB REQUEST]"
+title: "[TAB]"
 labels: enhancement, function-tab, question
 assignees: ''
 
