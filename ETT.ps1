@@ -61,7 +61,7 @@ $ETTVersion = "1.2.1"
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
-#Admin mode - if auto-elevate is enabled, this will be set to $true
+#Admin mode - if auto-elevate is enabled, this will be set to $true. If in EXE mode, this is automatically handled by Windows.
 $adminmode = $false
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
