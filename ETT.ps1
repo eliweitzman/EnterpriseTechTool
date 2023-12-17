@@ -128,7 +128,6 @@ $installType = "Portable"
 if (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\Eli's Enterprise Tech Toolkit") -or ($ScriptPath -eq "C:\Program Files (x86)\Eli's Enterprise Tech Toolkit")) {
     #ETT Regular Install
     $installType = "Installed"
-    $installVariant = "Regular"
 }
 
 #Check for updates
@@ -146,10 +145,10 @@ $applicationVersion = [System.Version]::new($ETTVersion)
 $githubVersion = [System.Version]::new($latestTag)
 
 if ($applicationVersion -lt $githubVersion) {
-    $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
+    $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
     if ($updatePrompt -eq "Yes") {
         #This is for if an application was installed with Winget, or with the self-extracting installer, and is a regular ETT variant
-        if (($installType -eq "Installed") -and ($installVariant -eq "Regular")) {
+        if (($installType -eq "Installed")) {
             winget.exe upgrade --id=EliWeitzman.ETT
         }
         #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
