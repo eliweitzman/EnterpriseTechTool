@@ -1067,7 +1067,7 @@ function bitlockerTool {
             try {
                 $ADComputer = Get-ADComputer -Identity $hostname
                 $bitlockerObj = Get-ADObject -Filter { objectclass -eq 'msFVE-RecoveryInformation' } -SearchBase $ADComputer.DistinguishedName -Properties 'msFVE-RecoveryPassword'
-                $recoveryPassword = $bitlockerObj | Select -ExpandProperty msFVE-RecoveryPassword
+                $recoveryPassword = $bitlockerObj | Select-Object -ExpandProperty msFVE-RecoveryPassword
             }
             catch {
                 $recoveryPassword = "Error: Computer not found"
@@ -2083,9 +2083,7 @@ $menuWindowsUpdateCheckFullSweep.Add_Click({
             #Next, prompt to install updates
             if ($wshell.Popup("Would you like to install these updates?", 0, "Windows Updates", 4 + 32) -eq 6) {
                 #Install updates
-                $updateSession = New-Object -ComObject Microsoft.Update.Session
-                $updateSearcher = $updateSession.CreateUpdateSearcher()
-                $result = $updateSearcher.Search("IsHidden=0 and IsInstalled=0")
+                $result = (New-Object -ComObject Microsoft.Update.Session).CreateupdateSearcher().Search("IsHidden=0 and IsInstalled=0")
                 $result.Updates | ForEach-Object {
                     $_.AcceptEula()
                     $downloader = $updateSession.CreateUpdateDownloader()
@@ -2114,8 +2112,7 @@ $menuWindowsUpdateCheckDefender.Add_Click({
         $updateSearcher = $updateSession.CreateUpdateSearcher()
 
         # Search for Windows Defender Definition updates
-        $result = $updateSearcher.Search("IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'")
-
+        $searchresult = $updateSearcher.Search("IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'")
         if ($searchResult.Updates.Count -eq 0) {
             $wshell = New-Object -ComObject Wscript.Shell
             $wshell.popup("No Windows Defender Definition updates found.", 0, "Windows Defender Definition Updates", 64)
@@ -2128,9 +2125,7 @@ $menuWindowsUpdateCheckDefender.Add_Click({
             #Next, prompt to install updates
             if ($wshell.Popup("Would you like to install these updates?", 0, "Windows Defender Definition Updates", 4 + 32) -eq 6) {
                 #Install updates
-                $updateSession = New-Object -ComObject Microsoft.Update.Session
-                $updateSearcher = $updateSession.CreateUpdateSearcher()
-                $result = $updateSearcher.Search("IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'")
+                $result = (New-Object -ComObject Microsoft.Update.Session).CreateUpdateSearcher().Search("IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'")
                 $result.Updates | ForEach-Object {
                     $_.AcceptEula()
                     $downloader = $updateSession.CreateUpdateDownloader()
@@ -2155,7 +2150,7 @@ $outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsUpdateCheck)
 #Windows Activation Button - Windows Activation Key
 $menuWindowsActivation.Text = "Get Windows Activation Key"
 $menuWindowsActivation.Add_Click({
-        $HardwareKey = (Get-WmiObject -query 'select * from SoftwareLicensingService' | Select OA3xOriginalProductKey).OA3xOriginalProductKey
+        $HardwareKey = (Get-WmiObject -query 'select * from SoftwareLicensingService' | Select-Object OA3xOriginalProductKey).OA3xOriginalProductKey
         
         #Verify that the key is not null
         if ($HardwareKey -eq $null -or $HardwareKey -eq "") {
@@ -2227,10 +2222,10 @@ $menuSecurity.Text = "Security"
 $outputsuppressed = $menu.Items.Add($menuSecurity)
 
 $hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
-$hostsComplient = $true
+$hostsCompliant = $true
 $hostsText = "Host File Integrity: Unmodified"
 if ($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085") {
-    $hostsComplient = $false
+    $hostsCompliant = $false
     $hostsText = "Host File Integrity: Modified"
 }
 
