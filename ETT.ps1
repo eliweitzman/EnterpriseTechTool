@@ -1974,7 +1974,7 @@ $menuBatteryDiagnostic.Add_Click({
                 }
 
                 #Adminmode is enabled, so run the battery report
-                Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru-Wait
+                Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru -Wait
                 Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
             }
             else {
