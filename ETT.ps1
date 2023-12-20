@@ -135,14 +135,21 @@ if (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\Eli's Enterp
 # GitHub API endpoint for tags
 $apiUrl = "https://api.github.com/repos/eliweitzman/EnterpriseTechTool/tags"
 # Make a web request to the GitHub API
-$response = Invoke-RestMethod -Uri $apiUrl -Method Get
+try {
+    $response = Invoke-RestMethod -Uri $apiUrl -Method Get -ErrorAction SilentlyContinue
 
-# Extract the name of the latest tag
-$latestTag = $response[0].name
+    # Extract the name of the latest tag
+    $latestTag = $response[0].name
 
-#Check the tag against our current application version
-$applicationVersion = [System.Version]::new($ETTVersion)
-$githubVersion = [System.Version]::new($latestTag)
+    #Check the tag against our current application version
+    $applicationVersion = [System.Version]::new($ETTVersion)
+    $githubVersion = [System.Version]::new($latestTag)
+}
+catch {
+    #IF Device is offline, don't check for updates, and thus set these to a value that will not trigger an update prompt
+    $applicationVersion = $true
+    $githubVersion = $true
+}
 
 if ($applicationVersion -lt $githubVersion) {
     $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
@@ -1141,16 +1148,16 @@ else {
 #Device Type conversion
 #A switch statement to convert the devicetype variable to a human readable format in a new systemType variable
 switch ($devicetype) {
-    0 {$systemType = "Unspecified"}
-    1 {$systemType = "Desktop"}
-    2 {$systemType = "Mobile"}
-    3 {$systemType = "Workstation"}
-    4 {$systemType = "Enterprise Server"}
-    5 {$systemType = "SOHO Server"}
-    6 {$systemType = "Appliance PC"}
-    7 {$systemType = "Performance Server"}
-    8 {$systemType = "Slate"}
-    default {$systemType = "Unknown"}
+    0 { $systemType = "Unspecified" }
+    1 { $systemType = "Desktop" }
+    2 { $systemType = "Mobile" }
+    3 { $systemType = "Workstation" }
+    4 { $systemType = "Enterprise Server" }
+    5 { $systemType = "SOHO Server" }
+    6 { $systemType = "Appliance PC" }
+    7 { $systemType = "Performance Server" }
+    8 { $systemType = "Slate" }
+    default { $systemType = "Unknown" }
 }
 
 #Create Device Info Dump
@@ -2234,7 +2241,6 @@ $hostsChkButton.Text = $hostsText
 $hostsChkButton.BackColor = $BGcolor
 $hostsChkButton.ForeColor = $TextColor
 $outputsuppressed = $menuSecurity.DropDownItems.Add($hostsChkButton)
-
 
 #Exit Button
 $menuExit.Text = "Exit"
