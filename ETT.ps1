@@ -2076,7 +2076,7 @@ $menuWindowsUpdateCheckFullSweep = New-Object System.Windows.Forms.ToolStripMenu
 $menuWindowsUpdateCheckFullSweep.Text = "Full Sweep"
 $menuWindowsUpdateCheckFullSweep.Add_Click({
         #Check for Windows Updates
-        $updates = (New-Object -ComObject Microsoft.Update.Session).CreateupdateSearcher().Search("IsHidden=0 and IsInstalled=0").Updates | Select-Object Title
+        $updates = (New-Object -ComObject Microsoft.Update.Session).CreateupdateSearcher().Search("IsHidden=0 and IsInstalled=0").Updates
         #Check if updates are available, if blank then no updates are available
         if ($updates -eq $null) {
             $wshell = New-Object -ComObject Wscript.Shell
@@ -2085,7 +2085,16 @@ $menuWindowsUpdateCheckFullSweep.Add_Click({
         else {
             #Updates are available, so display them in a popup
             $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Updates Available:" + "`n" + $updates, 0, "Windows Updates", 64)
+            $stringBuilder = [System.Text.StringBuilder]::new()
+            for ($i-0; $i -lt $updates.Count; $i++)
+            {
+                $update = $updates.Item($i)
+                [void]$stringBuilder.AppendLine("$($update.Title)")
+            }
+            # Convert StringBuilder to a string and output the result
+            $resultString = $stringBuilder.ToString()
+
+            $wshell.Popup("Updates Available:" + "`n" + $resultString, 0, "Windows Updates", 64)
 
             #Next, prompt to install updates
             if ($wshell.Popup("Would you like to install these updates?", 0, "Windows Updates", 4 + 32) -eq 6) {
@@ -2120,14 +2129,22 @@ $menuWindowsUpdateCheckDefender.Add_Click({
 
         # Search for Windows Defender Definition updates
         $searchresult = $updateSearcher.Search("IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'")
-        if ($searchResult.Updates.Count -eq 0) {
+        if ($searchresult.Updates.Count -eq 0) {
             $wshell = New-Object -ComObject Wscript.Shell
             $wshell.popup("No Windows Defender Definition updates found.", 0, "Windows Defender Definition Updates", 64)
         }
         else {
             #Updates are available, so display them in a popup
             $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Updates Available:" + "`n" + $searchResult.Updates, 0, "Windows Defender Definition Updates", 64)
+            $stringBuilder = [System.Text.StringBuilder]::new()
+            for ($i-0; $i -lt $searchresult.Updates.Count; $i++)
+            {
+                $update = $searchresult.Updates.Item($i)
+                [void]$stringBuilder.AppendLine("$($update.Title)")
+            }
+            # Convert StringBuilder to a string and output the result
+            $resultString = $stringBuilder.ToString()
+            $wshell.Popup("Updates Available:" + "`n" + $resultString, 0, "Windows Defender Definition Updates", 64)
 
             #Next, prompt to install updates
             if ($wshell.Popup("Would you like to install these updates?", 0, "Windows Defender Definition Updates", 4 + 32) -eq 6) {
