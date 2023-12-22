@@ -1292,58 +1292,63 @@ function CheckForWindowsUpdates {
     if ($searchResult.Updates.Count -eq 0) {
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.popup($noUpdatesMessage, 0, $windowTitle, 64)
-    }
-    else {
-        #If yes, install updates
-        if ($wshell.popup("Updates found. Would you like to install them?", 0, $windowTitle, 4) -eq 6) {
-            #Check the status to see if we need to download or just install updates
-            $downloadReq = $false
-            foreach ($update in $searchResult.Updates) {
-                if ($update.IsDownloaded -eq $false) {
-                    $downloadReq = $true
-                }
-            }
-
-            #If we need to download updates, we do that here.
-            if ($downloadReq) {
-                $updatesToDownload = new-object -com "Microsoft.Update.UpdateColl"
+    } else {
+        #Check if admin mode is enabled. Depending on the result, run the appropriate command
+        if ($adminmode -eq $true) {
+            #If yes, install updates
+            if ($wshell.popup("Updates found. Would you like to install them?", 0, $windowTitle, 4) -eq 6) {
+                #Check the status to see if we need to download or just install updates
+                $downloadReq = $false
                 foreach ($update in $searchResult.Updates) {
-                    $updatesToDownload.Add($update) | out-null
+                    if ($update.IsDownloaded -eq $false) {
+                        $downloadReq = $true
+                    }
                 }
-                $downloader = $updateSession.CreateUpdateDownloader() 
-                $downloader.Updates = $updatesToDownload
-                $downloader.Download()
-            }
 
-            $updatesToInstall = new-object -com "Microsoft.Update.UpdateColl"
-            foreach ($update in $searchResult.Updates) {
-                if ( $update.IsDownloaded ) {
-                    $updatesToInstall.Add($update) | out-null
+                #If we need to download updates, we do that here.
+                if ($downloadReq) {
+                    $updatesToDownload = new-object -com "Microsoft.Update.UpdateColl"
+                    foreach ($update in $searchResult.Updates) {
+                        $updatesToDownload.Add($update) | out-null
+                    }
+                    $downloader = $updateSession.CreateUpdateDownloader() 
+                    $downloader.Updates = $updatesToDownload
+                    $downloader.Download()
                 }
-            }
-            if ( $updatesToInstall.Count -eq 0 ) {
-                #Not ready for install.
+
+                $updatesToInstall = new-object -com "Microsoft.Update.UpdateColl"
+                foreach ($update in $searchResult.Updates) {
+                    if ( $update.IsDownloaded ) {
+                        $updatesToInstall.Add($update) | out-null
+                    }
+                }
+                if ( $updatesToInstall.Count -eq 0 ) {
+                    #Not ready for install.
+                }
+                else {
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $installer = $updateSession.CreateUpdateInstaller()
+                    $installer.Updates = $updatesToInstall
+                    $installationResult = $installer.Install()
+                    if ( $installationResult.ResultCode -eq 2 ) {
+                        $wshell.popup("Updates installed successfully.", 0, $windowTitle, 64)
+                    }
+                    else {
+                        $wshell.popup("Some updates could not installed.", 0, $windowTitle, 64)
+                    }
+                    if ( $installationResult.RebootRequired ) {
+                        $wshell.popup("One or more updates are requiring reboot.", 0, $windowTitle, 64)
+                    }
+                    else {
+                        $wshell.popup("Finished. Reboot are not required.", 0, $windowTitle, 64)
+                    }
+                }
             }
             else {
-                $wshell = New-Object -ComObject Wscript.Shell
-                $installer = $updateSession.CreateUpdateInstaller()
-                $installer.Updates = $updatesToInstall
-                $installationResult = $installer.Install()
-                if ( $installationResult.ResultCode -eq 2 ) {
-                    $wshell.popup("Updates installed successfully.", 0, $windowTitle, 64)
-                }
-                else {
-                    $wshell.popup("Some updates could not installed.", 0, $windowTitle, 64)
-                }
-                if ( $installationResult.RebootRequired ) {
-                    $wshell.popup("One or more updates are requiring reboot.", 0, $windowTitle, 64)
-                }
-                else {
-                    $wshell.popup("Finished. Reboot are not required.", 0, $windowTitle, 64)
-                }
+                #Do nothing
             }
-        }else {
-            #Do nothing
+        }else{
+            #If no, do not install updates, and do nothing
         }
     }
 }
