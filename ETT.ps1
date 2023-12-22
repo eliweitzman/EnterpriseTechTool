@@ -1290,13 +1290,15 @@ function CheckForWindowsUpdates {
     $searchResult = $updateSearcher.Search($updateSearchQuery)
 
     if ($searchResult.Updates.Count -eq 0) {
+        #If no updates are found, show a popup
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.popup($noUpdatesMessage, 0, $windowTitle, 64)
     } else {
         #Check if admin mode is enabled. Depending on the result, run the appropriate command
         if ($adminmode -eq $true) {
             #If yes, install updates
-            if ($wshell.popup("Updates found. Would you like to install them?", 0, $windowTitle, 4) -eq 6) {
+            $wshell = New-Object -ComObject Wscript.Shell
+            if ($wshell.Popup("Do you want to continue and download updates?", 0, "Update Confirm", 0x00000004) -eq 6) {
                 #Check the status to see if we need to download or just install updates
                 $downloadReq = $false
                 foreach ($update in $searchResult.Updates) {
@@ -1348,7 +1350,9 @@ function CheckForWindowsUpdates {
                 #Do nothing
             }
         }else{
-            #If no, do not install updates, and do nothing
+            #If no, show a popup that updates are available, but admin mode needs to be run
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.popup("Updates found. Please run ETT in admin mode to install updates.", 0, $windowTitle, 64)
         }
     }
 }
