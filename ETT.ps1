@@ -1277,8 +1277,7 @@ function notificationPush {
     
 }
 
-function CheckForWindowsUpdates
-{
+function CheckForWindowsUpdates {
     param(
         [string]$windowTitle,
         [string]$updateSearchQuery,
@@ -1295,60 +1294,56 @@ function CheckForWindowsUpdates
         $wshell.popup($noUpdatesMessage, 0, $windowTitle, 64)
     }
     else {
-        #Check the status to see if we need to download or just install updates
-        $downloadReq = $false
-        foreach ($update in $searchResult.Updates)
-        {
-            if($update.IsDownloaded -eq $false)
-            {
-                $downloadReq = $true
+        #If yes, install updates
+        if ($wshell.popup("Updates found. Would you like to install them?", 0, $windowTitle, 4) -eq 6) {
+            #Check the status to see if we need to download or just install updates
+            $downloadReq = $false
+            foreach ($update in $searchResult.Updates) {
+                if ($update.IsDownloaded -eq $false) {
+                    $downloadReq = $true
+                }
             }
-        }
 
-        #If we need to download updates, we do that here.
-        if ($downloadReq)
-        {
-            $updatesToDownload = new-object -com "Microsoft.Update.UpdateColl"
-            foreach ($update in $searchResult.Updates)
-            {
-                $updatesToDownload.Add($update) | out-null
+            #If we need to download updates, we do that here.
+            if ($downloadReq) {
+                $updatesToDownload = new-object -com "Microsoft.Update.UpdateColl"
+                foreach ($update in $searchResult.Updates) {
+                    $updatesToDownload.Add($update) | out-null
+                }
+                $downloader = $updateSession.CreateUpdateDownloader() 
+                $downloader.Updates = $updatesToDownload
+                $downloader.Download()
             }
-            $downloader = $updateSession.CreateUpdateDownloader() 
-            $downloader.Updates = $updatesToDownload
-            $downloader.Download()
-        }
 
-        $updatesToInstall = new-object -com "Microsoft.Update.UpdateColl"
-        foreach ($update in $searchResult.Updates)
-        {
-            if ( $update.IsDownloaded ) 
-            {
-                $updatesToInstall.Add($update) | out-null
+            $updatesToInstall = new-object -com "Microsoft.Update.UpdateColl"
+            foreach ($update in $searchResult.Updates) {
+                if ( $update.IsDownloaded ) {
+                    $updatesToInstall.Add($update) | out-null
+                }
             }
-        }
-        if ( $updatesToInstall.Count -eq 0 ) 
-        {
-            #Not ready for install.
-        }
-        else
-        {
-            $installer = $updateSession.CreateUpdateInstaller()
-            $installer.Updates = $updatesToInstall
-            $installationResult = $installer.Install()
-            if ( $installationResult.ResultCode -eq 2 ) {
-                Write-Host "All updates installed successfully."
+            if ( $updatesToInstall.Count -eq 0 ) {
+                #Not ready for install.
             }
-            else 
-            {
-                Write-Host "Some updates could not installed."
+            else {
+                $wshell = New-Object -ComObject Wscript.Shell
+                $installer = $updateSession.CreateUpdateInstaller()
+                $installer.Updates = $updatesToInstall
+                $installationResult = $installer.Install()
+                if ( $installationResult.ResultCode -eq 2 ) {
+                    $wshell.popup("Updates installed successfully.", 0, $windowTitle, 64)
+                }
+                else {
+                    $wshell.popup("Some updates could not installed.", 0, $windowTitle, 64)
+                }
+                if ( $installationResult.RebootRequired ) {
+                    $wshell.popup("One or more updates are requiring reboot.", 0, $windowTitle, 64)
+                }
+                else {
+                    $wshell.popup("Finished. Reboot are not required.", 0, $windowTitle, 64)
+                }
             }
-            if ( $installationResult.RebootRequired ) {
-                Write-Host "One or more updates are requiring reboot."
-            }
-            else 
-            {
-                Write-Host "Finished. Reboot are not required."
-            }
+        }else {
+            #Do nothing
         }
     }
 }
@@ -2164,7 +2159,7 @@ $menuWindowsUpdateCheckDefender = New-Object System.Windows.Forms.ToolStripMenuI
 $menuWindowsUpdateCheckDefender.Text = "Defender Definition Updates"
 $menuWindowsUpdateCheckDefender.Add_Click({
 
-    CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'"
+        CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'"
   
     })
 $menuWindowsUpdateCheckDefender.BackColor = $BGcolor
