@@ -10,6 +10,10 @@ Due to the nature of the application being effectively just a PowerShell script,
 | ------- | ------------------ |
 | 1.x     | :white_check_mark: |
 
+## ETT-Admin Version Support
+
+With the latest updates in version 1.2.1, ETT-Admin's functions have been merged and segmented into ETT through "Run-As" elevation. As such, ETT-Admin is being further deprecated, and will no longer be updated or supported. However, ETT's latest release includes the same functionality, just as a combined version.
+
 ## User Assumptions
 
 Users of ETT must ensure their local device's security measures are adequate. This includes ensuring they have an up-to-date operating system, antivirus software, and PowerShell version if they intend to run the application as a script.

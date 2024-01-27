@@ -15,10 +15,10 @@
 .AUTHOR
     Eli Weitzman
 .NOTES
-    Version:        1.2
+    Version:        1.2.1
     Creation Date:  12-26-22
-    Last Updated:   
-    Purpose/Change: 
+    Last Updated:   12-17-23
+    Purpose/Change: Timeout implementation
 
 .LICENSE
     BSD 3-Clause License
@@ -55,10 +55,13 @@
 Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
+#Build Variables
+$ETTVersion = "1.2.1"
+
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
-#Admin mode - if auto-elevate is enabled, this will be set to $true
+#Admin mode - if auto-elevate is enabled, this will be set to $true. If in EXE mode, this is automatically handled by Windows.
 $adminmode = $false
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
@@ -68,6 +71,8 @@ $LogoLocation = $null #If you want to use a custom logo, set the path here. Othe
 #ETT UI Options
 $backgroundImagePath = "" #Set this to a web URL or local path to change the BG image of ETT
 $ettHeaderTextColor = [System.Drawing.Color]::FromName("White")#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
+$timeout = $false #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
+$timeoutLength = 300 #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
 
 #Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 #RAM Check
@@ -109,6 +114,57 @@ $emailTo = $null
 
 ## END INITIAL FLAGS
 
+#Check Execution Path
+if ($MyInvocation.MyCommand.CommandType -eq "ExternalScript") {
+    # Powershell script
+    $ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
+}
+else {
+    # PS2EXE compiled script
+    $ScriptPath = Split-Path -Parent -Path ([Environment]::GetCommandLineArgs()[0])
+}
+
+$installType = "Portable"
+if (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\Eli's Enterprise Tech Toolkit") -or ($ScriptPath -eq "C:\Program Files (x86)\Eli's Enterprise Tech Toolkit")) {
+    #ETT Regular Install
+    $installType = "Installed"
+}
+
+#Check for updates
+
+# GitHub API endpoint for tags
+$apiUrl = "https://api.github.com/repos/eliweitzman/EnterpriseTechTool/tags"
+# Make a web request to the GitHub API
+try {
+    $response = Invoke-RestMethod -Uri $apiUrl -Method Get -ErrorAction SilentlyContinue
+
+    # Extract the name of the latest tag
+    $latestTag = $response[0].name
+
+    #Check the tag against our current application version
+    $applicationVersion = [System.Version]::new($ETTVersion)
+    $githubVersion = [System.Version]::new($latestTag)
+}
+catch {
+    #IF Device is offline, don't check for updates, and thus set these to a value that will not trigger an update prompt
+    $applicationVersion = $true
+    $githubVersion = $true
+}
+
+if ($applicationVersion -lt $githubVersion) {
+    $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
+    if ($updatePrompt -eq "Yes") {
+        #This is for if an application was installed with Winget, or with the self-extracting installer, and is a regular ETT variant
+        if (($installType -eq "Installed")) {
+            winget.exe upgrade --id=EliWeitzman.ETT
+        }
+        #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
+        elseif ($installType -eq "Portable") {
+            Start-Process "https://github.com/eliweitzman/EnterpriseTechTool"
+        }
+    }
+}
+
 #Determine Dark/Light Mode
 # Get the current theme
 $theme = (Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize").AppsUseLightTheme
@@ -130,17 +186,8 @@ else {
     $BoxColor = $BrandColor
 }
 
-#Admin Mode Auto-Elevate - If enabled, will auto-elevate to admin if not already running as admin. This will involve a UAC prompt.
-
-if ($adminmode -eq $true) {
-    if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
-        if ([int](Get-CimInstance -Class Win32_OperatingSystem | Select-Object -ExpandProperty BuildNumber) -ge 6000) {
-            $Command = "-File `"" + $MyInvocation.MyCommand.Path + "`" " + $MyInvocation.UnboundArguments
-            Start-Process -FilePath PowerShell.exe -Verb RunAs -ArgumentList $Command
-            Exit
-        }
-    }
-}
+# Check if the script is running with administrator privileges
+$adminmode = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 #Import Drawing API for Shield Icon
 Add-Type -AssemblyName System.Drawing
@@ -156,7 +203,7 @@ R89HR0e/AAAAAAAAAAAAAAAAAAAAAEdHRyBHR0efR0dH/2hQNf+hYBb/QJvF/0Rldf9HR0f/R0dHn0dH
 AAAAAAAAAAAAAAAAAAAAAAAAAA/n/+//gf5//wD0f/4AcAAMADAADAA0f/gAEA/4ABAP+AAQD/gAEA/4ABAP+AAQD/gAEA/4ABAP/gB/7/+B/+/w=="
 $shieldIconBytes = [Convert]::FromBase64String($shieldIconBase64)
 $shieldMemoryStream = New-Object IO.MemoryStream($shieldIconBytes, 0, $shieldIconBytes.Length)
-$shieldMemoryStream.Write($shieldIconBytes,0,$shieldIconBytes.Length)
+$shieldMemoryStream.Write($shieldIconBytes, 0, $shieldIconBytes.Length)
 $shieldIcon = [System.Drawing.Image]::FromStream($shieldMemoryStream, $true)
 
 
@@ -238,6 +285,10 @@ $outputsuppressed = $LoadingProgressBar.Value = 80
 $LoadingLabel.Text = "Getting CPU Info..."
 $cpuCheck = Get-WmiObject -Class Win32_Processor | Select-Object -ExpandProperty Name
 $outputsuppressed = $LoadingProgressBar.Value = 90
+
+$LoadingLabel.Text = "Getting Device Type..."
+$devicetype = (Get-WmiObject -Class Win32_ComputerSystem -Property PCSystemType).PCSystemType
+$outputsuppressed = $LoadingProgressBar.Value = 95
 
 $LoadingLabel.Text = "Getting Drive Type..."
 $drivetype = Get-PhysicalDisk | Where-Object DeviceID -eq 0 | Select-Object -ExpandProperty MediaType
@@ -1022,8 +1073,8 @@ function bitlockerTool {
             
             try {
                 $ADComputer = Get-ADComputer -Identity $hostname
-                $bitlockerObj = Get-ADObject -Filter {objectclass -eq 'msFVE-RecoveryInformation'} -SearchBase $ADComputer.DistinguishedName -Properties 'msFVE-RecoveryPassword'
-                $recoveryPassword = $bitlockerObj | Select -ExpandProperty msFVE-RecoveryPassword
+                $bitlockerObj = Get-ADObject -Filter { objectclass -eq 'msFVE-RecoveryInformation' } -SearchBase $ADComputer.DistinguishedName -Properties 'msFVE-RecoveryPassword'
+                $recoveryPassword = $bitlockerObj | Select-Object -ExpandProperty msFVE-RecoveryPassword
             }
             catch {
                 $recoveryPassword = "Error: Computer not found"
@@ -1094,6 +1145,21 @@ else {
     $winverCompliant = $true
 }
 
+#Device Type conversion
+#A switch statement to convert the devicetype variable to a human readable format in a new systemType variable
+switch ($devicetype) {
+    0 { $systemType = "Unspecified" }
+    1 { $systemType = "Desktop" }
+    2 { $systemType = "Mobile" }
+    3 { $systemType = "Workstation" }
+    4 { $systemType = "Enterprise Server" }
+    5 { $systemType = "SOHO Server" }
+    6 { $systemType = "Appliance PC" }
+    7 { $systemType = "Performance Server" }
+    8 { $systemType = "Slate" }
+    default { $systemType = "Unknown" }
+}
+
 #Create Device Info Dump
 $deviceInfo = @"
 Compliance Status: $complianceStatus
@@ -1105,6 +1171,7 @@ Model: $model
 RAM: $ramCheck GB
 CPU: $cpuCheck
 Domain: $domain
+System Type: $systemType
 Storage: $drivespace
 Storage Type: $drivetype
 "@
@@ -1210,10 +1277,90 @@ function notificationPush {
     
 }
 
+function CheckForWindowsUpdates {
+    param(
+        [string]$windowTitle,
+        [string]$updateSearchQuery,
+        [string]$noUpdatesMessage
+    )
+
+    #Create our Update Session and Update Searcher
+    $updateSession = new-object -com "Microsoft.Update.Session"
+    $updateSearcher = $updateSession.CreateupdateSearcher()
+    $searchResult = $updateSearcher.Search($updateSearchQuery)
+
+    if ($searchResult.Updates.Count -eq 0) {
+        #If no updates are found, show a popup
+        $wshell = New-Object -ComObject Wscript.Shell
+        $wshell.popup($noUpdatesMessage, 0, $windowTitle, 64)
+    } else {
+        #Check if admin mode is enabled. Depending on the result, run the appropriate command
+        if ($adminmode -eq $true) {
+            #If yes, install updates
+            $wshell = New-Object -ComObject Wscript.Shell
+            if ($wshell.Popup("Do you want to continue and download updates?", 0, "Update Confirm", 0x00000004) -eq 6) {
+                #Check the status to see if we need to download or just install updates
+                $downloadReq = $false
+                foreach ($update in $searchResult.Updates) {
+                    if ($update.IsDownloaded -eq $false) {
+                        $downloadReq = $true
+                    }
+                }
+
+                #If we need to download updates, we do that here.
+                if ($downloadReq) {
+                    $updatesToDownload = new-object -com "Microsoft.Update.UpdateColl"
+                    foreach ($update in $searchResult.Updates) {
+                        $updatesToDownload.Add($update) | out-null
+                    }
+                    $downloader = $updateSession.CreateUpdateDownloader() 
+                    $downloader.Updates = $updatesToDownload
+                    $downloader.Download()
+                }
+
+                $updatesToInstall = new-object -com "Microsoft.Update.UpdateColl"
+                foreach ($update in $searchResult.Updates) {
+                    if ( $update.IsDownloaded ) {
+                        $updatesToInstall.Add($update) | out-null
+                    }
+                }
+                if ( $updatesToInstall.Count -eq 0 ) {
+                    #Not ready for install.
+                }
+                else {
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $installer = $updateSession.CreateUpdateInstaller()
+                    $installer.Updates = $updatesToInstall
+                    $installationResult = $installer.Install()
+                    if ( $installationResult.ResultCode -eq 2 ) {
+                        $wshell.popup("Updates installed successfully.", 0, $windowTitle, 64)
+                    }
+                    else {
+                        $wshell.popup("Some updates could not installed.", 0, $windowTitle, 64)
+                    }
+                    if ( $installationResult.RebootRequired ) {
+                        $wshell.popup("One or more updates are requiring reboot.", 0, $windowTitle, 64)
+                    }
+                    else {
+                        $wshell.popup("Finished. Reboot are not required.", 0, $windowTitle, 64)
+                    }
+                }
+            }
+            else {
+                #Do nothing
+            }
+        }else{
+            #If no, show a popup that updates are available, but admin mode needs to be run
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.popup("Updates found. Please run ETT in admin mode to install updates.", 0, $windowTitle, 64)
+        }
+    }
+}
+
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
 $ETT.ClientSize = New-Object System.Drawing.Point(519, 330)
-$ETT.text = "Eli's Enterprise Tech Tool V1.2"
+$ETT.text = "Eli's Enterprise Tech Tool V$ETTVersion"
 $ETT.StartPosition = 'CenterScreen'
 $ETT.MaximizeBox = $false
 $ETT.MaximumSize = $ETT.Size
@@ -1419,6 +1566,7 @@ $menuHostname = New-Object System.Windows.Forms.ToolStripMenuItem
 $windowsVersion = New-Object System.Windows.Forms.ToolStripMenuItem
 $manufacturerInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $modelInfo = New-Object System.Windows.Forms.ToolStripMenuItem
+$devicetypeInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $domainInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $storageInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $ramInfo = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1444,6 +1592,7 @@ $menuSuspendBitlocker = New-Object System.Windows.Forms.ToolStripMenuItem
 #$menuRenameComputer = New-Object System.Windows.Forms.ToolStripMenuItem - Commented out until I can figure out how to make it work
 $menuTestNet = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuWiFiDiag = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuBatteryDiagnostic = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuRebootQuick = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuBitlockerRetreive = New-Object System.Windows.Forms.ToolStripMenuItem
 
@@ -1457,6 +1606,9 @@ $menuWindowsActivation = New-Object System.Windows.Forms.ToolStripMenuItem
 
 #SCCM Tools
 $sccmClientTools = New-Object System.Windows.Forms.ToolStripMenuItem
+
+#SECURITY TAB
+$menuSecurity = New-Object System.Windows.Forms.ToolStripMenuItem
 
 #One-Off Tabs
 $menuExit = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1582,6 +1734,18 @@ $modelInfo.ToolTipText = "Current device model." + "`nClick to copy model to cli
 $modelInfo.BackColor = $BGcolor
 $modelInfo.ForeColor = $TextColor
 $outputsuppressed = $menuInfo.DropDownItems.Add($modelInfo)
+
+#Device Type Info Display
+$devicetypeInfo.Text = "Device Type: " + $systemType
+$devicetypeInfo.Add_Click({
+        Set-Clipboard -Value $systemType
+        $wshell = New-Object -ComObject Wscript.Shell
+        $wshell.Popup("Device Type copied to clipboard", 0, "Device Type Copied", 64)
+    })
+$devicetypeInfo.ToolTipText = "Current device type." + "`nClick to copy device type to clipboard."
+$devicetypeInfo.BackColor = $BGcolor
+$devicetypeInfo.ForeColor = $TextColor
+$outputsuppressed = $menuInfo.DropDownItems.Add($devicetypeInfo)
 
 #Domain Info Display
 $domainInfo.Text = "Domain: " + $domain
@@ -1771,11 +1935,11 @@ $outputsuppressed = $menu.Items.Add($menuFunctions)
 $launchDriverUpdater.Text = "Launch Driver Updater (CLI)"
 $launchDriverUpdater.Add_Click({
         #Launch Driver Updater
-        if ($manufacturer -eq "Dell Inc.") {
+        if (($manufacturer -eq "Dell Inc.") -and (Test-Path -Path "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe")) {
             #Uses Dell Command Update CLI to update drivers
             Start-Process -Filepath "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe" -ArgumentList "/applyUpdates -outputLog=C:\Temp\dellUpdateOutput.log" -WorkingDirectory "C:\Program Files (x86)\Dell\CommandUpdate" -PassThru -Verb RunAs
         }
-        elseif ($manufacturer -eq "LENOVO") {
+        elseif (($manufacturer -eq "LENOVO") -and (Test-Path -Path "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe")) {
             #Uses Lenovo System Update CLI trigger to update drivers
             Start-Process "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe" -ArgumentList "/CM -search C -action INSTALL -includerebootpackages 1,3,4 -noreboot" -WorkingDirectory "C:\Program Files (x86)\Lenovo\System Update" -PassThru -Verb RunAs
             $wshell = New-Object -ComObject Wscript.Shell
@@ -1784,6 +1948,7 @@ $launchDriverUpdater.Add_Click({
         else {
             #Open MS Settings - Windows Update deeplink
             Start-Process ms-settings:windowsupdate-action
+            Start-Process ms-settings:windowsupdate-optionalupdates
         }
     })
 $launchDriverUpdater.BackColor = $BGcolor
@@ -1794,15 +1959,18 @@ $outputsuppressed = $menuFunctions.DropDownItems.Add($launchDriverUpdater)
 $launchDriverUpdaterGUI.Text = "Launch Driver Updater (GUI)"
 $launchDriverUpdaterGUI.Add_Click({
         #Launch Driver Updater
-        if ($manufacturer -eq "Dell Inc.") {
+        if (($manufacturer -eq "Dell Inc.") -and (Test-Path -Path "C:\Program Files\Dell\CommandUpdate\DellCommandUpdate.exe")) {
             Start-Process "C:\Program Files\Dell\CommandUpdate\DellCommandUpdate.exe"
         }
-        elseif ($manufacturer -eq "LENOVO") {
+        elseif (($manufacturer -eq "LENOVO") -and (Test-Path -Path "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe")) {
             Start-Process "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe"
         }
         else {
-            #Open MS Settings - Windows Update deeplink
+            #Open MS Settings - Windows Update deeplink and 1 second popup to notify user
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("Driver Updater not found. Opening Windows Update.", 0, "Driver Updater", 64)
             Start-Process ms-settings:windowsupdate-action
+            Start-Process ms-settings:windowsupdate-optionalupdates
         }
     })
 $launchDriverUpdaterGUI.BackColor = $BGcolor
@@ -1817,7 +1985,6 @@ $menuSFCScan.Add_Click({
     })
 $menuSFCScan.BackColor = $BGcolor
 $menuSFCScan.ForeColor = $TextColor
-$menuSFCScan.Image = $shieldIcon
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuSFCScan)
 
 #Suspend BitLocker Button - Suspends BitLocker for one reboot
@@ -1846,7 +2013,6 @@ $menuSuspendBitLocker.Add_Click({
     })
 $menuSuspendBitLocker.BackColor = $BGcolor
 $menuSuspendBitLocker.ForeColor = $TextColor
-$menuSuspendBitlocker.Image = $shieldIcon
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuSuspendBitLocker)
 
 #Test Network Button - Tests network connectivity
@@ -1880,8 +2046,49 @@ $menuWiFiDiag.Add_Click({
     })
 $menuWiFiDiag.BackColor = $BGcolor
 $menuWiFiDiag.ForeColor = $TextColor
-$menuWiFiDiag.Image = $shieldIcon
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuWiFiDiag)
+
+#Battery Diagnostic Button - Tests Battery Health
+$menuBatteryDiagnostic.Text = "Launch Battery Diagnostic"
+$menuBatteryDiagnostic.Add_Click({
+        #Test Battery, first check if device is a laptop
+        if ($systemType -eq "Mobile" -or $systemType -eq "Appliance PC" -or $systemType -eq "Slate") {
+            #Device is a laptop, now check if adminmode is enabled
+            if ($adminmode -eq "True") {
+                #Check to see if C:\Temp\ exists, if not, create it
+                if ((Test-Path -path "C:\Temp\") -eq $false) {
+                    New-Item -Path 'C:\Temp\' -ItemType Directory
+                }
+
+                #Adminmode is enabled, so run the battery report
+                Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru -Wait
+                Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
+            }
+            else {
+                #Adminmode is not enabled, so run the battery report in a sub-process shell, but catch if UAC is not accepted and do nothing
+                try {
+                    #Check to see if C:\Temp\ exists, if not, create it
+                    if ((Test-Path -path "C:\Temp\") -eq $false) {
+                        New-Item -Path 'C:\Temp\' -ItemType Directory
+                    }
+
+                    Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru -Verb RunAs -Wait
+                    Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
+                }
+                catch {
+                    #Do nothing...
+                }
+            }
+        }
+        else {
+            #Device is not a laptop, so display a popup
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("This device is not a laptop. No battery report available.", 0, "Battery Diagnostic", 64)
+        }
+    })
+$menuBatteryDiagnostic.BackColor = $BGcolor
+$menuBatteryDiagnostic.ForeColor = $TextColor
+$outputsuppressed = $menuFunctions.DropDownItems.Add($menuBatteryDiagnostic)
 
 #Quick Reboot Button - Reboots the computer
 $menuRebootQuick.Text = "Quick Reboot"
@@ -1913,8 +2120,8 @@ $menuFunctions.DropDownItems.Add($menuRenameComputer)
 
 $menuBitlockerRetreive.Text = "Retrieve BitLocker Key"
 $menuBitlockerRetreive.Add_Click({
-    bitlockerTool
-})
+        bitlockerTool
+    })
 $menuBitlockerRetreive.BackColor = $BGcolor
 $menuBitlockerRetreive.ForeColor = $TextColor
 $outputsuppressed = $menuFunctions.DropDownItems.Add($menuBitlockerRetreive)
@@ -1941,28 +2148,39 @@ $outputsuppressed = $menu.Items.Add($menuWindowsTools)
 
 #Windows Update Check Button - Checks for Windows Updates
 $menuWindowsUpdateCheck.Text = "Check for Windows Updates"
-$menuWindowsUpdateCheck.Add_Click({
-        #Check for Windows Updates
-        $updates = (New-Object -ComObject Microsoft.Update.Session).CreateupdateSearcher().Search("IsHidden=0 and IsInstalled=0").Updates | Select-Object Title
-        #Check if updates are available, if blank then no updates are available
-        if ($updates -eq $null) {
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("No updates available.", 0, "Windows Updates", 64)
-        }
-        else {
-            #Updates are available, so display them in a popup
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Updates Available:" + "`n" + $updates, 0, "Windows Updates", 64)
-        }
-    })
 $menuWindowsUpdateCheck.BackColor = $BGcolor
 $menuWindowsUpdateCheck.ForeColor = $TextColor
+
+#Add sub-menu items to Windows Update Check Button - Full Sweep
+$menuWindowsUpdateCheckFullSweep = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuWindowsUpdateCheckFullSweep.Text = "Full Sweep"
+$menuWindowsUpdateCheckFullSweep.Add_Click({
+
+        CheckForWindowsUpdates -windowTitle "All Windows Updates" -noUpdatesMessage "No updates available." -updateSearchQuery "IsHidden=0 and IsInstalled=0"
+        
+    })
+$menuWindowsUpdateCheckFullSweep.BackColor = $BGcolor
+$menuWindowsUpdateCheckFullSweep.ForeColor = $TextColor
+$outputsuppressed = $menuWindowsUpdateCheck.DropDownItems.Add($menuWindowsUpdateCheckFullSweep)
+
+#Add sub-menu items to Windows Update Check Button - Defender Definition Updates
+$menuWindowsUpdateCheckDefender = New-Object System.Windows.Forms.ToolStripMenuItem
+$menuWindowsUpdateCheckDefender.Text = "Defender Definition Updates"
+$menuWindowsUpdateCheckDefender.Add_Click({
+
+        CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'"
+  
+    })
+$menuWindowsUpdateCheckDefender.BackColor = $BGcolor
+$menuWindowsUpdateCheckDefender.ForeColor = $TextColor
+$outputsuppressed = $menuWindowsUpdateCheck.DropDownItems.Add($menuWindowsUpdateCheckDefender)
+
 $outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsUpdateCheck)
 
 #Windows Activation Button - Windows Activation Key
 $menuWindowsActivation.Text = "Get Windows Activation Key"
 $menuWindowsActivation.Add_Click({
-        $HardwareKey = (Get-WmiObject -query 'select * from SoftwareLicensingService' | Select OA3xOriginalProductKey).OA3xOriginalProductKey
+        $HardwareKey = (Get-WmiObject -query 'select * from SoftwareLicensingService' | Select-Object OA3xOriginalProductKey).OA3xOriginalProductKey
         
         #Verify that the key is not null
         if ($HardwareKey -eq $null -or $HardwareKey -eq "") {
@@ -2029,16 +2247,47 @@ foreach ($key in $($sccmTSTable.Keys)) {
     $outputsuppressed = $sccmClientTools.DropDownItems.Add($tmpButton)
 }
 
+#Security TAB Construction
+$menuSecurity.Text = "Security"
+$outputsuppressed = $menu.Items.Add($menuSecurity)
+
+$hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
+$hostsCompliant = $true
+$hostsText = "Host File Integrity: Unmodified"
+if ($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085") {
+    $hostsCompliant = $false
+    $hostsText = "Host File Integrity: Modified"
+}
+
+$hostsChkButton = New-Object System.Windows.Forms.ToolStripMenuItem
+$hostsChkButton.Text = $hostsText
+$hostsChkButton.BackColor = $BGcolor
+$hostsChkButton.ForeColor = $TextColor
+$outputsuppressed = $menuSecurity.DropDownItems.Add($hostsChkButton)
+
 #Exit Button
 $menuExit.Text = "Exit"
 $menuExit.Add_Click({ $ETT.Close() })
 $outputsuppressed = $menu.Items.Add($menuExit)
 
+#For non-admin mode, show the UAC shield on the buttons that require admin mode
+if ($adminmode -eq $false) {
+    $menuWiFiDiag.Image = $shieldIcon
+    $menuSFCScan.Image = $shieldIcon
+    $menuSuspendBitlocker.Image = $shieldIcon
+    $menuBatteryDiagnostic.Image = $shieldIcon
+}
+
 #Add all buttons and functions to the GUI menu
 $ETT.controls.AddRange(@($Logo, $Heading, $ClearLastLogin, $Lapspw, $appUpdate, $PolicyPatch, $menu))
 
-#region Logic 
-
-#endregion
+#Timeout Logic - IF timeout is true, then set a timer to close the form after a specified amount of time - WIP
+if ($timeout -eq $true) {
+    $timeoutTimer = New-Object System.Windows.Forms.Timer
+    #Set the interval to the timeout value (converted to milliseconds)
+    $timeoutTimer.Interval = $timeoutLength * 1000
+    $timeoutTimer.Add_Tick({ $ETT.Close() }) #Close the form when the timer ticks
+    $timeoutTimer.Start() #Start the timer
+}
 
 [void]$ETT.ShowDialog()

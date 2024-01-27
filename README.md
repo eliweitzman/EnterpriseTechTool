@@ -1,6 +1,7 @@
 # 🚀 Eli's Enterprise Tech Toolkit!
 
-![GitHub](https://img.shields.io/github/license/eliweitzman/enterprisetechtool) ![GitHub all releases](https://img.shields.io/github/downloads/eliweitzman/enterprisetechtool/total) ![GitHub Repo stars](https://img.shields.io/github/stars/eliweitzman/enterprisetechtool) ![GitHub Discussions](https://img.shields.io/github/discussions/eliweitzman/enterprisetechtool)
+[![GitHub License](https://img.shields.io/github/license/eliweitzman/Enterprisetechtool?style=flat&link=https%3A%2F%2Fgithub.com%2Feliweitzman%2FEnterpriseTechTool%2Fblob%2Fmain%2FLICENSE)](https://img.shields.io/github/license/eliweitzman/enterprisetechtool?link=https%3A%2F%2Fgithub.com%2Feliweitzman%2FEnterpriseTechTool%2Fblob%2Fmain%2FLICENSE
+) [![GitHub all releases](https://img.shields.io/github/downloads/eliweitzman/enterprisetechtool/total)](https://github.com/eliweitzman/EnterpriseTechTool/releases) ![GitHub Repo stars](https://img.shields.io/github/stars/eliweitzman/enterprisetechtool) ![GitHub Discussions](https://img.shields.io/github/discussions/eliweitzman/enterprisetechtool?link=https%3A%2F%2Fgithub.com%2Feliweitzman%2FEnterpriseTechTool%2Fdiscussions)
 
 Welcome to Eli's Enterprise Tech Tool (ETT, or Enterprise Tech Tool, for short). In this project, I hope to combine a bunch of useful sysadmin/helpdesk solutions that could be potentially helpful in general field work. ETT is an all-in-one power tool for Windows, built as a PowerShell script. Designed with IT professionals in mind, this application is customizable, and feature-packed with tons of admin tools to make life easier. Most of these projects are made from ideas I've had while at work, but hopefully some new functions come about soon!
 
@@ -13,7 +14,7 @@ Welcome to Eli's Enterprise Tech Tool (ETT, or Enterprise Tech Tool, for short).
 ### Core Functions
 
 - Clear Last Windows Session Login
-- Retreive Microsoft and Windows LAPS passwords from On-Prem AD (Azure AD Windows LAPS coming soon!)
+- Retreive Microsoft and Windows LAPS passwords from On-Prem AD (Azure AD Windows LAPS now available!)
 - Update all apps (using Windows Package Manager)
 - Update Device Policy (gpupdate)
 - System-aware dark/light mode!
@@ -65,23 +66,20 @@ Standard Install:
 winget install --id=EliWeitzman.ETT
 ```
 
-Admin-Mode Install:
-```
-winget install --id=EliWeitzman.ETT-Admin
-```
+2. Self-extracting Installer
 
-2. Self-extracting Installer (Admin Mode and Regular)
-
-Simply run the latest release's ETT.Installer or ETT-Admin.Installer
-
-_Note: Currently, only the ETT.Installer is whitelisted by Microsoft Defender SmartScreen. ETT-Admin will prompt Defender prior to download and install as of now ([Clearance WIP](https://github.com/eliweitzman/EnterpriseTechTool/issues/35))._
+Simply run the latest release's ETT.Installer.exe
 
 3. Portable Mode
 
 A single, standalone EXE application, portable enough to fit on a flash drive! 
 
-_Note: Portable application is not yet whitelisted by SmartScreen, but approval is currently [in-progress](https://github.com/eliweitzman/EnterpriseTechTool/issues/35)_
+## Automatic Updates
 
+Beginning with release 1.2.1, ETT will now be able to automatically check for, and run software updates. However, there are a few key prerequisites necessary. 
+
+1. Ensure the Windows Package Manager tool is installed (or that you have the latest version of the App Installer Windows App).
+2. You must be running an installed version of ETT. Portable versions will prompt that an update is available to download, but it will not self-update.
 
 ## Optimal Environment
 
@@ -92,12 +90,18 @@ The application is designed to run as a PowerShell Script, but as well is compil
 In the first few lines of the program, there are a few sections that are commented out, allowing for color customization, as well as other customizations to compliance checking thresholds. These are customizable as needed, but the stock is as well provided, and disables any compliance checks. To understand what each flag does, check out this [Wiki](https://github.com/eliweitzman/EnterpriseTechTool/wiki/Customization-Overview) page for more!
 
 ```
-#Admin mode - if auto-elevate is enabled, this will be set to $true
+#Admin mode - if auto-elevate is enabled, this will be set to $true. If in EXE mode, this is automatically handled by Windows.
 $adminmode = $false
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
 $BrandColor = '#023a24' #Set the color of the form, currently populated with a hex value.
 $LogoLocation = $null #If you want to use a custom logo, set the path here. Otherwise, leave as $null
+
+#ETT UI Options
+$backgroundImagePath = "" #Set this to a web URL or local path to change the BG image of ETT
+$ettHeaderTextColor = [System.Drawing.Color]::FromName("White")#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
+$timeout = $false #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
+$timeoutLength = 300 #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
 
 #Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 #RAM Check
