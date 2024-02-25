@@ -2362,7 +2362,7 @@ $menuFun = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuFun.Text = "Fun"
 $menuFun.Add_Click({
         #Open a web browser to a fun website
-        Start-Process https://www.youtube.com/watch?v=a3Z7zEc7AXQ
+        Start-Process https://youtu.be/dQw4w9WgXcQ?si=HjDcCh_FForoWMq6
     })
 $menuFun.BackColor = $BGcolor
 $menuFun.ForeColor = $TextColor
