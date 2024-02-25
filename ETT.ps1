@@ -15,7 +15,7 @@
 .AUTHOR
     Eli Weitzman
 .NOTES
-    Version:        1.2.1
+    Version:        1.3
     Creation Date:  12-26-22
     Last Updated:   12-17-23
     Purpose/Change: Timeout implementation
@@ -56,7 +56,7 @@ Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 #Build Variables
-$ETTVersion = "1.2.1"
+$ETTVersion = "1.3"
 
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
@@ -74,6 +74,9 @@ $ettHeaderTextColor = [System.Drawing.Color]::FromName("White")#Override the col
 $timeout = $false #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
 $timeoutLength = 300 #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
 
+#Custom Toolbox - CHANGE THIS TO MATCH YOUR PREFERENCE
+$customTools = $true #Set this to $true to enable custom functions. Otherwise, set to $false
+
 #Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 #RAM Check
 $ramCheckActive = $false
@@ -86,6 +89,43 @@ $drivespaceMinimum = 20 #SET MINIMUM DRIVESPACE IN GB
 #Windows Version Check
 $winverCheckActive = $false
 $winverTarget = '22h2' #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
+
+<#Custom Functions - Place custom functions below:
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Naming must follow this format in order to work: "custom_FUNCTIONNAME"
+#>
+
+function custom_Eli1 {
+    $wshell = New-Object -ComObject Wscript.Shell
+    $wshell.Popup("TEST", 0, "TEST", 0x1)
+}
+
+
+<#
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+END CUSTOM FUNCTIONS
+#>
+
+if ($customTools -eq $true) {
+    #Custom Function Logic Intake
+    $userFunctions = Get-Command | Where-Object { $_.CommandType -eq 'Function' -and $_.Name -like 'custom_*' }
+
+    # Convert to an array
+    $functionNames = $userFunctions.Name
+    $functionCode = $userFunctions
+
+    #Show a gridview with the functions, and their code
+    $functionGrid = @()
+    for ($i = 0; $i -lt $functionNames.Count; $i++) {
+        $functionGrid += [PSCustomObject]@{
+            FunctionName = $functionNames[$i]
+            FunctionCode = $functionCode[$i].ScriptBlock
+        }
+    }
+
+    #Show in gridview
+    $functionGrid | Out-GridView -Title "Custom Functions" -OutputMode Single | Out-Null
+}
 
 <#Notification Framework - COMING IN 1.2.1
 
@@ -151,6 +191,7 @@ catch {
     $githubVersion = $true
 }
 
+#Update Checker
 if ($applicationVersion -lt $githubVersion) {
     $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
     if ($updatePrompt -eq "Yes") {
@@ -205,6 +246,8 @@ $shieldIconBytes = [Convert]::FromBase64String($shieldIconBase64)
 $shieldMemoryStream = New-Object IO.MemoryStream($shieldIconBytes, 0, $shieldIconBytes.Length)
 $shieldMemoryStream.Write($shieldIconBytes, 0, $shieldIconBytes.Length)
 $shieldIcon = [System.Drawing.Image]::FromStream($shieldMemoryStream, $true)
+#Convert icon to usable in text string (emoji)
+$shieldIconEmoji = [char]::ConvertFromUtf32(0x1F6E1)
 
 
 #Capture Machine Info, and make a loading screen
@@ -1293,7 +1336,8 @@ function CheckForWindowsUpdates {
         #If no updates are found, show a popup
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.popup($noUpdatesMessage, 0, $windowTitle, 64)
-    } else {
+    }
+    else {
         #Check if admin mode is enabled. Depending on the result, run the appropriate command
         if ($adminmode -eq $true) {
             #If yes, install updates
@@ -1349,7 +1393,8 @@ function CheckForWindowsUpdates {
             else {
                 #Do nothing
             }
-        }else{
+        }
+        else {
             #If no, show a popup that updates are available, but admin mode needs to be run
             $wshell = New-Object -ComObject Wscript.Shell
             $wshell.popup("Updates found. Please run ETT in admin mode to install updates.", 0, $windowTitle, 64)
@@ -1359,7 +1404,7 @@ function CheckForWindowsUpdates {
 
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
-$ETT.ClientSize = New-Object System.Drawing.Point(519, 330)
+$ETT.ClientSize = New-Object System.Drawing.Point(850, 330)
 $ETT.text = "Eli's Enterprise Tech Tool V$ETTVersion"
 $ETT.StartPosition = 'CenterScreen'
 $ETT.MaximizeBox = $false
@@ -1379,7 +1424,7 @@ if ($backgroundImagePath -ne "") {
 }
 
 #Import and load in logo icon
-$Logo = New-Object system.Windows.Forms.PictureBox
+$Logo = New-Object System.Windows.Forms.PictureBox
 $Logo.width = 126
 $Logo.height = 73
 $Logo.location = New-Object System.Drawing.Point(377, 29)
@@ -1389,7 +1434,7 @@ if ($null -eq $LogoLocation) {
     $Logo.Visible = $false
 }
 
-$Heading = New-Object system.Windows.Forms.Label
+$Heading = New-Object System.Windows.Forms.Label
 $Heading.text = "Enterprise Tech Tool"
 $Heading.BackColor = [System.Drawing.Color]::FromName("Transparent")
 $Heading.AutoSize = $true
@@ -1517,7 +1562,7 @@ $appUpdate_onClick = {
 $appUpdate.Add_Click($appUpdate_onClick)
 
 #A button to run a policy update (GPUpdate and Intune Sync)
-$PolicyPatch = New-Object system.Windows.Forms.Button
+$PolicyPatch = New-Object System.Windows.Forms.Button
 $PolicyPatch.text = "Windows Policy Update"
 $PolicyPatch.width = 237
 $PolicyPatch.height = 89
@@ -1537,6 +1582,435 @@ $PolicyPatch_OnClick = {
 
 #Make button do stuff
 $PolicyPatch.Add_Click($PolicyPatch_OnClick)
+
+#"The Toolbox" - a side menu for additional tools
+
+#Title
+$ToolboxTitle = New-Object System.Windows.Forms.Label
+$ToolboxTitle.text = "The Toolbox"
+$ToolboxTitle.AutoSize = $true
+$ToolboxTitle.width = 25
+$ToolboxTitle.height = 10
+$ToolboxTitle.location = New-Object System.Drawing.Point(600, 10)
+$ToolboxTitle.Font = New-Object System.Drawing.Font('Segoe UI', 16, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+$ToolboxTitle.ForeColor = $TextColor
+$ETT.Controls.Add($ToolboxTitle)
+
+#Tabbed Menu Box for Toolbox
+$ToolboxMenu = New-Object System.Windows.Forms.TabControl
+$ToolboxMenu.width = 320
+$ToolboxMenu.height = 275
+$ToolboxMenu.location = New-Object System.Drawing.Point(520, 45)
+$ToolboxMenu.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+$ToolboxMenu.ForeColor = $TextColor
+$ToolboxMenu.BackColor = $BGcolor
+$ETT.Controls.Add($ToolboxMenu)
+
+#Tab 1 - Actions
+$Tab1 = New-Object System.Windows.Forms.TabPage
+$Tab1.text = "Actions"
+$Tab1.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+$Tab1.ForeColor = $TextColor
+$Tab1.BackColor = $BGcolor
+$ToolboxMenu.Controls.Add($Tab1)
+
+#Tab 2 - Windows
+$Tab2 = New-Object System.Windows.Forms.TabPage
+$Tab2.text = "Windows"
+$Tab2.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+$Tab2.ForeColor = $TextColor
+$Tab2.BackColor = $BGcolor
+$ToolboxMenu.Controls.Add($Tab2)
+
+#Tab 3 - Security
+$Tab3 = New-Object System.Windows.Forms.TabPage
+$Tab3.text = "Security"
+$Tab3.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+$Tab3.ForeColor = $TextColor
+$Tab3.BackColor = $BGcolor
+$ToolboxMenu.Controls.Add($Tab3)
+
+#Tab 4 - SCCM (if enabled)
+
+#Check to see if the SCCM client is installed and we have the required WMI class
+$sccmClass = Get-WmiObject -Class "SMS_Client" -List -Namespace "root\CCM" -ErrorAction SilentlyContinue
+$sccmClassExists = $sccmClass -ne $null
+
+if ($sccmClassExists) {
+    $Tab4 = New-Object System.Windows.Forms.TabPage
+    $Tab4.text = "SCCM"
+    $Tab4.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+    $Tab4.ForeColor = $TextColor
+    $Tab4.BackColor = $BGcolor
+    $ToolboxMenu.Controls.Add($Tab4)
+}
+
+#Tab 5 - AD (Centered Text for title)
+$Tab5 = New-Object System.Windows.Forms.TabPage
+$Tab5.text = "Active Directory"
+$Tab5.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+$Tab5.ForeColor = $TextColor
+$Tab5.BackColor = $BGcolor
+$ToolboxMenu.Controls.Add($Tab5)
+
+#Tab 6 - Custom (if enabled)
+if ($customTools -eq $true) {
+    $Tab6 = New-Object System.Windows.Forms.TabPage
+    $Tab6.text = "Custom"
+    $Tab6.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+    $Tab6.ForeColor = $TextColor
+    $Tab6.BackColor = $BGcolor
+    $ToolboxMenu.Controls.Add($Tab6)
+
+    $customList = New-Object System.Windows.Forms.Listbox
+    $customList.Width = 312
+    $customList.height = 259
+    $customList.location = New-Object System.Drawing.Point(0,0)
+    $customList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+    $customList.ForeColor = $TextColor
+    $customList.BackColor = $BGcolor
+    $customList.SelectionMode = "One"
+    $Tab6.Controls.Add($customList)
+}
+
+#Custom Functions Add to Listbox
+if ($customTools -eq $true) {
+    $functionNames | ForEach-Object {$customList.Items.Add($_)}
+
+    #On the click of a given function, run it
+    $customList.Add_Click({
+        $functionName = $customList.SelectedItem
+        Invoke-Expression -Command $functionName
+    })
+}
+
+#Action Functions
+
+#Action function listbox
+$ActionList = New-Object System.Windows.Forms.ListBox
+$ActionList.width = 312
+$ActionList.height = 259
+$ActionList.location = New-Object System.Drawing.Point(0, 0)
+$ActionList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+$ActionList.ForeColor = $TextColor
+$ActionList.BackColor = $BGcolor
+$ActionList.SelectionMode = "One"
+$Tab1.Controls.Add($ActionList)
+
+#Action function listbox items (Add UAC Icon to functions that require admin mode)
+$ActionList.Items.Add("Driver Updater (GUI)") | Out-Null
+$ActionList.Items.Add("Driver Updater (CLI)") | Out-Null
+$ActionList.Items.Add("SFC Scan" + $shieldIconEmoji) | Out-Null
+$ActionList.Items.Add("Suspend Bitlocker" + $shieldIconEmoji) | Out-Null
+$ActionList.Items.Add("Test Network") | Out-Null
+$ActionList.Items.Add("WiFi Diagnostics" + $shieldIconEmoji) | Out-Null
+$ActionList.Items.Add("Battery Diagnostics" + $shieldIconEmoji) | Out-Null
+$ActionList.Items.Add("Quick Reboot") | Out-Null
+
+
+$ActionList.Add_Click({
+        #Function 1 - Driver Updater (GUI)
+        if ($ActionList.SelectedItem -eq "Driver Updater (GUI)") {
+            #Launch Driver Updater
+            if (($manufacturer -eq "Dell Inc.") -and (Test-Path -Path "C:\Program Files\Dell\CommandUpdate\DellCommandUpdate.exe")) {
+                Start-Process "C:\Program Files\Dell\CommandUpdate\DellCommandUpdate.exe"
+            }
+            elseif (($manufacturer -eq "LENOVO") -and (Test-Path -Path "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe")) {
+                Start-Process "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe"
+            }
+            else {
+                #Open MS Settings - Windows Update deeplink and 1 second popup to notify user
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("Driver Updater not found. Opening Windows Update.", 0, "Driver Updater", 64)
+                Start-Process ms-settings:windowsupdate-action
+                Start-Process ms-settings:windowsupdate-optionalupdates
+            }
+        }
+        #Function 2 - Driver Updater (CLI)
+        if ($ActionList.SelectedItem -eq "Driver Updater (CLI)") {
+            #Launch Driver Updater
+            if (($manufacturer -eq "Dell Inc.") -and (Test-Path -Path "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe")) {
+                #Uses Dell Command Update CLI to update drivers
+                Start-Process -Filepath "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe" -ArgumentList "/applyUpdates -outputLog=C:\Temp\dellUpdateOutput.log" -WorkingDirectory "C:\Program Files (x86)\Dell\CommandUpdate" -PassThru -Verb RunAs
+            }
+            elseif (($manufacturer -eq "LENOVO") -and (Test-Path -Path "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe")) {
+                #Uses Lenovo System Update CLI trigger to update drivers
+                Start-Process "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe" -ArgumentList "/CM -search C -action INSTALL -includerebootpackages 1,3,4 -noreboot" -WorkingDirectory "C:\Program Files (x86)\Lenovo\System Update" -PassThru -Verb RunAs
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("Lenovo Updates Completed!", 0, "Driver Updater", 64)
+            }
+            else {
+                #Open MS Settings - Windows Update deeplink
+                Start-Process ms-settings:windowsupdate-action
+                Start-Process ms-settings:windowsupdate-optionalupdates
+            }
+        }
+        #Function 3 - SFC Scan
+        if ($ActionList.SelectedItem -eq "SFC Scan") {
+            #SFC Scan
+            Start-Process powershell.exe -ArgumentList "-command sfc /scannow" -PassThru -Verb RunAs
+        }
+        #Function 4 - Suspend Bitlocker
+        if ($ActionList.SelectedItem -eq "Suspend Bitlocker") {
+            #Check if adminmode is enabled
+            if ($adminmode -eq "True") {
+                #Check if BitLocker is enabled
+                if ((Get-BitLockerVolume -MountPoint C:).ProtectionStatus -eq "On") {
+                    #Suspend BitLocker
+                    Suspend-BitLocker -MountPoint "C:" -RebootCount 1
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $wshell.Popup("BitLocker suspended for one reboot.", 0, "BitLocker", 64)
+                }
+                else {
+                    #BitLocker is not enabled
+                    $wshell = New-Object -ComObject Wscript.Shell
+                    $wshell.Popup("BitLocker is not enabled on this computer.", 0, "BitLocker", 64)
+                }
+            }
+            else {
+                #Admin mode is not enabled
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("Admin mode is not enabled. Please enable adminmode flag and reboot script. If compiled, this requires a version of the application with adminmode flag turned on.", 0, "BitLocker", 64)     
+            }
+        }
+        #Function 5 - Test Network
+        if ($ActionList.SelectedItem -eq "Test Network") {
+            #Test Network
+            Start-Process powershell.exe -ArgumentList "-command Test-NetConnection -ComputerName google.com; pause" -PassThru -Wait
+        }
+        #Function 6 - WiFi Diagnostics
+        if ($ActionList.SelectedItem -eq "WiFi Diagnostics") {
+            #Test Wi-Fi
+            if ($adminmode -eq "True") {
+                Start-Process cmd.exe -ArgumentList "/K netsh wlan show wlanreport" -PassThru -Wait
+                Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
+            }
+            else {
+                #Admin mode is not enabled, run in a sub-process shell, but catch if UAC is not accepted and do nothing
+                try {
+                    Start-Process powershell.exe -Verb runAs -ArgumentList "-command netsh wlan show wlanreport" -PassThru -Wait
+                    Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
+                }
+                catch {
+                    #Do nothing...
+                }
+            }
+        }
+        #Function 7 - Battery Diagnostics
+        if ($ActionList.SelectedItem -eq "Battery Diagnostics") {
+            #Test Battery, first check if device is a laptop
+            if ($systemType -eq "Mobile" -or $systemType -eq "Appliance PC" -or $systemType -eq "Slate") {
+                #Device is a laptop, now check if adminmode is enabled
+                if ($adminmode -eq "True") {
+                    #Check to see if C:\Temp\ exists, if not, create it
+                    if ((Test-Path -path "C:\Temp\") -eq $false) {
+                        New-Item -Path 'C:\Temp\' -ItemType Directory
+                    }
+
+                    #Adminmode is enabled, so run the battery report
+                    Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru -Wait
+                    Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
+                }
+                else {
+                    #Adminmode is not enabled, so run the battery report in a sub-process shell, but catch if UAC is not accepted and do nothing
+                    try {
+                        #Check to see if C:\Temp\ exists, if not, create it
+                        if ((Test-Path -path "C:\Temp\") -eq $false) {
+                            New-Item -Path 'C:\Temp\' -ItemType Directory
+                        }
+
+                        Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru -Verb RunAs -Wait
+                        Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
+                    }
+                    catch {
+                        #Do nothing...
+                    }
+                }
+            }
+            else {
+                #Device is not a laptop, so display a popup
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("This device is not a laptop. No battery report available.", 0, "Battery Diagnostic", 64)
+            }
+        }
+        #Function 8 - Reboot Quick
+        if ($ActionList.SelectedItem -eq "Quick Reboot") {
+            #First, confirm reboot
+            $wshell = New-Object -ComObject Wscript.Shell
+            if ($wshell.Popup("Are you sure you want to reboot? Make sure everything is saved before proceeding.", 0, "Reboot", 4 + 32) -eq 6) {
+                #Reboot
+                Start-Process shutdown -argumentlist "-r -t 0" -PassThru
+            }
+        }
+    })
+
+#Windows Functions
+
+#Windows function listbox
+$WindowsList = New-Object System.Windows.Forms.ListBox
+$WindowsList.width = 312
+$WindowsList.height = 259
+$WindowsList.location = New-Object System.Drawing.Point(0, 0)
+$WindowsList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+$WindowsList.ForeColor = $TextColor
+$WindowsList.BackColor = $BGcolor
+$WindowsList.SelectionMode = "One"
+$Tab2.Controls.Add($WindowsList)
+
+#Windows function listbox items
+$WindowsList.Items.Add("Windows Update - Full Sweep") | Out-Null
+$WindowsList.Items.Add("Windows Update - Defender Only") | Out-Null
+$WindowsList.Items.Add("Get Windows Activation Key") | Out-Null
+$WindowsList.Items.Add("Get Windows Activation Type") | Out-Null
+
+#Windows function listbox actions
+$WindowsList.Add_Click({
+        #Function 1 - Windows Update - Full Sweep
+        if ($WindowsList.SelectedItem -eq "Windows Update - Full Sweep") {
+            #Run Windows Update
+            CheckForWindowsUpdates -windowTitle "All Windows Updates" -noUpdatesMessage "No updates available." -updateSearchQuery "IsHidden=0 and IsInstalled=0"
+        }
+        #Function 2 - Windows Update - Defender Only
+        if ($WindowsList.SelectedItem -eq "Windows Update - Defender Only") {
+            #Run Windows Update
+            CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'"
+        }
+        #Function 3 - Windows Activation
+        if ($WindowsList.SelectedItem -eq "Get Windows Activation") {
+            $HardwareKey = (Get-WmiObject -query 'select * from SoftwareLicensingService' | Select-Object OA3xOriginalProductKey).OA3xOriginalProductKey
+        
+            #Verify that the key is not null
+            if ($HardwareKey -eq $null -or $HardwareKey -eq "") {
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("No Windows Activation Key found in WMI." + "`n`nThis could be the result of running in a VM, or not stored in BIOS", 0, "Windows Activation", 64)
+            }
+            else {
+                #Key is not null, so display it in a popup
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("Windows Activation Key: " + $HardwareKey + "`n`nKey Copied to Clipboard.", 0, "Windows Activation Key", 64)
+            }
+        }
+        if ($WindowsList.SelectedItem -eq "Get Windows Activation Type") {
+            slmgr.vbs /dli
+        }
+    })
+
+#Security Functions
+
+#Security function listbox
+$SecurityList = New-Object System.Windows.Forms.ListBox
+$SecurityList.width = 312
+$SecurityList.height = 259
+$SecurityList.location = New-Object System.Drawing.Point(0, 0)
+$SecurityList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+$SecurityList.ForeColor = $TextColor
+$SecurityList.BackColor = $BGcolor
+$SecurityList.SelectionMode = "One"
+$Tab3.Controls.Add($SecurityList)
+
+#Hosts File Integrity Check
+$hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
+$hostsCompliant = $true
+$hostsText = "Host File Integrity: Unmodified"
+if ($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085") {
+    $hostsCompliant = $false
+    $hostsText = "Host File Integrity: Modified"
+}
+
+#Security function listbox items
+$SecurityList.Items.Add("$hostsText") | Out-Null
+
+#SCCM Functions (if enabled)
+
+if ($sccmClassExists) {
+    #Create the SCCM Trigger Schedule Table
+    $sccmTSTable = [ordered]@{}
+    $sccmTSTable.Add("Application Deployment Evaluation Cycle", "{00000000-0000-0000-0000-000000000121}")
+    $sccmTSTable.Add("Discovery Data Collection Cycle", "{00000000-0000-0000-0000-000000000103}")
+    $sccmTSTable.Add("File Collection Cycle", "{00000000-0000-0000-0000-000000000104}")
+    $sccmTSTable.Add("Hardware Inventory Cycle", "{00000000-0000-0000-0000-000000000001}")
+    $sccmTSTable.Add("Machine Policy Retrieval", "{00000000-0000-0000-0000-000000000021}")
+    $sccmTSTable.Add("Machine Policy Evaluation Cycle", "{00000000-0000-0000-0000-000000000022}")
+    $sccmTSTable.Add("Software Inventory Cycle", "{00000000-0000-0000-0000-000000000002}" )
+    $sccmTSTable.Add("Software Metering Usage Report Cycle", "{00000000-0000-0000-0000-000000000106}")
+    $sccmTSTable.Add("Software Updates Deployment Evaluation Cycle", "{00000000-0000-0000-0000-000000000114}")
+    $sccmTSTable.Add("User Policy Retrieval", "{00000000-0000-0000-0000-000000000026}")
+    $sccmTSTable.Add("User Policy Evaluation Cycle", "{00000000-0000-0000-0000-000000000027}")
+    $sccmTSTable.Add("Windows Installer Source List Update Cycle", "{00000000-0000-0000-0000-000000000107}")
+
+    #SCCM Trigger helper function
+    function TriggerSCCMClientFunction {
+        param (
+            $TriggerScheduleGUID,
+            $TriggerScheduleName
+        )
+        Invoke-CimMethod -Namespace 'root\CCM' -ClassName SMS_Client -MethodName TriggerSchedule -Arguments @{sScheduleID = $TriggerScheduleGUID }
+        $wshell = New-Object -ComObject Wscript.Shell
+        $wshell.Popup("SCCM Client Task $TriggerScheduleName Triggered. The selected task will run and might take several minutes to finish.", 0, "SCCM Client Task", 64)
+    }
+
+    #SCCM function listbox
+    $SCCMList = New-Object System.Windows.Forms.ListBox
+    $SCCMList.width = 312
+    $SCCMList.height = 259
+    $SCCMList.location = New-Object System.Drawing.Point(0, 0)
+    $SCCMList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+    $SCCMList.ForeColor = $TextColor
+    $SCCMList.BackColor = $BGcolor
+    $SCCMList.SelectionMode = "One"
+    $Tab4.Controls.Add($SCCMList)
+
+    foreach ($key in $($sccmTSTable.Keys)) {
+        #Add the SCCM Trigger Schedule Table to the SCCM List
+        $SCCMList.Items.Add($key) | Out-Null
+    }
+
+    #SCCM function listbox actions
+    $SCCMList.Add_Click({
+            #IF a selection is made, run the function from the table
+            if ($SCCMList.SelectedItem -ne $null) {
+                TriggerSCCMClientFunction -TriggerScheduleGUID $($sccmTSTable.Item($SCCMList.SelectedItem)) -TriggerScheduleName $SCCMList.SelectedItem
+            }
+        })
+}
+
+#AD Functions
+
+#AD function listbox
+$ADList = New-Object System.Windows.Forms.ListBox
+$ADList.width = 312
+$ADList.height = 259
+$ADList.location = New-Object System.Drawing.Point(0, 0)
+$ADList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+$ADList.ForeColor = $TextColor
+$ADList.BackColor = $BGcolor
+$ADList.SelectionMode = "One"
+$Tab5.Controls.Add($ADList)
+
+#AD function listbox items
+$ADList.Items.Add("AD Explorer") | Out-Null
+$ADList.Items.Add("Get Bitlocker Recovery Key") | Out-Null
+
+#AD function listbox actions
+$ADList.Add_Click({
+        if ($ADList.SelectedItem -eq "AD Lookup") {
+            #Test if RSAT is installed
+            try {
+                Get-ADUser -Identity $env:USERNAME -ErrorAction SilentlyContinue
+                #AD Lookup
+                ADLookup
+            }
+            catch {
+                $wshell = New-Object -ComObject Wscript.Shell
+                $wshell.Popup("RSAT AD Tools or your permissions level are not compliant. Please install RSAT AD tools or use an entitled account and try again.", 0, "RSAT", 64)
+            }
+        }
+        if ($ADList.SelectedItem -eq "Bitlocker Recovery Key Retreival") {
+            bitlockerTool
+        }
+    })
+
+
 
 #TAB MENU
 
