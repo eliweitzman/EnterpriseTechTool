@@ -77,7 +77,10 @@ $timeoutLength = 300 #Set the length of the timeout in seconds. Default is 300 s
 #Custom Toolbox - CHANGE THIS TO MATCH YOUR PREFERENCE
 $customTools = $true #Set this to $true to enable custom functions. Otherwise, set to $false
 
-#Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
+<#Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#>
+
 #RAM Check
 $ramCheckActive = $false
 $ramMinimum = 8 #SET MINIMUM RAM IN GB
@@ -114,17 +117,17 @@ if ($customTools -eq $true) {
     $functionNames = $userFunctions.Name
     $functionCode = $userFunctions
 
-    #Show a gridview with the functions, and their code
+    <#Show a gridview with the functions, and their code
     $functionGrid = @()
     for ($i = 0; $i -lt $functionNames.Count; $i++) {
         $functionGrid += [PSCustomObject]@{
             FunctionName = $functionNames[$i]
             FunctionCode = $functionCode[$i].ScriptBlock
         }
-    }
+    }#>
 
     #Show in gridview
-    $functionGrid | Out-GridView -Title "Custom Functions" -OutputMode Single | Out-Null
+    #$functionGrid | Out-GridView -Title "Custom Functions" -OutputMode Single | Out-Null
 }
 
 <#Notification Framework - COMING IN 1.2.1
@@ -2300,9 +2303,15 @@ $outputsuppressed = $menuInfo.DropDownItems.Add($adminInfo)
 #Device Info Print to Text File in C Temp
 $deviceInfoPrint.Text = "Print Device Info to Text File"
 $deviceInfoPrint.Add_Click({
-        $deviceInfo | Out-File -FilePath C:\Temp\DeviceInfo.txt
-        $wshell = New-Object -ComObject Wscript.Shell
-        $wshell.Popup("Device Info printed to C:\Temp\DeviceInfo.txt", 0, "Device Info Printed", 64)
+        $saveDialog = New-Object System.Windows.Forms.SaveFileDialog | Out-Null
+        $saveDialog.Filter = "Text Files (*.txt)|*.txt"
+        $saveDialog.Title = "Save Device Info to Text File"
+        $saveDialog.InitialDirectory = "C:\Temp"
+        $saveDialog.FileName = "DeviceInfo.txt"
+
+        if ($saveDialog.ShowDialog() -eq "OK") {
+            $deviceInfo | Out-File -FilePath $saveDialog.FileName
+        }
     })
 $deviceInfoPrint.BackColor = $BGcolor
 $deviceInfoPrint.ForeColor = $TextColor
@@ -2527,6 +2536,14 @@ $menuBatteryDiagnostic.Text = "Launch Battery Diagnostic"
 $menuBatteryDiagnostic.Add_Click({
         #Test Battery, first check if device is a laptop
         if ($systemType -eq "Mobile" -or $systemType -eq "Appliance PC" -or $systemType -eq "Slate") {
+
+            #Next, create a file dialog to save the battery report
+            $saveDialog = New-Object System.Windows.Forms.SaveFileDialog
+            $saveDialog.Filter = "HTML Files (*.html)|*.html"
+            $saveDialog.Title = "Save Battery Report"
+            $saveDialog.InitialDirectory = "C:\Temp"
+            $saveDialog.FileName = "Battery.html"
+
             #Device is a laptop, now check if adminmode is enabled
             if ($adminmode -eq "True") {
                 #Check to see if C:\Temp\ exists, if not, create it
@@ -2535,8 +2552,12 @@ $menuBatteryDiagnostic.Add_Click({
                 }
 
                 #Adminmode is enabled, so run the battery report
-                Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru -Wait
-                Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
+                #First, determine a save location for the battery report
+                if ($saveDialog.ShowDialog() -eq "OK") {
+                    #Run the battery report
+                    Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output $saveDialog.FileName" -PassThru -Wait
+                    Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList $saveDialog.FileName -WindowStyle maximized
+                }
             }
             else {
                 #Adminmode is not enabled, so run the battery report in a sub-process shell, but catch if UAC is not accepted and do nothing
@@ -2546,8 +2567,12 @@ $menuBatteryDiagnostic.Add_Click({
                         New-Item -Path 'C:\Temp\' -ItemType Directory
                     }
 
-                    Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru -Verb RunAs -Wait
-                    Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
+                    #Run the battery report
+                    #First, determine a save location for the battery report
+                    if ($saveDialog.ShowDialog() -eq "OK") {
+                        Start-Process powershell.exe -Verb runAs -ArgumentList "-command powercfg /batteryreport /output $saveDialog.FileName" -PassThru -Wait
+                        Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList $saveDialog.FileName -WindowStyle maximized
+                    }
                 }
                 catch {
                     #Do nothing...
