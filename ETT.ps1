@@ -58,7 +58,6 @@ Add-Type -AssemblyName System.Windows.Forms
 #Build Variables
 $ETTVersion = "1.3"
 
-
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
 #Admin mode - if auto-elevate is enabled, this will be set to $true. If in EXE mode, this is automatically handled by Windows.
@@ -129,7 +128,7 @@ if ($customTools -eq $true) {
     #$functionGrid | Out-GridView -Title "Custom Functions" -OutputMode Single | Out-Null
 }
 
-<#Notification Framework - COMING IN 1.2.1
+<#Notification Framework - COMING SOON(TM)
 
 #Set ticketing system - CHANGE THIS TO MATCH YOUR PREFERENCE (Jira or ServiceNow or Email. Null will disable)
 $ticketType = $null
@@ -1857,7 +1856,7 @@ $WindowsList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
 $WindowsList.ForeColor = $TextColor
 $WindowsList.BackColor = $BGcolor
 $WindowsList.SelectionMode = "One"
-$Tab2.Controls.Add($WindowsList)
+$outputsuppressed = $Tab2.Controls.Add($WindowsList)
 
 #Windows function listbox items
 $WindowsList.Items.Add("Windows Update - Full Sweep") | Out-Null
@@ -1908,7 +1907,7 @@ $SecurityList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
 $SecurityList.ForeColor = $TextColor
 $SecurityList.BackColor = $BGcolor
 $SecurityList.SelectionMode = "One"
-$Tab3.Controls.Add($SecurityList)
+$outputsupressed = $Tab3.Controls.Add($SecurityList)
 
 #Hosts File Integrity Check
 $hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
