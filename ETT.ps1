@@ -103,7 +103,6 @@ function custom_Eli1 {
     $wshell.Popup("TEST", 0, "TEST", 0x1)
 }
 
-
 <#
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 END CUSTOM FUNCTIONS
@@ -2090,6 +2089,7 @@ $menuSecurity = New-Object System.Windows.Forms.ToolStripMenuItem
 #One-Off Tabs
 $menuExit = New-Object System.Windows.Forms.ToolStripMenuItem
 
+
 #Keyboard Shortcuts
 
 #CTRL + P to run deviceInfoPrint
@@ -2105,7 +2105,7 @@ $launchDriverUpdaterGUI.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [S
 $launchDriverUpdaterGUI.ShortcutKeyDisplayString = "CTRL + D"
 
 #CTRL + F to run launchDriverUpdater
-$launchDriverUpdater.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::F
+$launchDriverUpdater.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::P
 $launchDriverUpdater.ShortcutKeyDisplayString = "CTRL + F"
 
 #CTRL + S to run menuSFCScan
@@ -2412,7 +2412,7 @@ $outputsuppressed = $menuHelp.DropDownItems.Add($menuBugReport)
 
 #Functions Tab
 $menuFunctions.Text = "Functions"
-$outputsuppressed = $menu.Items.Add($menuFunctions)
+#$outputsuppressed = $menu.Items.Add($menuFunctions)
 
 #Launch Driver Updater Button - Launches driver update script and auto updates based on manufacturer - Currently only supports Dell and Lenovo
 $launchDriverUpdater.Text = "Launch Driver Updater (CLI)"
@@ -2639,11 +2639,11 @@ $menuAD.Add_Click({
             $wshell.Popup("RSAT AD Tools or your permissions level are not compliant. Please install RSAT AD tools or use an entitled account and try again.", 0, "RSAT", 64)
         }
     })
-$outputsuppressed = $menu.Items.Add($menuAD)
+#$outputsuppressed = $menu.Items.Add($menuAD)
 
 #Windows Tools Tab
 $menuWindowsTools.Text = "Windows"
-$outputsuppressed = $menu.Items.Add($menuWindowsTools)
+#$outputsuppressed = $menu.Items.Add($menuWindowsTools)
 
 #Windows Update Check Button - Checks for Windows Updates
 $menuWindowsUpdateCheck.Text = "Check for Windows Updates"
@@ -2731,7 +2731,7 @@ function TriggerSCCMClientFunction {
 #SCCM Tools Menu Construction
 #If the SCCM Client is not installed on the computer, the menu option will be unavailable.
 if ($sccmClassExists) {
-    $outputsuppressed = $menu.Items.Add($sccmClientTools)
+    #$outputsuppressed = $menu.Items.Add($sccmClientTools)
 }
 $sccmClientTools.Text = "SCCM Tools"
 
@@ -2748,7 +2748,7 @@ foreach ($key in $($sccmTSTable.Keys)) {
 
 #Security TAB Construction
 $menuSecurity.Text = "Security"
-$outputsuppressed = $menu.Items.Add($menuSecurity)
+#$outputsuppressed = $menu.Items.Add($menuSecurity)
 
 $hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
 $hostsCompliant = $true
