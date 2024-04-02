@@ -57,6 +57,7 @@ Add-Type -AssemblyName System.Windows.Forms
 
 #Build Variables
 $ETTVersion = "1.3"
+$AutoUpdateCheckerEnabled = $true
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
@@ -173,36 +174,38 @@ if (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\Eli's Enterp
 
 #Check for updates
 
-# GitHub API endpoint for tags
-$apiUrl = "https://api.github.com/repos/eliweitzman/EnterpriseTechTool/tags"
-# Make a web request to the GitHub API
-try {
-    $response = Invoke-RestMethod -Uri $apiUrl -Method Get -ErrorAction SilentlyContinue
+if ($AutoUpdateCheckerEnabled = $true){
+    # GitHub API endpoint for tags
+    $apiUrl = "https://api.github.com/repos/eliweitzman/EnterpriseTechTool/tags"
+    # Make a web request to the GitHub API
+    try {
+        $response = Invoke-RestMethod -Uri $apiUrl -Method Get -ErrorAction SilentlyContinue
 
-    # Extract the name of the latest tag
-    $latestTag = $response[0].name
+        # Extract the name of the latest tag
+        $latestTag = $response[0].name
 
-    #Check the tag against our current application version
-    $applicationVersion = [System.Version]::new($ETTVersion)
-    $githubVersion = [System.Version]::new($latestTag)
-}
-catch {
-    #IF Device is offline, don't check for updates, and thus set these to a value that will not trigger an update prompt
-    $applicationVersion = $true
-    $githubVersion = $true
-}
+        #Check the tag against our current application version
+        $applicationVersion = [System.Version]::new($ETTVersion)
+        $githubVersion = [System.Version]::new($latestTag)
+    }
+    catch {
+        #IF Device is offline, don't check for updates, and thus set these to a value that will not trigger an update prompt
+        $applicationVersion = $true
+        $githubVersion = $true
+    }
 
-#Update Checker
-if ($applicationVersion -lt $githubVersion) {
-    $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
-    if ($updatePrompt -eq "Yes") {
-        #This is for if an application was installed with Winget, or with the self-extracting installer, and is a regular ETT variant
-        if (($installType -eq "Installed")) {
-            winget.exe upgrade --id=EliWeitzman.ETT
-        }
-        #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
-        elseif ($installType -eq "Portable") {
-            Start-Process "https://github.com/eliweitzman/EnterpriseTechTool"
+    #Update Checker
+    if ($applicationVersion -lt $githubVersion) {
+        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
+        if ($updatePrompt -eq "Yes") {
+            #This is for if an application was installed with Winget, or with the self-extracting installer, and is a regular ETT variant
+            if (($installType -eq "Installed")) {
+                winget.exe upgrade --id=EliWeitzman.ETT
+            }
+            #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
+            elseif ($installType -eq "Portable") {
+                Start-Process "https://github.com/eliweitzman/EnterpriseTechTool"
+            }
         }
     }
 }
