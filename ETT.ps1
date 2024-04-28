@@ -103,6 +103,17 @@ function custom_Eli1 {
     $wshell.Popup("TEST", 0, "TEST", 0x1)
 }
 
+#shutdown the computer
+function custom_Shutdown {
+    $wshell = New-Object -ComObject Wscript.Shell
+    $wshell.Popup("Shutting down in 5 seconds", 5, "Shutdown", 0x1)
+    Start-Sleep -Seconds 5
+    shutdown.exe /s /t 0
+}
+
+
+
+
 <#
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 END CUSTOM FUNCTIONS
@@ -290,8 +301,8 @@ $LoadingProgressBar.TabIndex = 1
 $LoadingProgressBar.Value = 0
 
 #Add controls to form
-$LoadingForm.Controls.Add($LoadingLabel)
-$LoadingForm.Controls.Add($LoadingProgressBar)
+$LoadingForm.Controls.Add($LoadingLabel) | Out-Null
+$LoadingForm.Controls.Add($LoadingProgressBar) | Out-Null
 
 #Show the form
 [void]$LoadingForm.Show()
@@ -1608,7 +1619,7 @@ $ToolboxMenu.location = New-Object System.Drawing.Point(520, 45)
 $ToolboxMenu.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
 $ToolboxMenu.ForeColor = $TextColor
 $ToolboxMenu.BackColor = $BGcolor
-$ETT.Controls.Add($ToolboxMenu)
+$ETT.Controls.Add($ToolboxMenu) | Out-Null
 
 #Tab 1 - Actions
 $Tab1 = New-Object System.Windows.Forms.TabPage
@@ -1616,7 +1627,7 @@ $Tab1.text = "Actions"
 $Tab1.Font = New-Object System.Drawing.Font('Segoe UI', 10)
 $Tab1.ForeColor = $TextColor
 $Tab1.BackColor = $BGcolor
-$ToolboxMenu.Controls.Add($Tab1)
+$ToolboxMenu.Controls.Add($Tab1) | Out-Null
 
 #Tab 2 - Windows
 $Tab2 = New-Object System.Windows.Forms.TabPage
@@ -1624,7 +1635,7 @@ $Tab2.text = "Windows"
 $Tab2.Font = New-Object System.Drawing.Font('Segoe UI', 10)
 $Tab2.ForeColor = $TextColor
 $Tab2.BackColor = $BGcolor
-$ToolboxMenu.Controls.Add($Tab2)
+$ToolboxMenu.Controls.Add($Tab2) | Out-Null
 
 #Tab 3 - Security
 $Tab3 = New-Object System.Windows.Forms.TabPage
@@ -1632,7 +1643,7 @@ $Tab3.text = "Security"
 $Tab3.Font = New-Object System.Drawing.Font('Segoe UI', 10)
 $Tab3.ForeColor = $TextColor
 $Tab3.BackColor = $BGcolor
-$ToolboxMenu.Controls.Add($Tab3)
+$ToolboxMenu.Controls.Add($Tab3) | Out-Null
 
 #Tab 4 - SCCM (if enabled)
 
@@ -1646,16 +1657,19 @@ if ($sccmClassExists) {
     $Tab4.Font = New-Object System.Drawing.Font('Segoe UI', 10)
     $Tab4.ForeColor = $TextColor
     $Tab4.BackColor = $BGcolor
-    $ToolboxMenu.Controls.Add($Tab4)
+    $ToolboxMenu.Controls.Add($Tab4) | Out-Null
 }
 
-#Tab 5 - AD (Centered Text for title)
-$Tab5 = New-Object System.Windows.Forms.TabPage
-$Tab5.text = "Active Directory"
-$Tab5.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-$Tab5.ForeColor = $TextColor
-$Tab5.BackColor = $BGcolor
-$ToolboxMenu.Controls.Add($Tab5)
+#Tab 5 - AD (Centered Text for title) - if RSAT is installed
+#Check to see if RSAT is installed
+if (Get-Module -ListAvailable -Name ActiveDirectory -ErrorAction SilentlyContinue) {
+    $Tab5 = New-Object System.Windows.Forms.TabPage
+    $Tab5.text = "AD"
+    $Tab5.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+    $Tab5.ForeColor = $TextColor
+    $Tab5.BackColor = $BGcolor
+    $ToolboxMenu.Controls.Add($Tab5) | Out-Null
+}
 
 #Tab 6 - Custom (if enabled)
 if ($customTools -eq $true) {
@@ -1664,7 +1678,7 @@ if ($customTools -eq $true) {
     $Tab6.Font = New-Object System.Drawing.Font('Segoe UI', 10)
     $Tab6.ForeColor = $TextColor
     $Tab6.BackColor = $BGcolor
-    $ToolboxMenu.Controls.Add($Tab6)
+    $ToolboxMenu.Controls.Add($Tab6) | Out-Null
 
     $customList = New-Object System.Windows.Forms.Listbox
     $customList.Width = 312
@@ -1674,12 +1688,12 @@ if ($customTools -eq $true) {
     $customList.ForeColor = $TextColor
     $customList.BackColor = $BGcolor
     $customList.SelectionMode = "One"
-    $Tab6.Controls.Add($customList)
+    $Tab6.Controls.Add($customList) | Out-Null
 }
 
 #Custom Functions Add to Listbox
 if ($customTools -eq $true) {
-    $functionNames | ForEach-Object {$customList.Items.Add($_)}
+    $functionNames | ForEach-Object {$customList.Items.Add($_)} | Out-Null
 
     #On the click of a given function, run it
     $customList.Add_Click({
@@ -2012,10 +2026,7 @@ $ADList.Add_Click({
         if ($ADList.SelectedItem -eq "Bitlocker Recovery Key Retreival") {
             bitlockerTool
         }
-    })
-
-
-
+})
 #TAB MENU
 
 $menu = New-Object System.Windows.Forms.MenuStrip
