@@ -8,7 +8,7 @@ Welcome to Eli's Enterprise Tech Tool (ETT, or Enterprise Tech Tool, for short).
 ## Features
 
 <p align="center">
-  <img src="https://github.com/eliweitzman/EnterpriseTechTool/blob/main/ImageAssets/UI%20Screenshot.png" alt="A screenshot of the application window." width=50% height=50%/>
+  <img src="https://github.com/eliweitzman/EnterpriseTechTool/blob/1.3-Dev/ImageAssets/ETTToolbox.png?raw=true" alt="A screenshot of the application window." width=60% height=60%/>
 </p>
 
 ### Core Functions
@@ -20,6 +20,7 @@ Welcome to Eli's Enterprise Tech Tool (ETT, or Enterprise Tech Tool, for short).
 - System-aware dark/light mode!
 - Retreive device information details
 - Set hardware/software compliance flags
+- Embed custom powershell scripts
 - And more!
 
 ### Additional Modules!
