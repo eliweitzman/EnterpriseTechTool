@@ -1,0 +1,31 @@
+{
+    "AutoUpdateCheckerEnabled" : true,
+    "AdminMode" : false,
+    "BrandColor" : "#023a24",
+    "LogoLocation" : null,
+    "BackgroundImagePath" : "",
+    "ETTHeaderTextColor" : "White",
+    "ApplicationTimeoutEnabled" : false,
+    "ApplicationTimeoutLength" : 300,
+    "EnableCustomTools" : true,
+    "RAMCheckActive": false,
+    "RAMCheckMinimum" : 8,
+    "DriveSpaceCheckActive" : false,
+    "DriveSpaceCheckMinimum" : 20,
+    "WinVersionCheckActive" : false,
+    "WinVersionTarget": "24H2",
+
+    "CustomFunctions": [
+        {
+          "name": "Get-HelloWorld",
+          "description": "Returns a friendly 'Hello, World!' message.",
+          "code": "function Get-HelloWorld { $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup('Hello, World!', 0, 'Hello, World!', 0x1)}"
+        },
+        {
+          "name": "Get-RandomNumber",
+          "description": "Generates a random number between 1 and 100.",
+          "code": "function Get-RandomNumber {$rand =  (Get-Random -Minimum 1 -Maximum 100); $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup($rand, 0, $rand, 0x1)}"
+        }
+      ]
+  }
+  

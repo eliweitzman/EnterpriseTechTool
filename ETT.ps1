@@ -50,6 +50,26 @@
     OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #>
+# Create the Ternary Operator since PowerShell 5 doesn't have it
+set-alias ?: Invoke-Ternary -Option AllScope -Description "PSCX filter alias"
+filter Invoke-Ternary ([scriptblock]$decider, [scriptblock]$ifTrue, [scriptblock]$ifFalse) 
+{
+   if (&$decider) { 
+      &$ifTrue
+   } else { 
+      &$ifFalse 
+   }
+}
+
+#Load ETTConfig.json File
+$jsonConfigString = Get-Content -Path ".\ETTConfig.json"
+$jsonConfig = $jsonConfigString | ConvertFrom-Json
+
+#Load Custom Functions
+foreach ($f in $jsonConfig.customFunctions)
+{
+    . { Invoke-Expression $f.code }
+}
 
 #Import Winforms API for GUI
 Add-Type -AssemblyName System.Windows.Forms
@@ -57,50 +77,46 @@ Add-Type -AssemblyName System.Windows.Forms
 
 #Build Variables
 $ETTVersion = "1.3"
-$AutoUpdateCheckerEnabled = $true
+$AutoUpdateCheckerEnabled = (?: {$jsonConfig.AutoUpdateCheckerEnabled -ne $null} {$jsonConfig.AutoUpdateCheckerEnabled}{$true})
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
 #Admin mode - if auto-elevate is enabled, this will be set to $true. If in EXE mode, this is automatically handled by Windows.
-$adminmode = $false
+$adminmode = (?: {$jsonConfig.AdminMode -ne $null} {$jsonConfig.AdminMode} {$false})
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
-$BrandColor = '#023a24' #Set the color of the form, currently populated with a hex value.
-$LogoLocation = $null #If you want to use a custom logo, set the path here. Otherwise, leave as $null
+$BrandColor = (?: {$jsonConfig.BrandColor-ne $null} {$jsonConfig.BrandColor} {'#023a24'}) #Set the color of the form, currently populated with a hex value.
+$LogoLocation = (?: {$jsonConfig.LogoLocation -ne $null} {$jsonConfig.LogoLocation} {$null}) #If you want to use a custom logo, set the path here. Otherwise, leave as $null
 
 #ETT UI Options
-$backgroundImagePath = "" #Set this to a web URL or local path to change the BG image of ETT
-$ettHeaderTextColor = [System.Drawing.Color]::FromName("White")#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
-$timeout = $false #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
-$timeoutLength = 300 #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
+$backgroundImagePath = (?: {$jsonConfig.BackgroundImagePath -ne $null} {$jsonConfig.BackgroundImagePath} {""}) #Set this to a web URL or local path to change the BG image of ETT
+$ettHeaderTextColor = (?: {$jsonConfig.ETTHeaderTextColor -ne $null} {[System.Drawing.Color]::FromName($jsonConfig.ETTHeaderTextColor)} {[System.Drawing.Color]::FromName("White")})#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
+$timeout = (?: {$jsonConfig.ApplicationTimeoutEnabled -ne $null} {$jsonConfig.ApplicationTimeoutEnabled} {$false}) #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
+$timeoutLength = (?: {$jsonConfig.ApplicationTimeoutLength -ne $null} {$jsonConfig.ApplicationTimeoutLength} {300}) #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
 
 #Custom Toolbox - CHANGE THIS TO MATCH YOUR PREFERENCE
-$customTools = $true #Set this to $true to enable custom functions. Otherwise, set to $false
+$customTools = (?: {$jsonConfig.EnableCustomTools -ne $null} {$jsonConfig.EnableCustomTools} {$true}) #Set this to $true to enable custom functions. Otherwise, set to $false
 
 <#Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #>
 
 #RAM Check
-$ramCheckActive = $false
-$ramMinimum = 8 #SET MINIMUM RAM IN GB
+$ramCheckActive = (?: {$jsonConfig.RAMCheckActive -ne $null} {$jsonConfig.RAMCheckActive} {$false})
+$ramMinimum = (?: {$jsonConfig.RAMCheckMinimum -ne $null} {$jsonConfig.RAMCheckMinimum} {8}) #SET MINIMUM RAM IN GB
 
 #Drivespace Check
-$drivespaceCheckActive = $false
-$drivespaceMinimum = 20 #SET MINIMUM DRIVESPACE IN GB
+$drivespaceCheckActive = (?: {$jsonConfig.DriveSpaceCheckActive -ne $null} {$jsonConfig.DriveSpaceCheckActive} {$false})
+$drivespaceMinimum = (?: {$jsonConfig.DriveSpaceCheckMinimum -ne $null} {$jsonConfig.DriveSpaceCheckMinimum} {20}) #SET MINIMUM DRIVESPACE IN GB
 
 #Windows Version Check
-$winverCheckActive = $false
-$winverTarget = '22h2' #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
+$winverCheckActive = (?: {$jsonConfig.WinVersionCheckActive -ne $null} {$jsonConfig.WinVersionCheckActive} {$false})
+$winverTarget = (?: {$jsonConfig.WinVersionTarget -ne $null} {$jsonConfig.WinVersionTarget} {"24H2"}) #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
 
 <#Custom Functions - Place custom functions below:
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Naming must follow this format in order to work: "custom_FUNCTIONNAME"
 #>
-
-#Import Custom Functions from ETT_Custom_Functions.ps1 via Dot Sourcing
-$customFunctionsFile = Get-Content .\ETT_Custom_Functions.ps1 -Raw
-. { Invoke-Expression $customFunctionsFile }
 
 #Custom Test Functions
 function custom_Eli1 {
@@ -1698,11 +1714,20 @@ if ($customTools -eq $true) {
 
 #Custom Functions Add to Listbox
 if ($customTools -eq $true) {
+    if($jsonConfig.CustomFunctions -ne $null)
+    {
+        foreach ($func in $jsonConfig.CustomFunctions)
+        {
+            $customList.Items.Add($func.name)
+            . { Invoke-Expression $func.code }
+        }
+    }
     $functionNames | ForEach-Object {$customList.Items.Add($_)} | Out-Null
 
     #On the click of a given function, run it
     $customList.Add_Click({
         $functionName = $customList.SelectedItem
+        Write-Output "Add Click Executed"
         Invoke-Expression -Command $functionName
     })
 }
