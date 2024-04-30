@@ -98,6 +98,11 @@ $winverTarget = '22h2' #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
 Naming must follow this format in order to work: "custom_FUNCTIONNAME"
 #>
 
+#Import Custom Functions from ETT_Custom_Functions.ps1 via Dot Sourcing
+$customFunctionsFile = Get-Content .\ETT_Custom_Functions.ps1 -Raw
+. { Invoke-Expression $customFunctionsFile }
+
+#Custom Test Functions
 function custom_Eli1 {
     $wshell = New-Object -ComObject Wscript.Shell
     $wshell.Popup("TEST", 0, "TEST", 0x1)
