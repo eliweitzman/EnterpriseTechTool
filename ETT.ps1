@@ -65,12 +65,6 @@ filter Invoke-Ternary ([scriptblock]$decider, [scriptblock]$ifTrue, [scriptblock
 $jsonConfigString = Get-Content -Path ".\ETTConfig.json"
 $jsonConfig = $jsonConfigString | ConvertFrom-Json
 
-#Load Custom Functions
-foreach ($f in $jsonConfig.customFunctions)
-{
-    . { Invoke-Expression $f.code }
-}
-
 #Import Winforms API for GUI
 Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
