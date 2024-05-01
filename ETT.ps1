@@ -107,6 +107,10 @@ $drivespaceMinimum = (?: {$jsonConfig.DriveSpaceCheckMinimum -ne $null} {$jsonCo
 $winverCheckActive = (?: {$jsonConfig.WinVersionCheckActive -ne $null} {$jsonConfig.WinVersionCheckActive} {$false})
 $winverTarget = (?: {$jsonConfig.WinVersionTarget -ne $null} {$jsonConfig.WinVersionTarget} {"24H2"}) #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
 
+#Azure Information
+$azureADTenantId = (?: {$jsonConfig.AzureADTenantId -ne $null} {$jsonConfig.AzureADTenantId}{""})
+$lapsAppClientId = (?: {$jsonConfig.LAPSAppClientId -ne $null} {$jsonConfig.LAPSAppClientId}{""})
+
 <#Custom Functions - Place custom functions below:
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Naming must follow this format in order to work: "custom_FUNCTIONNAME"
@@ -727,27 +731,26 @@ function LAPSTool {
 
                 #If azure LAPS is checked, change the domain input box to the Azure AD tenant ID input box
                 $domainLabel.Text = "Tenant ID:"
-                $domainInput.Text = ""
+                $domainInput.Enabled = $true
 
+                #Enable the domain input box, and remove the domain from the input box
+                $domainInput.Text = ""
+                $domainInput.Text = $azureADTenantId
+                
                 #Move the domain input box to the right to make room for title text
                 $domainInput.Location = New-Object System.Drawing.Point(90, 114)
 
                 #If Azure LAPS is checked, change the hostname input box to the device ID input box
                 $hostnameLabel.Text = "Device ID:"
                 $hostnameInput.Text = ""
-            
 
                 #Align the username input box with the hostname input box
                 $usernameInfo.Location = New-Object System.Drawing.Point(16, 189)
 
                 #If Azure LAPS is checked, change the username input box to the client ID input box
                 $usernameInfo.Text = "Client ID:"
-                $usernameInput.Text = ""
+                $usernameInput.Text = $lapsAppClientId
                 $usernameInput.Enabled = $true
-
-                #Enable the domain input box, and remove the domain from the input box
-                $domainInput.Enabled = $true
-                $domainInput.Text = ""
 
                 #If Azure LAPS is checked, change the start button to say "Get Password"
                 $lapsStart.Text = "Get Password"
