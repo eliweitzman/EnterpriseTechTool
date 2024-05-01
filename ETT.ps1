@@ -117,47 +117,15 @@ Naming must follow this format in order to work: "custom_FUNCTIONNAME"
 #>
 
 #Custom Test Functions
-function custom_Eli1 {
+function custom_ExampleFunction {
     $wshell = New-Object -ComObject Wscript.Shell
-    $wshell.Popup("TEST", 0, "TEST", 0x1)
+    $wshell.Popup("This example function was triggered from a Custom Function list click.", 0, "Example Function", 0x1)
 }
-
-#shutdown the computer
-function custom_Shutdown {
-    $wshell = New-Object -ComObject Wscript.Shell
-    $wshell.Popup("Shutting down in 5 seconds", 5, "Shutdown", 0x1)
-    Start-Sleep -Seconds 5
-    shutdown.exe /s /t 0
-}
-
-
-
 
 <#
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 END CUSTOM FUNCTIONS
 #>
-
-if ($customTools -eq $true) {
-    #Custom Function Logic Intake
-    $userFunctions = Get-Command | Where-Object { $_.CommandType -eq 'Function' -and $_.Name -like 'custom_*' }
-
-    # Convert to an array
-    $functionNames = $userFunctions.Name
-    $functionCode = $userFunctions
-
-    <#Show a gridview with the functions, and their code
-    $functionGrid = @()
-    for ($i = 0; $i -lt $functionNames.Count; $i++) {
-        $functionGrid += [PSCustomObject]@{
-            FunctionName = $functionNames[$i]
-            FunctionCode = $functionCode[$i].ScriptBlock
-        }
-    }#>
-
-    #Show in gridview
-    #$functionGrid | Out-GridView -Title "Custom Functions" -OutputMode Single | Out-Null
-}
 
 <#Notification Framework - COMING SOON(TM)
 
@@ -1711,28 +1679,27 @@ if ($customTools -eq $true) {
 
 #Custom Functions Add to Listbox
 if ($customTools -eq $true) {
+    $arrList = New-Object System.Collections.ArrayList
+
+    #Process hardcoded Custom Functions
+    $userFunctions = Get-Command | Where-Object { $_.CommandType -eq 'Function' -and $_.Name -like 'custom_*' }
+    $userFunctions | ForEach-Object {$tmpObject = [PSCustomObject]@{ name = $_.Name }; [void] $arrList.Add($tmpObject)}
+
+    #Process Config File Custom Functions
     if($jsonConfig.CustomFunctions -ne $null)
     {
-        foreach ($func in $jsonConfig.CustomFunctions)
-        {
-            [void] $customList.Items.Add($func.name + " : " + $func.description)
-            . { Invoke-Expression $func.code }
-        }
+        $jsonConfig.CustomFunctions | ForEach-Object { [void] $arrList.Add($_); . {Invoke-Expression $_.code}}
+        
     }
-    $functionNames | ForEach-Object {$customList.Items.Add($_)} | Out-Null
+
+    #Setup Custom Function List
+    $customList.DataSource = $arrList
+    $customList.DisplayMember = "name"
+    $customList.ValueMember = "name"
 
     #On the click of a given function, run it
     $customList.Add_Click({
-        $functionName = $customList.SelectedItem
-        $functionIndex = $customList.SelectedIndex
-        try
-        {
-            Invoke-Expression -Command $jsonConfig.CustomFunctions[$functionIndex].name
-        }
-        catch
-        {
-            Invoke-Expression -Command $functionName
-        }
+        Invoke-Expression -Command $customList.SelectedValue
     })
 }
 
