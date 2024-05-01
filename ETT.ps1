@@ -1712,7 +1712,7 @@ if ($customTools -eq $true) {
     {
         foreach ($func in $jsonConfig.CustomFunctions)
         {
-            $customList.Items.Add($func.name)
+            [void] $customList.Items.Add($func.name + " : " + $func.description)
             . { Invoke-Expression $func.code }
         }
     }
@@ -1721,8 +1721,15 @@ if ($customTools -eq $true) {
     #On the click of a given function, run it
     $customList.Add_Click({
         $functionName = $customList.SelectedItem
-        Write-Output "Add Click Executed"
-        Invoke-Expression -Command $functionName
+        $functionIndex = $customList.SelectedIndex
+        try
+        {
+            Invoke-Expression -Command $jsonConfig.CustomFunctions[$functionIndex].name
+        }
+        catch
+        {
+            Invoke-Expression -Command $functionName
+        }
     })
 }
 
