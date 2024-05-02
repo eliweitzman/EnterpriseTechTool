@@ -16,6 +16,7 @@
     "WinVersionTarget": "24H2",
     "AzureADTenantId" : "",
     "LAPSAppClientId" : "",
+    "AnimeMode" : false,
 
     "CustomFunctions": [
         {

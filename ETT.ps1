@@ -111,6 +111,15 @@ $winverTarget = (?: {$jsonConfig.WinVersionTarget -ne $null} {$jsonConfig.WinVer
 $azureADTenantId = (?: {$jsonConfig.AzureADTenantId -ne $null} {$jsonConfig.AzureADTenantId}{""})
 $lapsAppClientId = (?: {$jsonConfig.LAPSAppClientId -ne $null} {$jsonConfig.LAPSAppClientId}{""})
 
+#Anime Mode
+$animeMode = (?: {$jsonConfig.AnimeMode}{$jsonConfig.AnimeMode}{""})
+$animeImageArr = @("https://cache.desktopnexus.com/thumbseg/2451/2451508-bigthumbnail.jpg","https://wallpapercave.com/wp/wp9498801.jpg","https://itsaboutanime.files.wordpress.com/2019/12/12-best-anime-wallpapers-in-hd-and-4k-that-you-must-get-now.jpg")
+if ($animeMode)
+{
+    $selectedAnimeImage = $animeImageArr | Get-Random
+    $backgroundImagePath = $selectedAnimeImage
+}
+
 <#Custom Functions - Place custom functions below:
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Naming must follow this format in order to work: "custom_FUNCTIONNAME"
