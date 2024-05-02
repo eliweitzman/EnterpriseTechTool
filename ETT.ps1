@@ -327,6 +327,19 @@ $LoadingLabel.Text = "Getting RAM Info..."
 $ramCheck = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
 $outputsuppressed = $LoadingProgressBar.Value = 80
 
+$loadingLabel.Text = "Getting RSAT Info..."
+if ($adminmode -eq $true) {
+    $rsatInfo = Get-WindowsCapability -Name RSAT* -Online | Select-Object State -Wait
+}else {
+    try {
+        $rsatInfo = Get-AdUser -ErrorAction SilentlyContinue -Wait
+    }
+    catch {
+        $rsatInfo = "NotPresent"
+    }
+}
+$outputsuppressed = $LoadingProgressBar.Value = 85
+
 $LoadingLabel.Text = "Getting CPU Info..."
 $cpuCheck = Get-WmiObject -Class Win32_Processor | Select-Object -ExpandProperty Name
 $outputsuppressed = $LoadingProgressBar.Value = 90
@@ -1648,7 +1661,8 @@ if ($sccmClassExists) {
 
 #Tab 5 - AD (Centered Text for title) - if RSAT is installed
 #Check to see if RSAT is installed
-if (Get-Module -ListAvailable -Name ActiveDirectory -ErrorAction SilentlyContinue) {
+
+if ($rsatInfo -eq "Installed") {
     $Tab5 = New-Object System.Windows.Forms.TabPage
     $Tab5.text = "AD"
     $Tab5.Font = New-Object System.Drawing.Font('Segoe UI', 10)
