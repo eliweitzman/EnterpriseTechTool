@@ -936,18 +936,28 @@ if ($customTools -eq $true) {
 
     #Process hardcoded Custom Functions
     $userFunctions = Get-Command | Where-Object { $_.CommandType -eq 'Function' -and $_.Name -like 'custom_*' }
-    $userFunctions | ForEach-Object {$tmpObject = [PSCustomObject]@{ name = $($toolboxIcon + " "  + $_.Name); functionName = $_.Name }; [void] $arrList.Add($tmpObject)}
+    $userFunctions | ForEach-Object {$tmpObject = [PSCustomObject]@{ displayName = $($toolboxIcon + " "  + $_.Name); functionName = $_.Name }; [void] $arrList.Add($tmpObject)}
 
     #Process Config File Custom Functions
     if($jsonConfig.CustomFunctions -ne $null)
     {
-        $jsonConfig.CustomFunctions | ForEach-Object {$_.name = $($toolboxIcon + " " + $_.Name); [void] $arrList.Add($_); . {Invoke-Expression $_.code}}
+        ForEach ($customFunction in $jsonConfig.CustomFunctions)
+        {
+            $customFunctionDisplayName = "$toolboxIcon $($customFunction.displayName)"
+            if($customFunction.requireAdmin -eq $true)
+            {
+                $customFunctionDisplayName = "$toolboxIcon $($customFunction.displayName) $shieldIconEmoji"
+            }
+            $customFunction.displayName = $customFunctionDisplayName
+            [void] $arrList.Add($customFunction)
+            . {Invoke-Expression $customFunction.code}
+        }
         
     }
 
     #Setup Custom Function List
     $customList.DataSource = $arrList
-    $customList.DisplayMember = "name"
+    $customList.DisplayMember = "displayName"
     $customList.ValueMember = "functionName"
 
     #On the click of a given function, run it
