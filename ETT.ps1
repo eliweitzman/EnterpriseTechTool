@@ -858,29 +858,42 @@ $ToolboxMenu.ForeColor = $TextColor
 $ToolboxMenu.BackColor = $BGcolor
 $ETT.Controls.Add($ToolboxMenu) | Out-Null
 
+#Constructs a new tab and returns the List object of created tab
+function Create-TabPage
+{
+    param(
+        [Parameter(Position=0,mandatory=$true)]
+        $PageName
+    )
+    #Construct Tab Page
+    $tmpTab = New-Object System.Windows.Forms.TabPage
+    $tmpTab.text = $PageName
+    $tmpTab.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+    $tmpTab.ForeColor = $TextColor
+    $tmpTab.BackColor = $BGcolor
+    [void]$ToolboxMenu.Controls.Add($tmpTab)
+
+    #Construct List
+    $tmpList = New-Object System.Windows.Forms.Listbox
+    $tmpList.Width = 312
+    $tmpList.height = 259
+    $tmpList.location = New-Object System.Drawing.Point(0,0)
+    $tmpList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+    $tmpList.ForeColor = $TextColor
+    $tmpList.BackColor = $BGcolor
+    $tmpList.SelectionMode = "One"
+    $tmpTab.Controls.Add($tmpList)
+    return $tmpList
+}
+
 #Tab 1 - Actions
-$Tab1 = New-Object System.Windows.Forms.TabPage
-$Tab1.text = "Actions"
-$Tab1.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-$Tab1.ForeColor = $TextColor
-$Tab1.BackColor = $BGcolor
-$ToolboxMenu.Controls.Add($Tab1) | Out-Null
+$ActionList = Create-TabPage -PageName "Actions"
 
 #Tab 2 - Windows
-$Tab2 = New-Object System.Windows.Forms.TabPage
-$Tab2.text = "Windows"
-$Tab2.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-$Tab2.ForeColor = $TextColor
-$Tab2.BackColor = $BGcolor
-$ToolboxMenu.Controls.Add($Tab2) | Out-Null
+$WindowsList = Create-TabPage -PageName "Windows"
 
 #Tab 3 - Security
-$Tab3 = New-Object System.Windows.Forms.TabPage
-$Tab3.text = "Security"
-$Tab3.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-$Tab3.ForeColor = $TextColor
-$Tab3.BackColor = $BGcolor
-$ToolboxMenu.Controls.Add($Tab3) | Out-Null
+$SecurityList = Create-TabPage -PageName "Security"
 
 #Tab 4 - SCCM (if enabled)
 
@@ -889,48 +902,20 @@ $sccmClass = Get-WmiObject -Class "SMS_Client" -List -Namespace "root\CCM" -Erro
 $sccmClassExists = $sccmClass -ne $null
 
 if ($sccmClassExists) {
-    $Tab4 = New-Object System.Windows.Forms.TabPage
-    $Tab4.text = "SCCM"
-    $Tab4.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-    $Tab4.ForeColor = $TextColor
-    $Tab4.BackColor = $BGcolor
-    $ToolboxMenu.Controls.Add($Tab4) | Out-Null
+    $SCCMList = Create-TabPage -PageName "SCCM"
 }
 
 #Tab 5 - AD (Centered Text for title) - if RSAT is installed
 #Check to see if RSAT is installed
 
 if ($rsatInfo -eq "Installed") {
-    $Tab5 = New-Object System.Windows.Forms.TabPage
-    $Tab5.text = "AD"
-    $Tab5.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-    $Tab5.ForeColor = $TextColor
-    $Tab5.BackColor = $BGcolor
-    $ToolboxMenu.Controls.Add($Tab5) | Out-Null
+    $ADList = Create-TabPage -PageName "AD"
 }
 
 #Tab 6 - Custom (if enabled)
-if ($customTools -eq $true) {
-    $Tab6 = New-Object System.Windows.Forms.TabPage
-    $Tab6.text = "Custom"
-    $Tab6.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-    $Tab6.ForeColor = $TextColor
-    $Tab6.BackColor = $BGcolor
-    $ToolboxMenu.Controls.Add($Tab6) | Out-Null
-
-    $customList = New-Object System.Windows.Forms.Listbox
-    $customList.Width = 312
-    $customList.height = 259
-    $customList.location = New-Object System.Drawing.Point(0,0)
-    $customList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-    $customList.ForeColor = $TextColor
-    $customList.BackColor = $BGcolor
-    $customList.SelectionMode = "One"
-    $Tab6.Controls.Add($customList) | Out-Null
-}
-
 #Custom Functions Add to Listbox
 if ($customTools -eq $true) {
+    $customList = Create-TabPage -PageName "Custom"
     $arrList = New-Object System.Collections.ArrayList
     $toolboxIcon = [char]::ConvertFromUtf32(0x1F9F0)
 
@@ -967,18 +952,6 @@ if ($customTools -eq $true) {
 }
 
 #Action Functions
-
-#Action function listbox
-$ActionList = New-Object System.Windows.Forms.ListBox
-$ActionList.width = 312
-$ActionList.height = 259
-$ActionList.location = New-Object System.Drawing.Point(0, 0)
-$ActionList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-$ActionList.ForeColor = $TextColor
-$ActionList.BackColor = $BGcolor
-$ActionList.SelectionMode = "One"
-$Tab1.Controls.Add($ActionList)
-
 #Action function listbox items (Add UAC Icon to functions that require admin mode)
 $ActionList.Items.Add("Driver Updater (GUI)") | Out-Null
 $ActionList.Items.Add("Driver Updater (CLI)") | Out-Null
@@ -1127,18 +1100,6 @@ $ActionList.Add_Click({
     })
 
 #Windows Functions
-
-#Windows function listbox
-$WindowsList = New-Object System.Windows.Forms.ListBox
-$WindowsList.width = 312
-$WindowsList.height = 259
-$WindowsList.location = New-Object System.Drawing.Point(0, 0)
-$WindowsList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-$WindowsList.ForeColor = $TextColor
-$WindowsList.BackColor = $BGcolor
-$WindowsList.SelectionMode = "One"
-$outputsuppressed = $Tab2.Controls.Add($WindowsList)
-
 #Windows function listbox items
 $WindowsList.Items.Add("Windows Update - Full Sweep") | Out-Null
 $WindowsList.Items.Add("Windows Update - Defender Only") | Out-Null
@@ -1178,18 +1139,6 @@ $WindowsList.Add_Click({
     })
 
 #Security Functions
-
-#Security function listbox
-$SecurityList = New-Object System.Windows.Forms.ListBox
-$SecurityList.width = 312
-$SecurityList.height = 259
-$SecurityList.location = New-Object System.Drawing.Point(0, 0)
-$SecurityList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-$SecurityList.ForeColor = $TextColor
-$SecurityList.BackColor = $BGcolor
-$SecurityList.SelectionMode = "One"
-$outputsupressed = $Tab3.Controls.Add($SecurityList)
-
 #Hosts File Integrity Check
 $hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
 $hostsCompliant = $true
@@ -1231,17 +1180,6 @@ if ($sccmClassExists) {
         $wshell.Popup("SCCM Client Task $TriggerScheduleName Triggered. The selected task will run and might take several minutes to finish.", 0, "SCCM Client Task", 64)
     }
 
-    #SCCM function listbox
-    $SCCMList = New-Object System.Windows.Forms.ListBox
-    $SCCMList.width = 312
-    $SCCMList.height = 259
-    $SCCMList.location = New-Object System.Drawing.Point(0, 0)
-    $SCCMList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-    $SCCMList.ForeColor = $TextColor
-    $SCCMList.BackColor = $BGcolor
-    $SCCMList.SelectionMode = "One"
-    $Tab4.Controls.Add($SCCMList)
-
     foreach ($key in $($sccmTSTable.Keys)) {
         #Add the SCCM Trigger Schedule Table to the SCCM List
         $SCCMList.Items.Add($key) | Out-Null
@@ -1257,18 +1195,6 @@ if ($sccmClassExists) {
 }
 
 #AD Functions
-
-#AD function listbox
-$ADList = New-Object System.Windows.Forms.ListBox
-$ADList.width = 312
-$ADList.height = 259
-$ADList.location = New-Object System.Drawing.Point(0, 0)
-$ADList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-$ADList.ForeColor = $TextColor
-$ADList.BackColor = $BGcolor
-$ADList.SelectionMode = "One"
-$Tab5.Controls.Add($ADList)
-
 #AD function listbox items
 $ADList.Items.Add("AD Explorer") | Out-Null
 $ADList.Items.Add("Get Bitlocker Recovery Key") | Out-Null
