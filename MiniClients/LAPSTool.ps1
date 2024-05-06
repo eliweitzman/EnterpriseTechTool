@@ -251,7 +251,7 @@ function LAPSTool {
                     }
                     else {
                         #Next, actually connect to the MS Graph API
-                        Connect-MgGraph -TenantId $tenantID -ClientId $clientID
+                        Connect-MgGraph -TenantId $tenantID -ClientId $clientID -Scope Device.Read.All
                         #Now, get the password
                         $lapsResult = (Get-LapsAADPassword -DeviceIds $hostnameInput.Text -IncludePasswords -AsPlainText).Password
                         #If the output is null, the computer is not in Azure AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
@@ -264,7 +264,7 @@ function LAPSTool {
                             $lapsResult | clip
  
                             $wshell = New-Object -ComObject Wscript.Shell
-                            $wshell.Popup("Password for $hostname is $lapsResult. Copied to clipboard.", 0, "Password", 0x0)
+                            $wshell.Popup("Password for $($hostnameInput.Text) is $lapsResult. Copied to clipboard.", 0, "Password", 0x0)
                         }
                     }
                 }
