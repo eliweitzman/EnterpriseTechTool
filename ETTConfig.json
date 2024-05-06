@@ -20,15 +20,17 @@
 
     "CustomFunctions": [
         {
-          "name": "Get-HelloWorld",
+          "name": "Display Hello World",
           "description": "Returns a friendly 'Hello, World!' message.",
           "tab" : "",
+          "functionName" : "Get-HelloWorld",
           "code": "function Get-HelloWorld { $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup('Hello, World!', 0, 'Hello, World!', 0x1)}"
         },
         {
-          "name": "Get-RandomNumber",
+          "name": "Display Random Number",
           "description": "Generates a random number between 1 and 100.",
           "tab": "",
+          "functionName" : "Get-RandomNumber",
           "code": "function Get-RandomNumber {$rand =  (Get-Random -Minimum 1 -Maximum 100); $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup($rand, 0, $rand, 0x1)}"
         }
       ]

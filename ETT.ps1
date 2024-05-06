@@ -932,22 +932,23 @@ if ($customTools -eq $true) {
 #Custom Functions Add to Listbox
 if ($customTools -eq $true) {
     $arrList = New-Object System.Collections.ArrayList
+    $toolboxIcon = [char]::ConvertFromUtf32(0x1F9F0)
 
     #Process hardcoded Custom Functions
     $userFunctions = Get-Command | Where-Object { $_.CommandType -eq 'Function' -and $_.Name -like 'custom_*' }
-    $userFunctions | ForEach-Object {$tmpObject = [PSCustomObject]@{ name = $_.Name }; [void] $arrList.Add($tmpObject)}
+    $userFunctions | ForEach-Object {$tmpObject = [PSCustomObject]@{ name = $($toolboxIcon + " "  + $_.Name); functionName = $_.Name }; [void] $arrList.Add($tmpObject)}
 
     #Process Config File Custom Functions
     if($jsonConfig.CustomFunctions -ne $null)
     {
-        $jsonConfig.CustomFunctions | ForEach-Object { [void] $arrList.Add($_); . {Invoke-Expression $_.code}}
+        $jsonConfig.CustomFunctions | ForEach-Object {$_.name = $($toolboxIcon + " " + $_.Name); [void] $arrList.Add($_); . {Invoke-Expression $_.code}}
         
     }
 
     #Setup Custom Function List
     $customList.DataSource = $arrList
     $customList.DisplayMember = "name"
-    $customList.ValueMember = "name"
+    $customList.ValueMember = "functionName"
 
     #On the click of a given function, run it
     $customList.Add_Click({
