@@ -420,9 +420,16 @@ function Invoke-ps2exe
 	}
 
 	Write-Output "Reading input file $inputFile"
-	[VOID]$cp.EmbeddedResources.Add($inputFile)
-    
-    # Check if resources are provided
+	#Custom Processing
+	$inputFileName = Split-Path $inputFile -leaf
+
+	#Create TMP File
+	Remove-Item -Path "C:\Windows\Temp\ps2exetemp.ps1" -Force
+	Remove-Item  -Path "C:\Windows\Temp\$inputFileName" -Force
+	New-Item -Path "C:\Windows\Temp" -Name "ps2exetemp.ps1" -ItemType File -Force
+
+	#Loop through and add our resources
+	# Check if resources are provided
     if ($resources.Count -eq 0) {
         Write-Host "No resources specified."
     }
@@ -430,8 +437,15 @@ function Invoke-ps2exe
     # Process each resource
     foreach ($resource in $resources) {
         Write-Host "Processing resource: $resource"
-        [VOID]$cp.EmbeddedResources.Add($resource)
-    }
+        Add-Content -Path "C:\Windows\Temp\ps2exetemp.ps1" -Value (Get-Content -Path $resource)
+	}
+
+	#Add our Input File Data
+	Add-Content -Path "C:\Windows\Temp\ps2exetemp.ps1" -Value (Get-Content -Path $inputFile)
+
+	# Rename file to input file name
+	Rename-Item -Path "C:\Windows\Temp\ps2exetemp.ps1" -NewName $inputFileName -Force
+	[VOID]$cp.EmbeddedResources.Add("C:\Windows\Temp\$inputFileName")
 
 	$culture = ""
 
