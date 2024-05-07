@@ -77,45 +77,45 @@ $AutoUpdateCheckerEnabled = (?: {$jsonConfig.AutoUpdateCheckerEnabled -ne $null}
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
 #Admin mode - if auto-elevate is enabled, this will be set to $true. If in EXE mode, this is automatically handled by Windows.
-$adminmode = (?: {$jsonConfig.AdminMode -ne $null} {$jsonConfig.AdminMode} {$false})
+$adminmode = (?: {$jsonConfig.AdminMode -ne $null -and $jsonConfig.AdminMode -ne ""} {$jsonConfig.AdminMode} {$false})
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
-$BrandColor = (?: {$jsonConfig.BrandColor-ne $null} {$jsonConfig.BrandColor} {'#023a24'}) #Set the color of the form, currently populated with a hex value.
-$LogoLocation = (?: {$jsonConfig.LogoLocation -ne $null} {$jsonConfig.LogoLocation} {$null}) #If you want to use a custom logo, set the path here. Otherwise, leave as $null
+$BrandColor = (?: {$jsonConfig.BrandColor-ne $null -and $jsonConfig.BrandColor-ne ""} {$jsonConfig.BrandColor} {'#023a24'}) #Set the color of the form, currently populated with a hex value.
+$LogoLocation = (?: {$jsonConfig.LogoLocation -ne $null -and $jsonConfig.LogoLocation -ne ""} {$jsonConfig.LogoLocation} {$null}) #If you want to use a custom logo, set the path here. Otherwise, leave as $null
 
 #ETT UI Options
-$backgroundImagePath = (?: {$jsonConfig.BackgroundImagePath -ne $null} {$jsonConfig.BackgroundImagePath} {""}) #Set this to a web URL or local path to change the BG image of ETT
+$backgroundImagePath = (?: {$jsonConfig.BackgroundImagePath -ne $null -and $jsonConfig.BackgroundImagePath -ne ""} {$jsonConfig.BackgroundImagePath} {""}) #Set this to a web URL or local path to change the BG image of ETT
 $ettApplicationTitle = (?: {$jsonConfig.ETTApplicationTitle -ne $null -and $jsonConfig.ETTApplicationTitle -ne ""} {"$($jsonConfig.ETTApplicationTitle) V$ETTVersion"} {"Eli's Enterprise Tech Tool V$ETTVersion"})
 $ettHeaderText =  (?: {($jsonConfig.ETTHeaderText -ne $null -and $jsonConfig.ETTHeaderText -ne "")} {$jsonConfig.ETTHeaderText} {"Enterprise Tech Tool"})
-$ettHeaderTextColor = (?: {$jsonConfig.ETTHeaderTextColor -ne $null} {[System.Drawing.Color]::FromName($jsonConfig.ETTHeaderTextColor)} {[System.Drawing.Color]::FromName("White")})#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
-$timeout = (?: {$jsonConfig.ApplicationTimeoutEnabled -ne $null} {$jsonConfig.ApplicationTimeoutEnabled} {$false}) #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
-$timeoutLength = (?: {$jsonConfig.ApplicationTimeoutLength -ne $null} {$jsonConfig.ApplicationTimeoutLength} {300}) #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
+$ettHeaderTextColor = (?: {$jsonConfig.ETTHeaderTextColor -ne $null -and $jsonConfig.ETTHeaderTextColor -ne ""} {[System.Drawing.Color]::FromName($jsonConfig.ETTHeaderTextColor)} {[System.Drawing.Color]::FromName("White")})#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
+$timeout = (?: {$jsonConfig.ApplicationTimeoutEnabled -ne $null -and $jsonConfig.ApplicationTimeoutEnabled -ne ""} {$jsonConfig.ApplicationTimeoutEnabled} {$false}) #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
+$timeoutLength = (?: {$jsonConfig.ApplicationTimeoutLength -ne $null -and $jsonConfig.ApplicationTimeoutLength -ne ""} {$jsonConfig.ApplicationTimeoutLength} {300}) #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
 
 #Custom Toolbox - CHANGE THIS TO MATCH YOUR PREFERENCE
-$customTools = (?: {$jsonConfig.EnableCustomTools -ne $null} {$jsonConfig.EnableCustomTools} {$true}) #Set this to $true to enable custom functions. Otherwise, set to $false
+$customTools = (?: {$jsonConfig.EnableCustomTools -ne $null -and $jsonConfig.EnableCustomTools -ne ""} {$jsonConfig.EnableCustomTools} {$true}) #Set this to $true to enable custom functions. Otherwise, set to $false
 
 <#Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #>
 
 #RAM Check
-$ramCheckActive = (?: {$jsonConfig.RAMCheckActive -ne $null} {$jsonConfig.RAMCheckActive} {$false})
-$ramMinimum = (?: {$jsonConfig.RAMCheckMinimum -ne $null} {$jsonConfig.RAMCheckMinimum} {8}) #SET MINIMUM RAM IN GB
+$ramCheckActive = (?: {$jsonConfig.RAMCheckActive -ne $null -and $jsonConfig.RAMCheckActive -ne ""} {$jsonConfig.RAMCheckActive} {$false})
+$ramMinimum = (?: {$jsonConfig.RAMCheckMinimum -ne $null -and $jsonConfig.RAMCheckMinimum -ne ""} {$jsonConfig.RAMCheckMinimum} {8}) #SET MINIMUM RAM IN GB
 
 #Drivespace Check
-$drivespaceCheckActive = (?: {$jsonConfig.DriveSpaceCheckActive -ne $null} {$jsonConfig.DriveSpaceCheckActive} {$false})
-$drivespaceMinimum = (?: {$jsonConfig.DriveSpaceCheckMinimum -ne $null} {$jsonConfig.DriveSpaceCheckMinimum} {20}) #SET MINIMUM DRIVESPACE IN GB
+$drivespaceCheckActive = (?: {$jsonConfig.DriveSpaceCheckActive -ne $null -and $jsonConfig.DriveSpaceCheckActive -ne ""} {$jsonConfig.DriveSpaceCheckActive} {$false})
+$drivespaceMinimum = (?: {$jsonConfig.DriveSpaceCheckMinimum -ne $null -and $jsonConfig.DriveSpaceCheckMinimum -ne ""} {$jsonConfig.DriveSpaceCheckMinimum} {20}) #SET MINIMUM DRIVESPACE IN GB
 
 #Windows Version Check
-$winverCheckActive = (?: {$jsonConfig.WinVersionCheckActive -ne $null} {$jsonConfig.WinVersionCheckActive} {$false})
-$winverTarget = (?: {$jsonConfig.WinVersionTarget -ne $null} {$jsonConfig.WinVersionTarget} {"24H2"}) #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
+$winverCheckActive = (?: {$jsonConfig.WinVersionCheckActive -ne $null -and $jsonConfig.WinVersionCheckActive -ne ""} {$jsonConfig.WinVersionCheckActive} {$false})
+$winverTarget = (?: {$jsonConfig.WinVersionTarget -ne $null -and $jsonConfig.WinVersionTarget -ne ""} {$jsonConfig.WinVersionTarget} {"24H2"}) #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
 
 #Azure Information
-$azureADTenantId = (?: {$jsonConfig.AzureADTenantId -ne $null} {$jsonConfig.AzureADTenantId}{""})
-$lapsAppClientId = (?: {$jsonConfig.LAPSAppClientId -ne $null} {$jsonConfig.LAPSAppClientId}{""})
+$azureADTenantId = (?: {$jsonConfig.AzureADTenantId -ne $null -and $jsonConfig.AzureADTenantId -ne ""} {$jsonConfig.AzureADTenantId}{""})
+$lapsAppClientId = (?: {$jsonConfig.LAPSAppClientId -ne $null -and $jsonConfig.LAPSAppClientId -ne ""} {$jsonConfig.LAPSAppClientId}{""})
 
 #Anime Mode
-$animeMode = (?: {$jsonConfig.AnimeMode}{$jsonConfig.AnimeMode}{""})
+$animeMode = (?: {$jsonConfig.AnimeMode -ne $null -and $jsonConfig.AnimeMode -ne $false -and $jsonConfig.AnimeMode -ne ""}{$jsonConfig.AnimeMode}{""})
 $animeImageArr = @("https://cache.desktopnexus.com/thumbseg/2451/2451508-bigthumbnail.jpg","https://wallpapercave.com/wp/wp9498801.jpg","https://itsaboutanime.files.wordpress.com/2019/12/12-best-anime-wallpapers-in-hd-and-4k-that-you-must-get-now.jpg")
 if ($animeMode)
 {
@@ -319,6 +319,10 @@ $LoadingLabel.Text = "Getting Windows Version..."
 $winver = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").DisplayVersion
 $outputsuppressed = $LoadingProgressBar.Value = 30
 
+$LoadingLabel.Text = "Getting Windows Defender Status..."
+$defenderEnrollmentStatus = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows Advanced Threat Protection\Status" -ErrorAction SilentlyContinue).OnboardingState
+$outputsuppressed = $LoadingProgressBar.Value = 35
+
 $LoadingLabel.Text = "Getting Manufacturer..."
 $manufacturer = Get-WmiObject -Class Win32_ComputerSystemProduct | Select-Object -ExpandProperty Vendor
 $outputsuppressed = $LoadingProgressBar.Value = 40
@@ -387,11 +391,10 @@ $drivetype = (Get-PhysicalDisk | Where-Object DeviceID -eq 0).MediaType
 $complianceFlag = $false#>
 
 
-#MiniTools Dot Sourcing
-#Function for AD Computer or User Lookup, depending on the value of $ADLookupType parameter - DISABLED FOR INITIAL RELEASE, WILL BE RE-ENABLED IN FUTURE, after fixing bugs
-. ./MiniClients/ADLookup.ps1
-. ./MiniClients/LAPSTool.ps1
-. ./MiniClients/BitlockerTool.ps1
+#MiniTools Dot Sourcing - For development purpose only. DOT Sourcing doesn't work correctly with ps2exe.
+. .\MiniClients\ADLookup.ps1
+. .\MiniClients\LAPSTool.ps1
+. .\MiniClients\BitlockerTool.ps1
 
 #Device Compliance Checks
 #RAM Check
