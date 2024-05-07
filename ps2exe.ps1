@@ -424,9 +424,9 @@ function Invoke-ps2exe
 	$inputFileName = Split-Path $inputFile -leaf
 
 	#Create TMP File
-	Remove-Item -Path "C:\Windows\Temp\ps2exetemp.ps1" -Force
-	Remove-Item  -Path "C:\Windows\Temp\$inputFileName" -Force
-	New-Item -Path "C:\Windows\Temp" -Name "ps2exetemp.ps1" -ItemType File -Force
+	Remove-Item -Path "C:\Windows\Temp\ps2exetemp.ps1" -Force -ErrorAction SilentlyContinue
+	Remove-Item  -Path "C:\Windows\Temp\$inputFileName" -Force -ErrorAction SilentlyContinue
+	New-Item -Path "C:\Windows\Temp" -Name "ps2exetemp.ps1" -ItemType File -Force | Out-Null
 
 	#Loop through and add our resources
 	# Check if resources are provided
