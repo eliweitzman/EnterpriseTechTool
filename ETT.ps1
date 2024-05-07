@@ -660,7 +660,7 @@ function CheckForWindowsUpdates {
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
 $ETT.ClientSize = New-Object System.Drawing.Point(850, 330)
-$ETT.text = $ettApplicationTitle
+$ETT.text = "$ettApplicationTitle [Admin Mode: $adminmode]"
 $ETT.StartPosition = 'CenterScreen'
 $ETT.MaximizeBox = $false
 $ETT.MaximumSize = $ETT.Size
