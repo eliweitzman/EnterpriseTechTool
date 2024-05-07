@@ -714,15 +714,15 @@ $ToastStack = New-Object System.Windows.Forms.NotifyIcon
 $Path = 'C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe'
 $ToastStack.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($path)
 $ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
-$ToastStack.BalloonTipTitle = "Eli's Enterprise Tech Tool"
-$ToastStack.BalloonTipText = "Welcome to Eli's Enterprise Tech Tool!"
+$ToastStack.BalloonTipTitle = $ettApplicationTitle
+$ToastStack.BalloonTipText = "Welcome to $ettApplicationTitle!"
 $ToastStack.Visible = $true
 $ToastStack.ShowBalloonTip(5000)
 
 #IF Compliance Flag is true, add a flyout notification
 if ($complianceFlag -eq $true) {
     $ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Error
-    $ToastStack.BalloonTipTitle = "Eli's Enterprise Tech Tool"
+    $ToastStack.BalloonTipTitle = $ettApplicationTitle
     $ToastStack.BalloonTipText = "This device is non-compliant!"
     $ToastStack.Visible = $true
     $ToastStack.ShowBalloonTip(5000)
