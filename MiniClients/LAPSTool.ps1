@@ -154,6 +154,7 @@ function LAPSTool {
     $domainInput.Anchor = 'top'
     $domainInput.location = New-Object System.Drawing.Point(80, 114)
     $domainInput.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
+    $domainInput.Text = $domain
 
     #Hostname information label
     $hostnameLabel = New-Object system.Windows.Forms.Label
