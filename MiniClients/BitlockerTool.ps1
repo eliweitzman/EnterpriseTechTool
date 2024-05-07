@@ -3,9 +3,11 @@ function BitlockerTool {
         [Parameter(Position=0,mandatory=$true)]
         [System.Drawing.Color]$BackgroundColor, 
         [Parameter(Position=1,mandatory=$true)]
-        [System.Drawing.Color]$TextColor,
+        [System.Drawing.Color]$WindowTextColor,
         [Parameter(Position=2,mandatory=$true)]
-        [System.Drawing.Color]$BoxColor
+        [System.Drawing.Color]$ButtonColor,
+        [Parameter(Position=2,mandatory=$true)]
+        [System.Drawing.Color]$ButtonTextColor
         )
 
     #Test RSAT AD Tools is installed
@@ -40,7 +42,7 @@ function BitlockerTool {
     $BTitle.height = 10
     $BTitle.location = New-Object System.Drawing.Point(88, 10)
     $BTitle.Font = New-Object System.Drawing.Font('Segoe UI', 16, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-    $BTitle.ForeColor = $TextColor
+    $BTitle.ForeColor = $WindowTextColor
     $BForm.Controls.Add($BTitle)
 
     #Logo (sourced from WinAero gal)
@@ -60,7 +62,7 @@ function BitlockerTool {
     $BHostname.height = 10
     $BHostname.location = New-Object System.Drawing.Point(16, 60)
     $BHostname.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-    $BHostname.ForeColor = $TextColor
+    $BHostname.ForeColor = $WindowTextColor
     $BForm.Controls.Add($BHostname)
 
     $BHostnameInput = New-Object system.Windows.Forms.TextBox
@@ -80,7 +82,7 @@ function BitlockerTool {
     $BUsername.height = 10
     $BUsername.location = New-Object System.Drawing.Point(16, 90)
     $BUsername.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-    $BUsername.ForeColor = $TextColor
+    $BUsername.ForeColor = $WindowTextColor
     $BForm.Controls.Add($BUsername)
 
     $BUsernameInput = New-Object system.Windows.Forms.TextBox
@@ -102,8 +104,8 @@ function BitlockerTool {
     $BSubmit.height = 30
     $BSubmit.location = New-Object System.Drawing.Point(90, 120)
     $BSubmit.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-    $BSubmit.ForeColor = $TextColor
-    $BSubmit.BackColor = $BoxColor
+    $BSubmit.ForeColor = $ButtonTextColor
+    $BSubmit.BackColor = $ButtonColor
 
     #If RSAT is not installed, disable button
     if ($RSATStatus -eq "Not Installed") {

@@ -230,14 +230,14 @@ if ($theme -eq 0) {
     #DARK MODE
     $BGcolor = 'Black'
     $TextColor = 'White'
-    $ButtonText = 'White'
+    $ButtonTextColor = 'White'
     $BoxColor = $BrandColor
 }
 else {
     #LIGHT MODE
     $BGcolor = 'WhiteSmoke'
     $TextColor = 'Black'
-    $ButtonText = 'White'
+    $ButtonTextColor = 'White'
     $BoxColor = $BrandColor
 }
 
@@ -735,7 +735,7 @@ $ClearLastLogin.width = 237
 $ClearLastLogin.height = 89
 $ClearLastLogin.location = New-Object System.Drawing.Point(13, 117)
 $ClearLastLogin.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-$ClearLastLogin.ForeColor = $ButtonText
+$ClearLastLogin.ForeColor = $ButtonTextColor
 $ClearLastLogin.BackColor = $BoxColor
 
 $ClearLastLogin_Action = {
@@ -770,7 +770,7 @@ $Lapspw.height = 89
 $Lapspw.Anchor = 'top'
 $Lapspw.location = New-Object System.Drawing.Point(267, 117)
 $Lapspw.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-$Lapspw.ForeColor = $ButtonText
+$Lapspw.ForeColor = $ButtonTextColor
 $Lapspw.BackColor = $BoxColor
 
 #A seperate GUI applet for LAPS openable when the function is selected
@@ -789,7 +789,7 @@ $appUpdate.height = 89
 $appUpdate.Anchor = 'bottom,left'
 $appUpdate.location = New-Object System.Drawing.Point(13, 219)
 $appUpdate.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-$appUpdate.ForeColor = $ButtonText
+$appUpdate.ForeColor = $ButtonTextColor
 $appUpdate.BackColor = $BoxColor
 
 #Winget upgrading function
@@ -823,7 +823,7 @@ $PolicyPatch.width = 237
 $PolicyPatch.height = 89
 $PolicyPatch.location = New-Object System.Drawing.Point(266, 219)
 $PolicyPatch.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-$PolicyPatch.ForeColor = $ButtonText
+$PolicyPatch.ForeColor = $ButtonTextColor
 $PolicyPatch.BackColor = $BoxColor
 
 #BATCH MENU = Policy Update!
@@ -1209,7 +1209,7 @@ $ADList.Add_Click({
             try {
                 Get-ADUser -Identity $env:USERNAME -ErrorAction SilentlyContinue
                 #AD Lookup
-                ADLookup -BackgroundColor $BGcolor -TextColor $TextColor -BrandColor $BrandColor -ButtonTextColor $ButtonText
+                ADLookup -BackgroundColor $BGcolor -WindowTextColor $TextColor -BrandColor $BrandColor -ButtonTextColor $ButtonTextColor
             }
             catch {
                 $wshell = New-Object -ComObject Wscript.Shell
@@ -1217,7 +1217,7 @@ $ADList.Add_Click({
             }
         }
         if ($ADList.SelectedItem -eq "Get Bitlocker Recovery Key") {
-            BitlockerTool -BackgroundColor $BGcolor -TextColor $TextColor -BoxColor $BoxColor
+            BitlockerTool -BackgroundColor $BGcolor -WindowTextColor $TextColor -ButtonColor $BrandColor -ButtonTextColor $ButtonTextColor
         }
 })
 #TAB MENU

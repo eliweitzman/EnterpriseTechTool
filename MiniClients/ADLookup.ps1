@@ -21,7 +21,7 @@ function ADLookup {
         [Parameter(Position=0,mandatory=$true)]
         [System.Drawing.Color]$BackgroundColor, 
         [Parameter(Position=1,mandatory=$true)]
-        [System.Drawing.Color]$TextColor,
+        [System.Drawing.Color]$WindowTextColor,
         [Parameter(Position=2,mandatory=$true)]
         [System.Drawing.Color]$BrandColor,
         [Parameter(Position=3,mandatory=$true)]
@@ -55,7 +55,7 @@ function ADLookup {
     $SearchLabel.Height = 20
     $SearchLabel.Text = "Search Query:"
     $SearchLabel.Font = New-Object System.Drawing.Font("Arial", 11)
-    $SearchLabel.ForeColor = $TextColor
+    $SearchLabel.ForeColor = $WindowTextColor
     $SearchLabel.TabIndex = 0
     $SearchLabel.TextAlign = "MiddleLeft"
     $SearchLabel.UseMnemonic = $false
@@ -120,7 +120,7 @@ function ADLookup {
     $DomainLabel.Height = 20
     $DomainLabel.Text = "Domain:"
     $DomainLabel.Font = New-Object System.Drawing.Font("Arial", 11)
-    $DomainLabel.ForeColor = $TextColor
+    $DomainLabel.ForeColor = $WindowTextColor
     $DomainLabel.TabIndex = 0
     $DomainLabel.TextAlign = "MiddleLeft"
     $DomainLabel.UseMnemonic = $false
