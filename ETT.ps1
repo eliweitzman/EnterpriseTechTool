@@ -344,15 +344,12 @@ $ramCheck = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property cap
 $outputsuppressed = $LoadingProgressBar.Value = 80
 
 $loadingLabel.Text = "Getting RSAT Info..."
-if ($adminmode -eq $true) {
-    $rsatInfo = Get-WindowsCapability -Name RSAT* -Online | Select-Object State -Wait
-}else {
-    try {
-        $rsatInfo = Get-AdUser -ErrorAction SilentlyContinue -Wait
-    }
-    catch {
-        $rsatInfo = "NotPresent"
-    }
+if (Get-Module -Name "ActiveDirectory")
+{
+    $rsatInfo = "Installed"
+}
+else {
+    $rsatInfo = "NotPresent"
 }
 $outputsuppressed = $LoadingProgressBar.Value = 85
 
@@ -1206,7 +1203,7 @@ $ADList.Items.Add("Get Bitlocker Recovery Key") | Out-Null
 
 #AD function listbox actions
 $ADList.Add_Click({
-        if ($ADList.SelectedItem -eq "AD Lookup") {
+        if ($ADList.SelectedItem -eq "AD Explorer") {
             #Test if RSAT is installed
             try {
                 Get-ADUser -Identity $env:USERNAME -ErrorAction SilentlyContinue
@@ -1218,7 +1215,7 @@ $ADList.Add_Click({
                 $wshell.Popup("RSAT AD Tools or your permissions level are not compliant. Please install RSAT AD tools or use an entitled account and try again.", 0, "RSAT", 64)
             }
         }
-        if ($ADList.SelectedItem -eq "Bitlocker Recovery Key Retreival") {
+        if ($ADList.SelectedItem -eq "Get Bitlocker Recovery Key") {
             BitlockerTool -BackgroundColor $BGcolor -TextColor $TextColor -BoxColor $BoxColor
         }
 })
