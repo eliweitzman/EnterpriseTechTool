@@ -685,6 +685,7 @@ $Logo.height = 73
 $Logo.location = New-Object System.Drawing.Point(377, 29)
 $Logo.imageLocation = $LogoLocation
 $Logo.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::zoom
+$Logo.BackColor = [System.Drawing.Color]::FromName("Transparent")
 if ($null -eq $LogoLocation) {
     $Logo.Visible = $false
 }
@@ -849,6 +850,7 @@ $ToolboxTitle.height = 10
 $ToolboxTitle.location = New-Object System.Drawing.Point(600, 10)
 $ToolboxTitle.Font = New-Object System.Drawing.Font('Segoe UI', 16, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
 $ToolboxTitle.ForeColor = $TextColor
+$ToolboxTitle.BackColor = [System.Drawing.Color]::FromName("Transparent")
 $ETT.Controls.Add($ToolboxTitle)
 
 #Tabbed Menu Box for Toolbox
