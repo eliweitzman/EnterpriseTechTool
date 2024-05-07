@@ -72,7 +72,7 @@ Add-Type -AssemblyName System.Windows.Forms
 
 #Build Variables
 $ETTVersion = "1.3"
-$AutoUpdateCheckerEnabled = (?: {$jsonConfig.AutoUpdateCheckerEnabled -ne $null} {$jsonConfig.AutoUpdateCheckerEnabled}{$true})
+$AutoUpdateCheckerEnabled = (?: {$jsonConfig.AutoUpdateCheckerEnabled -ne $null -and $jsonConfig.AutoUpdateCheckerEnabled -ne ""} {$jsonConfig.AutoUpdateCheckerEnabled}{$true})
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
