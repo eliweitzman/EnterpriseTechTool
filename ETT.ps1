@@ -85,6 +85,8 @@ $LogoLocation = (?: {$jsonConfig.LogoLocation -ne $null} {$jsonConfig.LogoLocati
 
 #ETT UI Options
 $backgroundImagePath = (?: {$jsonConfig.BackgroundImagePath -ne $null} {$jsonConfig.BackgroundImagePath} {""}) #Set this to a web URL or local path to change the BG image of ETT
+$ettApplicationTitle = (?: {$jsonConfig.ETTApplicationTitle -ne $null -and $jsonConfig.ETTApplicationTitle -ne ""} {"$($jsonConfig.ETTApplicationTitle) V$ETTVersion"} {"Eli's Enterprise Tech Tool V$ETTVersion"})
+$ettHeaderText =  (?: {($jsonConfig.ETTHeaderText -ne $null -and $jsonConfig.ETTHeaderText -ne "")} {$jsonConfig.ETTHeaderText} {"Enterprise Tech Tool"})
 $ettHeaderTextColor = (?: {$jsonConfig.ETTHeaderTextColor -ne $null} {[System.Drawing.Color]::FromName($jsonConfig.ETTHeaderTextColor)} {[System.Drawing.Color]::FromName("White")})#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
 $timeout = (?: {$jsonConfig.ApplicationTimeoutEnabled -ne $null} {$jsonConfig.ApplicationTimeoutEnabled} {$false}) #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
 $timeoutLength = (?: {$jsonConfig.ApplicationTimeoutLength -ne $null} {$jsonConfig.ApplicationTimeoutLength} {300}) #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
@@ -657,7 +659,7 @@ function CheckForWindowsUpdates {
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
 $ETT.ClientSize = New-Object System.Drawing.Point(850, 330)
-$ETT.text = "Eli's Enterprise Tech Tool V$ETTVersion"
+$ETT.text = $ettApplicationTitle
 $ETT.StartPosition = 'CenterScreen'
 $ETT.MaximizeBox = $false
 $ETT.MaximumSize = $ETT.Size
@@ -687,7 +689,7 @@ if ($null -eq $LogoLocation) {
 }
 
 $Heading = New-Object System.Windows.Forms.Label
-$Heading.text = "Enterprise Tech Tool"
+$Heading.text = $ettHeaderText
 $Heading.BackColor = [System.Drawing.Color]::FromName("Transparent")
 $Heading.AutoSize = $true
 $Heading.width = 25

@@ -4,6 +4,8 @@
     "BrandColor" : "#023a24",
     "LogoLocation" : null,
     "BackgroundImagePath" : "",
+    "ETTApplicationTitle" : "",
+    "ETTHeaderText" : "",
     "ETTHeaderTextColor" : "White",
     "ApplicationTimeoutEnabled" : false,
     "ApplicationTimeoutLength" : 300,
