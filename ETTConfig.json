@@ -25,17 +25,15 @@
           "displayName": "Display Hello World",
           "description": "Returns a friendly 'Hello, World!' message.",
           "tab" : "",
-          "functionName" : "Get-HelloWorld",
           "requireAdmin" : true,
-          "code": "function Get-HelloWorld { $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup('Hello, World!', 0, 'Hello, World!', 0x1)}"
+          "codeBlock": "$wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup('Hello, World!', 0, 'Hello, World!', 0x1)"
         },
         {
           "displayName": "Display Random Number",
           "description": "Generates a random number between 1 and 100.",
           "tab": "",
-          "functionName" : "Get-RandomNumber",
           "requireAdmin" : false,
-          "code": "function Get-RandomNumber {$rand =  (Get-Random -Minimum 1 -Maximum 100); $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup($rand, 0, $rand, 0x1)}"
+          "codeBlock": "$rand =  (Get-Random -Minimum 1 -Maximum 100); $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup($rand, 0, $rand, 0x1)"
         }
       ]
   }
