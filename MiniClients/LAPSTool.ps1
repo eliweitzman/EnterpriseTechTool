@@ -14,7 +14,7 @@ function LAPSTool {
 
     #Create box
     $LapsForm = New-Object system.Windows.Forms.Form
-    $LapsForm.ClientSize = New-Object System.Drawing.Point(450, 301)
+    $LapsForm.ClientSize = New-Object System.Drawing.Point(450, 325)
     $LapsForm.text = "LAPS GUI"
     $LapsForm.BackColor = $BackgroundColor
     $LapsForm.ForeColor = $TextColor
@@ -60,7 +60,8 @@ function LAPSTool {
             if ($azureLaps.Checked -eq $true) {
                 #Re-enable the start button if it was disabled by RSAT not being installed
                 $lapsStart.Enabled = $true
-
+                $msGraphSessionLabel.Visible = $true
+                $msGraphLogoutButton.Visible = $true
                 $windowsLaps.Checked = $false
                 $windowsLaps.Enabled = $false
                 $altCreds.Enabled = $false
@@ -78,7 +79,7 @@ function LAPSTool {
                 $domainInput.Location = New-Object System.Drawing.Point(90, 114)
 
                 #If Azure LAPS is checked, change the hostname input box to the device ID input box
-                $hostnameLabel.Text = "Device ID:"
+                $hostnameLabel.Text = "Machine Hostname:"
                 $hostnameInput.Text = ""
 
                 #Align the username input box with the hostname input box
@@ -88,14 +89,13 @@ function LAPSTool {
                 $usernameInfo.Text = "Client ID:"
                 $usernameInput.Text = $lapsAppClientId
                 $usernameInput.Enabled = $true
-
-                #If Azure LAPS is checked, change the start button to say "Get Password"
-                $lapsStart.Text = "Get Password"
             }
             else {
                 $windowsLaps.Enabled = $true
                 $domainInput.Enabled = $true
                 $altCreds.Enabled = $true
+                $msGraphSessionLabel.Visible = $false
+                $msGraphLogoutButton.Visible = $false
 
                 #If Azure LAPS is not checked, change the domain input box to the domain input box
                 $domainLabel.Text = "Domain:"
@@ -112,9 +112,6 @@ function LAPSTool {
                 $usernameInfo.Text = "Your Username:"
                 $usernameInput.Text = $domain + "\" + $env:USERNAME
                 $usernameInput.Enabled = $false
-
-                #If Azure LAPS is not checked, change the start button to say "Start"
-                $lapsStart.Text = "Start"
 
                 #Also, check to see if RSAT is installed. If not, disable the start button
                 if (Get-Module -ListAvailable -Name ActiveDirectory) {
@@ -165,6 +162,17 @@ function LAPSTool {
     $hostnameLabel.location = New-Object System.Drawing.Point(16, 152)
     $hostnameLabel.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
     $hostnameLabel.ForeColor = $TextColor
+
+    #Azure Ad Session Label
+    $msGraphSessionLabel = New-Object system.Windows.Forms.Label
+    $msGraphSessionLabel.text = "MS Graph Session: $(Get-MGContext | Select -ExpandProperty Account)"
+    $msGraphSessionLabel.AutoSize = $true
+    $msGraphSessionLabel.width = 25
+    $msGraphSessionLabel.height = 10
+    $msGraphSessionLabel.location = New-Object System.Drawing.Point(16, 250)
+    $msGraphSessionLabel.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+    $msGraphSessionLabel.ForeColor = $TextColor
+    $msGraphSessionLabel.Visible = $false
 
     #Input field for hostname
     $hostnameInput = New-Object system.Windows.Forms.TextBox
@@ -218,12 +226,27 @@ function LAPSTool {
             }
         })
 
+    #Logout MSGraph Button
+    $msGraphLogoutButton = New-Object system.Windows.Forms.Button
+    $msGraphLogoutButton.text = "Logout MS Graph"
+    $msGraphLogoutButton.width = 130
+    $msGraphLogoutButton.height = 30
+    $msGraphLogoutButton.location = New-Object System.Drawing.Point(290, 275)
+    $msGraphLogoutButton.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+    $msGraphLogoutButton.BackColor = $BoxColor
+    $msGraphLogoutButton.ForeColor = $TextColor
+    $msGraphLogoutButton.Visible = $false
+    $msGraphLogoutButton.Add_Click({
+        Disconnect-MgGraph -ErrorAction SilentlyContinue
+        $msGraphSessionLabel.Text = "MS Graph Session: "
+    })
+
     #Start button that closes window to run
     $lapsStart = New-Object system.Windows.Forms.Button
-    $lapsStart.text = "Start"
+    $lapsStart.text = "Get Password"
     $lapsStart.width = 125
     $lapsStart.height = 30
-    $lapsStart.location = New-Object System.Drawing.Point(154, 251)
+    $lapsStart.location = New-Object System.Drawing.Point(154, 275)
     $lapsStart.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
     $lapsStart.BackColor = $BoxColor
     $lapsStart.ForeColor = $TextColor
@@ -267,6 +290,7 @@ function LAPSTool {
                             $wshell = New-Object -ComObject Wscript.Shell
                             $wshell.Popup("Password for $($hostnameInput.Text) is $lapsResult. Copied to clipboard.", 0, "Password", 0x0)
                         }
+                        $msGraphSessionLabel.text = "MS Graph Session: $(Get-MGContext | Select -ExpandProperty Account)"
                     }
                 }
                 else {
@@ -360,7 +384,7 @@ function LAPSTool {
     }
 
     #Print the above GUI applets in the box
-    $LapsForm.controls.AddRange(@($Lapslogo, $domainInput, $domainLabel, $titleTag, $hostnameLabel, $hostnameInput, $usernameInfo, $usernameInput, $lapsStart, $windowsLaps, $altCreds, $azureLaps))
+    $LapsForm.controls.AddRange(@($Lapslogo, $domainInput, $domainLabel, $titleTag, $hostnameLabel, $hostnameInput, $usernameInfo, $usernameInput, $lapsStart, $windowsLaps, $altCreds, $azureLaps, $msGraphSessionLabel, $msGraphLogoutButton))
 
     #SHOW ME THE MONEY
     [void]$LapsForm.ShowDialog()
