@@ -309,39 +309,39 @@ $LoadingForm.Controls.Add($LoadingProgressBar) | Out-Null
 #Conditions to load
 $LoadingLabel.Text = "Getting username..."
 $username = whoami.exe
-$outputsuppressed = $LoadingProgressBar.Value = 10
+$LoadingProgressBar.Value = 10
 
 $LoadingLabel.Text = "Getting hostname..."
 $hostname = HOSTNAME.EXE
-$outputsuppressed = $LoadingProgressBar.Value = 20
+$LoadingProgressBar.Value = 20
 
 $LoadingLabel.Text = "Getting Windows Version..."
 $winver = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").DisplayVersion
-$outputsuppressed = $LoadingProgressBar.Value = 30
+$LoadingProgressBar.Value = 30
 
 $LoadingLabel.Text = "Getting Windows Defender Status..."
 $defenderEnrollmentStatus = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows Advanced Threat Protection\Status" -ErrorAction SilentlyContinue).OnboardingState
-$outputsuppressed = $LoadingProgressBar.Value = 35
+$LoadingProgressBar.Value = 35
 
 $LoadingLabel.Text = "Getting Manufacturer..."
 $manufacturer = Get-WmiObject -Class Win32_ComputerSystemProduct | Select-Object -ExpandProperty Vendor
-$outputsuppressed = $LoadingProgressBar.Value = 40
+$LoadingProgressBar.Value = 40
 
 $LoadingLabel.Text = "Getting Model..."
 $model = Get-WmiObject -Class Win32_ComputerSystem -Property Model | Select-Object -ExpandProperty Model
-$outputsuppressed = $LoadingProgressBar.Value = 50
+$LoadingProgressBar.Value = 50
 
 $LoadingLabel.Text = "Getting Domain..."
 $domain = (Get-CIMInstance -ClassName Win32_ComputerSystem).Domain
-$outputsuppressed = $LoadingProgressBar.Value = 60
+$LoadingProgressBar.Value = 60
 
 $LoadingLabel.Text = "Getting Drive Info..."
 $drivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
-$outputsuppressed = $LoadingProgressBar.Value = 70
+$LoadingProgressBar.Value = 70
 
 $LoadingLabel.Text = "Getting RAM Info..."
 $ramCheck = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
-$outputsuppressed = $LoadingProgressBar.Value = 80
+$LoadingProgressBar.Value = 80
 
 $loadingLabel.Text = "Getting RSAT Info..."
 Import-Module ActiveDirectory
@@ -352,19 +352,19 @@ if (Get-Module -Name "ActiveDirectory")
 else {
     $rsatInfo = "NotPresent"
 }
-$outputsuppressed = $LoadingProgressBar.Value = 85
+$LoadingProgressBar.Value = 85
 
 $LoadingLabel.Text = "Getting CPU Info..."
 $cpuCheck = Get-WmiObject -Class Win32_Processor | Select-Object -ExpandProperty Name
-$outputsuppressed = $LoadingProgressBar.Value = 90
+$LoadingProgressBar.Value = 90
 
 $LoadingLabel.Text = "Getting Device Type..."
 $devicetype = (Get-WmiObject -Class Win32_ComputerSystem -Property PCSystemType).PCSystemType
-$outputsuppressed = $LoadingProgressBar.Value = 95
+$LoadingProgressBar.Value = 95
 
 $LoadingLabel.Text = "Getting Drive Type..."
 $drivetype = Get-PhysicalDisk | Where-Object DeviceID -eq 0 | Select-Object -ExpandProperty MediaType
-$outputsuppressed = $LoadingProgressBar.Value = 100
+$LoadingProgressBar.Value = 100
 
 $LoadingLabel.Text = "Loading Complete!"
 
@@ -924,33 +924,6 @@ $menuBugReport = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuLicenses = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuGitHub = New-Object System.Windows.Forms.ToolStripMenuItem
 
-#FUNCTIONS TAB
-$menuFunctions = New-Object System.Windows.Forms.ToolStripMenuItem
-$launchDriverUpdater = New-Object System.Windows.Forms.ToolStripMenuItem
-$launchDriverUpdaterGUI = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuSFCScan = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuSuspendBitlocker = New-Object System.Windows.Forms.ToolStripMenuItem
-#$menuRenameComputer = New-Object System.Windows.Forms.ToolStripMenuItem - Commented out until I can figure out how to make it work
-$menuTestNet = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuWiFiDiag = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuBatteryDiagnostic = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuRebootQuick = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuBitlockerRetreive = New-Object System.Windows.Forms.ToolStripMenuItem
-
-#AD Tab
-$menuAD = New-Object System.Windows.Forms.ToolStripMenuItem
-
-#Windows Tools
-$menuWindowsTools = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuWindowsUpdateCheck = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuWindowsActivation = New-Object System.Windows.Forms.ToolStripMenuItem
-
-#SCCM Tools
-$sccmClientTools = New-Object System.Windows.Forms.ToolStripMenuItem
-
-#SECURITY TAB
-$menuSecurity = New-Object System.Windows.Forms.ToolStripMenuItem
-
 #One-Off Tabs
 $menuExit = New-Object System.Windows.Forms.ToolStripMenuItem
 
@@ -965,34 +938,6 @@ $deviceInfoPrint.ShortcutKeyDisplayString = "CTRL + P"
 $deviceInfoClipboard.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::C
 $deviceInfoClipboard.ShortcutKeyDisplayString = "CTRL + C"
 
-#CTRL + D to run launchDriverUpdaterGUI
-$launchDriverUpdaterGUI.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::D
-$launchDriverUpdaterGUI.ShortcutKeyDisplayString = "CTRL + D"
-
-#CTRL + F to run launchDriverUpdater
-$launchDriverUpdater.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::P
-$launchDriverUpdater.ShortcutKeyDisplayString = "CTRL + F"
-
-#CTRL + S to run menuSFCScan
-$menuSFCScan.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::S
-$menuSFCScan.ShortcutKeyDisplayString = "CTRL + S"
-
-#CTRL + Shift +  B to run menuSuspendBitlocker
-$menuSuspendBitlocker.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::B
-$menuSuspendBitlocker.ShortcutKeyDisplayString = "CTRL + SHIFT + B"
-
-#CTRL + Shift + T to run menuTestNet
-$menuTestNet.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::T
-$menuTestNet.ShortcutKeyDisplayString = "CTRL + SHIFT + T"
-
-#CTRL + Shift + W to run menuWiFiDiag
-$menuWiFiDiag.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::W
-$menuWiFiDiag.ShortcutKeyDisplayString = "CTRL + SHIFT + W"
-
-#CTRL + Shift + Q to run menuRebootQuick
-$menuRebootQuick.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::Q
-$menuRebootQuick.ShortcutKeyDisplayString = "CTRL + SHIFT + Q"
-
 #CTRL + Shift + R to run menuRenameComputer
 #$menuRenameComputer.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::R
 #$menuRenameComputer.ShortcutKeyDisplayString = "CTRL + SHIFT + R"
@@ -1001,7 +946,7 @@ $menuRebootQuick.ShortcutKeyDisplayString = "CTRL + SHIFT + Q"
 
 #Info Tab
 $menuInfo.Text = "Info"
-$outputsuppressed = $menu.Items.Add($menuInfo)
+[void]$menu.Items.Add($menuInfo)
 #Set tab color to red if compliance is not met
 if ($compliance -eq "Compliant") {
     $menuInfo.BackColor = $BGcolor
@@ -1021,7 +966,7 @@ $menuWhoami.Add_Click({
 $menuWhoami.ToolTipText = "Current username for session." + "`nClick to copy username to clipboard."
 $menuWhoami.BackColor = $BGcolor
 $menuWhoami.ForeColor = $TextColor
-$outputsuppressed = $menuInfo.DropDownItems.Add($menuWhoami)
+[void]$menuInfo.DropDownItems.Add($menuWhoami)
 
 #Hostname Display
 $menuHostname.Text = "Hostname: " + $hostname
@@ -1033,7 +978,7 @@ $menuHostname.Add_Click({
 $menuHostname.ToolTipText = "Current device hostname." + "`nClick to copy hostname to clipboard."
 $menuHostname.BackColor = $BGcolor
 $menuHostname.ForeColor = $TextColor
-$outputsuppressed = $menuInfo.DropDownItems.Add($menuHostname)
+[void]$menuInfo.DropDownItems.Add($menuHostname)
 
 #Windows Version Display
 $windowsVersion.Text = "Windows Version: " + $winver
@@ -1051,7 +996,7 @@ else {
     $windowsVersion.ForeColor = $TextColor
 }
 $windowsVersion.ToolTipText = "Current Windows version." + "`nClick to copy Windows version to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($windowsVersion)
+[void]$menuInfo.DropDownItems.Add($windowsVersion)
 
 #Manufacturer Info Display
 $manufacturerInfo.Text = "Manufacturer: " + $manufacturer
@@ -1063,7 +1008,7 @@ $manufacturerInfo.Add_Click({
 $manufacturerInfo.BackColor = $BGcolor
 $manufacturerInfo.ForeColor = $TextColor
 $manufacturerInfo.ToolTipText = "Current device manufacturer." + "`nClick to copy manufacturer to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($manufacturerInfo)
+[void]$menuInfo.DropDownItems.Add($manufacturerInfo)
 
 #Model Info Display
 $modelInfo.Text = "Model: " + $model
@@ -1075,7 +1020,7 @@ $modelInfo.Add_Click({
 $modelInfo.ToolTipText = "Current device model." + "`nClick to copy model to clipboard."
 $modelInfo.BackColor = $BGcolor
 $modelInfo.ForeColor = $TextColor
-$outputsuppressed = $menuInfo.DropDownItems.Add($modelInfo)
+[void]$menuInfo.DropDownItems.Add($modelInfo)
 
 #Device Type Info Display
 $devicetypeInfo.Text = "Device Type: " + $systemType
@@ -1087,7 +1032,7 @@ $devicetypeInfo.Add_Click({
 $devicetypeInfo.ToolTipText = "Current device type." + "`nClick to copy device type to clipboard."
 $devicetypeInfo.BackColor = $BGcolor
 $devicetypeInfo.ForeColor = $TextColor
-$outputsuppressed = $menuInfo.DropDownItems.Add($devicetypeInfo)
+[void]$menuInfo.DropDownItems.Add($devicetypeInfo)
 
 #Domain Info Display
 $domainInfo.Text = "Domain: " + $domain
@@ -1099,7 +1044,7 @@ $domainInfo.Add_Click({
 $domainInfo.ToolTipText = "Current device domain." + "`nClick to copy domain to clipboard."
 $domainInfo.BackColor = $BGcolor
 $domainInfo.ForeColor = $TextColor
-$outputsuppressed = $menuInfo.DropDownItems.Add($domainInfo)
+[void]$menuInfo.DropDownItems.Add($domainInfo)
 
 #Storage Info Display
 $storageInfo.Text = "Storage: " + $drivespace
@@ -1119,7 +1064,7 @@ else {
     $storageInfo.ForeColor = $TextColor
 }
 $storageInfo.ToolTipText = "Current device storage availability." + "`nClick to copy storage to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($storageInfo)
+[void]$menuInfo.DropDownItems.Add($storageInfo)
 
 #RAM Info Display
 $ramInfo.Text = "RAM: " + $ramCheck + "GB"
@@ -1139,7 +1084,7 @@ else {
 }
 
 $ramInfo.ToolTipText = "Current device RAM." + "`nClick to copy RAM to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($ramInfo)
+[void]$menuInfo.DropDownItems.Add($ramInfo)
 
 #CPU Info Display
 $cpuInfo.Text = "CPU: " + $cpuCheck
@@ -1151,7 +1096,7 @@ $cpuInfo.Add_Click({
 $cpuInfo.BackColor = $BGcolor
 $cpuInfo.ForeColor = $TextColor
 $cpuInfo.ToolTipText = "Current device CPU." + "`nClick to copy CPU to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($cpuInfo)
+[void]$menuInfo.DropDownItems.Add($cpuInfo)
 
 #Admin Mode Status Display
 $adminInfo.Text = "ETT Admin Mode: " + $adminmode
@@ -1163,7 +1108,7 @@ $adminInfo.Add_Click({
 $adminInfo.BackColor = $BGcolor
 $adminInfo.ForeColor = $TextColor
 $adminInfo.ToolTipText = "Current ETT Admin Mode." + "`nClick to copy ETT Admin Mode to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($adminInfo)
+[void]$menuInfo.DropDownItems.Add($adminInfo)
 
 #Device Info Print to Text File in C Temp
 $deviceInfoPrint.Text = "Print Device Info to Text File"
@@ -1181,7 +1126,7 @@ $deviceInfoPrint.Add_Click({
 $deviceInfoPrint.BackColor = $BGcolor
 $deviceInfoPrint.ForeColor = $TextColor
 $deviceInfoPrint.ToolTipText = "Prints device info to a text file in C:\Temp." + "`nClick to print device info to text file."
-$outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoPrint)
+[void]$menuInfo.DropDownItems.Add($deviceInfoPrint)
 
 $deviceInfoClipboard.Text = "Copy Device Info to Clipboard"
 $deviceInfoClipboard.Add_Click({
@@ -1192,7 +1137,7 @@ $deviceInfoClipboard.Add_Click({
 $deviceInfoClipboard.BackColor = $BGcolor
 $deviceInfoClipboard.ForeColor = $TextColor
 $deviceInfoClipboard.ToolTipText = "Copies device info to clipboard." + "`nClick to copy device info to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoClipboard)
+[void]$menuInfo.DropDownItems.Add($deviceInfoClipboard)
 
 #Device Info Ticket
 if ($null -eq $ticketType) {
@@ -1202,7 +1147,7 @@ if ($null -eq $ticketType) {
     $deviceInfoTicket.ForeColor = $TextColor
     $deviceInfoTicket.Enabled = $false
     $deviceInfoTicket.ToolTipText = "Sends device info to ticketing system. Not configured presently. Coming in 1.2.1"
-    $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoTicket)
+    [void]$menuInfo.DropDownItems.Add($deviceInfoTicket)
 }
 else {
     #If ticket type is not null, run the ticketing function
@@ -1214,12 +1159,12 @@ else {
     $deviceInfoTicket.BackColor = $BGcolor
     $deviceInfoTicket.ForeColor = $TextColor
     $deviceInfoTicket.ToolTipText = "Sends device info to $ticketType." + "`nClick to send device info to $ticketType."
-    $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoTicket)
+    [void]$menuInfo.DropDownItems.Add($deviceInfoTicket)
 }
 
 #Help Tab
 $menuHelp.Text = "Help"
-$outputsuppressed = $menu.Items.Add($menuHelp)
+[void]$menu.Items.Add($menuHelp)
 
 #About Button - Displays basic information about the script
 $menuAbout.Text = "About"
@@ -1229,7 +1174,7 @@ $menuAbout.Add_Click({
     })
 $menuAbout.BackColor = $BGcolor
 $menuAbout.ForeColor = $TextColor
-$outputsuppressed = $menuHelp.DropDownItems.Add($menuAbout)
+[void]$menuHelp.DropDownItems.Add($menuAbout)
 
 #Fun Button - It's fun (lol)
 $menuFun = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1242,8 +1187,7 @@ $menuFun.BackColor = $BGcolor
 $menuFun.ForeColor = $TextColor
 #Set keyboard shortcut to Ctrl + R
 $menuFun.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::R
-
-$outputsuppressed = $menuHelp.DropDownItems.Add($menuFun)
+[void]$menuHelp.DropDownItems.Add($menuFun)
 
 #Licenses Button - Displays basic license information
 $menuLicenses.Text = "Licenses"
@@ -1253,7 +1197,7 @@ $menuLicenses.Add_Click({
     })
 $menuLicenses.BackColor = $BGcolor
 $menuLicenses.ForeColor = $TextColor
-$outputsuppressed = $menuHelp.DropDownItems.Add($menuLicenses)
+[void]$menuHelp.DropDownItems.Add($menuLicenses)
 
 #GitHub Button
 $menuGitHub.Text = "GitHub"
@@ -1263,7 +1207,7 @@ $menuGitHub.Add_Click({
     })
 $menuGitHub.BackColor = $BGcolor
 $menuGitHub.ForeColor = $TextColor
-$outputsuppressed = $menuHelp.DropDownItems.Add($menuGitHub)
+[void]$menuHelp.DropDownItems.Add($menuGitHub)
 
 #Bug Report Button
 $menuBugReport.Text = "Bug Report"
@@ -1273,201 +1217,7 @@ $menuBugReport.Add_Click({
     })
 $menuBugReport.BackColor = $BGcolor
 $menuBugReport.ForeColor = $TextColor
-$outputsuppressed = $menuHelp.DropDownItems.Add($menuBugReport)
-
-#Functions Tab
-$menuFunctions.Text = "Functions"
-#$outputsuppressed = $menu.Items.Add($menuFunctions)
-
-#Launch Driver Updater Button - Launches driver update script and auto updates based on manufacturer - Currently only supports Dell and Lenovo
-$launchDriverUpdater.Text = "Launch Driver Updater (CLI)"
-$launchDriverUpdater.Add_Click({
-        #Launch Driver Updater
-        if (($manufacturer -eq "Dell Inc.") -and (Test-Path -Path "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe")) {
-            #Uses Dell Command Update CLI to update drivers
-            Start-Process -Filepath "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe" -ArgumentList "/applyUpdates -outputLog=C:\Temp\dellUpdateOutput.log" -WorkingDirectory "C:\Program Files (x86)\Dell\CommandUpdate" -PassThru -Verb RunAs
-        }
-        elseif (($manufacturer -eq "LENOVO") -and (Test-Path -Path "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe")) {
-            #Uses Lenovo System Update CLI trigger to update drivers
-            Start-Process "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe" -ArgumentList "/CM -search C -action INSTALL -includerebootpackages 1,3,4 -noreboot" -WorkingDirectory "C:\Program Files (x86)\Lenovo\System Update" -PassThru -Verb RunAs
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Lenovo Updates Completed!", 0, "Driver Updater", 64)
-        }
-        else {
-            #Open MS Settings - Windows Update deeplink
-            Start-Process ms-settings:windowsupdate-action
-            Start-Process ms-settings:windowsupdate-optionalupdates
-        }
-    })
-$launchDriverUpdater.BackColor = $BGcolor
-$launchDriverUpdater.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($launchDriverUpdater)
-
-#Launch Driver Updater GUI Button - Launches driver update GUI based on manufacturer - Currently only supports Dell and Lenovo
-$launchDriverUpdaterGUI.Text = "Launch Driver Updater (GUI)"
-$launchDriverUpdaterGUI.Add_Click({
-        #Launch Driver Updater
-        if (($manufacturer -eq "Dell Inc.") -and (Test-Path -Path "C:\Program Files\Dell\CommandUpdate\DellCommandUpdate.exe")) {
-            Start-Process "C:\Program Files\Dell\CommandUpdate\DellCommandUpdate.exe"
-        }
-        elseif (($manufacturer -eq "LENOVO") -and (Test-Path -Path "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe")) {
-            Start-Process "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe"
-        }
-        else {
-            #Open MS Settings - Windows Update deeplink and 1 second popup to notify user
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Driver Updater not found. Opening Windows Update.", 0, "Driver Updater", 64)
-            Start-Process ms-settings:windowsupdate-action
-            Start-Process ms-settings:windowsupdate-optionalupdates
-        }
-    })
-$launchDriverUpdaterGUI.BackColor = $BGcolor
-$launchDriverUpdaterGUI.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($launchDriverUpdaterGUI)
-
-#SFC Scan Button - Runs SFC Scan on the computer
-$menuSFCScan.Text = "SFC Scan"
-$menuSFCScan.Add_Click({
-        #SFC Scan
-        Start-Process powershell.exe -ArgumentList "-command sfc /scannow" -PassThru -Verb RunAs
-    })
-$menuSFCScan.BackColor = $BGcolor
-$menuSFCScan.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuSFCScan)
-
-#Suspend BitLocker Button - Suspends BitLocker for one reboot
-$menuSuspendBitLocker.Text = "Suspend BitLocker"
-$menuSuspendBitLocker.Add_Click({
-        #Check if adminmode is enabled
-        if ($adminmode -eq "True") {
-            #Check if BitLocker is enabled
-            if ((Get-BitLockerVolume -MountPoint C:).ProtectionStatus -eq "On") {
-                #Suspend BitLocker
-                Suspend-BitLocker -MountPoint "C:" -RebootCount 1
-                $wshell = New-Object -ComObject Wscript.Shell
-                $wshell.Popup("BitLocker suspended for one reboot.", 0, "BitLocker", 64)
-            }
-            else {
-                #BitLocker is not enabled
-                $wshell = New-Object -ComObject Wscript.Shell
-                $wshell.Popup("BitLocker is not enabled on this computer.", 0, "BitLocker", 64)
-            }
-        }
-        else {
-            #Admin mode is not enabled
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Admin mode is not enabled. Please enable adminmode flag and reboot script. If compiled, this requires a version of the application with adminmode flag turned on.", 0, "BitLocker", 64)     
-        }
-    })
-$menuSuspendBitLocker.BackColor = $BGcolor
-$menuSuspendBitLocker.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuSuspendBitLocker)
-
-#Test Network Button - Tests network connectivity
-$menuTestNet.Text = "Test Network"
-$menuTestNet.Add_Click({
-        #Test Network
-        Start-Process powershell.exe -ArgumentList "-command Test-NetConnection -ComputerName google.com; pause" -PassThru -Wait
-    })
-$menuTestNet.BackColor = $BGcolor
-$menuTestNet.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuTestNet)
-
-#WiFi Diagnostics Button - Tests WiFi Connection
-$menuWiFiDiag.Text = "Launch Wi-Fi Diagnostics"
-$menuWiFiDiag.Add_Click({
-        #Test Wi-Fi
-        if ($adminmode -eq "True") {
-            Start-Process cmd.exe -ArgumentList "/K netsh wlan show wlanreport" -PassThru -Wait
-            Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
-        }
-        else {
-            #Admin mode is not enabled, run in a sub-process shell, but catch if UAC is not accepted and do nothing
-            try {
-                Start-Process powershell.exe -Verb runAs -ArgumentList "-command netsh wlan show wlanreport" -PassThru -Wait
-                Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
-            }
-            catch {
-                #Do nothing...
-            }
-        }
-    })
-$menuWiFiDiag.BackColor = $BGcolor
-$menuWiFiDiag.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuWiFiDiag)
-
-#Battery Diagnostic Button - Tests Battery Health
-$menuBatteryDiagnostic.Text = "Launch Battery Diagnostic"
-$menuBatteryDiagnostic.Add_Click({
-        #Test Battery, first check if device is a laptop
-        if ($systemType -eq "Mobile" -or $systemType -eq "Appliance PC" -or $systemType -eq "Slate") {
-
-            #Next, create a file dialog to save the battery report
-            $saveDialog = New-Object System.Windows.Forms.SaveFileDialog
-            $saveDialog.Filter = "HTML Files (*.html)|*.html"
-            $saveDialog.Title = "Save Battery Report"
-            $saveDialog.InitialDirectory = "C:\Temp"
-            $saveDialog.FileName = "Battery.html"
-
-            #Device is a laptop, now check if adminmode is enabled
-            if ($adminmode -eq "True") {
-                #Check to see if C:\Temp\ exists, if not, create it
-                if ((Test-Path -path "C:\Temp\") -eq $false) {
-                    New-Item -Path 'C:\Temp\' -ItemType Directory
-                }
-
-                #Adminmode is enabled, so run the battery report
-                #First, determine a save location for the battery report
-                if ($saveDialog.ShowDialog() -eq "OK") {
-                    #Run the battery report
-                    Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output $saveDialog.FileName" -PassThru -Wait
-                    Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList $saveDialog.FileName -WindowStyle maximized
-                }
-            }
-            else {
-                #Adminmode is not enabled, so run the battery report in a sub-process shell, but catch if UAC is not accepted and do nothing
-                try {
-                    #Check to see if C:\Temp\ exists, if not, create it
-                    if ((Test-Path -path "C:\Temp\") -eq $false) {
-                        New-Item -Path 'C:\Temp\' -ItemType Directory
-                    }
-
-                    #Run the battery report
-                    #First, determine a save location for the battery report
-                    if ($saveDialog.ShowDialog() -eq "OK") {
-                        Start-Process powershell.exe -Verb runAs -ArgumentList "-command powercfg /batteryreport /output $saveDialog.FileName" -PassThru -Wait
-                        Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList $saveDialog.FileName -WindowStyle maximized
-                    }
-                }
-                catch {
-                    #Do nothing...
-                }
-            }
-        }
-        else {
-            #Device is not a laptop, so display a popup
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("This device is not a laptop. No battery report available.", 0, "Battery Diagnostic", 64)
-        }
-    })
-$menuBatteryDiagnostic.BackColor = $BGcolor
-$menuBatteryDiagnostic.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuBatteryDiagnostic)
-
-#Quick Reboot Button - Reboots the computer
-$menuRebootQuick.Text = "Quick Reboot"
-$menuRebootQuick.Add_Click({
-        #First, confirm reboot
-        $wshell = New-Object -ComObject Wscript.Shell
-        if ($wshell.Popup("Are you sure you want to reboot? Make sure everything is saved before proceeding.", 0, "Reboot", 4 + 32) -eq 6) {
-            #Reboot
-            Start-Process shutdown -argumentlist "-r -t 0" -PassThru
-        }
-
-    })
-$menuRebootQuick.BackColor = $BGcolor
-$menuRebootQuick.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuRebootQuick)
+[void]$menuHelp.DropDownItems.Add($menuBugReport)
 
 <#
 #Rename Computer Button
@@ -1482,165 +1232,10 @@ $menuRenameComputer.Add_Click({
 $menuFunctions.DropDownItems.Add($menuRenameComputer)
 #>
 
-$menuBitlockerRetreive.Text = "Retrieve BitLocker Key"
-$menuBitlockerRetreive.Add_Click({
-        bitlockerTool
-    })
-$menuBitlockerRetreive.BackColor = $BGcolor
-$menuBitlockerRetreive.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuBitlockerRetreive)
-
-#AD Tab
-$menuAD.Text = "AD Lookup"
-$menuAD.Add_Click({
-        #Test if RSAT is installed
-        try {
-            Get-ADUser -Identity $env:USERNAME -ErrorAction SilentlyContinue
-            #AD Lookup
-            ADLookup
-        }
-        catch {
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("RSAT AD Tools or your permissions level are not compliant. Please install RSAT AD tools or use an entitled account and try again.", 0, "RSAT", 64)
-        }
-    })
-#$outputsuppressed = $menu.Items.Add($menuAD)
-
-#Windows Tools Tab
-$menuWindowsTools.Text = "Windows"
-#$outputsuppressed = $menu.Items.Add($menuWindowsTools)
-
-#Windows Update Check Button - Checks for Windows Updates
-$menuWindowsUpdateCheck.Text = "Check for Windows Updates"
-$menuWindowsUpdateCheck.BackColor = $BGcolor
-$menuWindowsUpdateCheck.ForeColor = $TextColor
-
-#Add sub-menu items to Windows Update Check Button - Full Sweep
-$menuWindowsUpdateCheckFullSweep = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuWindowsUpdateCheckFullSweep.Text = "Full Sweep"
-$menuWindowsUpdateCheckFullSweep.Add_Click({
-
-        CheckForWindowsUpdates -windowTitle "All Windows Updates" -noUpdatesMessage "No updates available." -updateSearchQuery "IsHidden=0 and IsInstalled=0"
-        
-    })
-$menuWindowsUpdateCheckFullSweep.BackColor = $BGcolor
-$menuWindowsUpdateCheckFullSweep.ForeColor = $TextColor
-$outputsuppressed = $menuWindowsUpdateCheck.DropDownItems.Add($menuWindowsUpdateCheckFullSweep)
-
-#Add sub-menu items to Windows Update Check Button - Defender Definition Updates
-$menuWindowsUpdateCheckDefender = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuWindowsUpdateCheckDefender.Text = "Defender Definition Updates"
-$menuWindowsUpdateCheckDefender.Add_Click({
-
-        CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'"
-  
-    })
-$menuWindowsUpdateCheckDefender.BackColor = $BGcolor
-$menuWindowsUpdateCheckDefender.ForeColor = $TextColor
-$outputsuppressed = $menuWindowsUpdateCheck.DropDownItems.Add($menuWindowsUpdateCheckDefender)
-
-$outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsUpdateCheck)
-
-#Windows Activation Button - Windows Activation Key
-$menuWindowsActivation.Text = "Get Windows Activation Key"
-$menuWindowsActivation.Add_Click({
-        $HardwareKey = (Get-WmiObject -query 'select * from SoftwareLicensingService' | Select-Object OA3xOriginalProductKey).OA3xOriginalProductKey
-        
-        #Verify that the key is not null
-        if ($HardwareKey -eq $null -or $HardwareKey -eq "") {
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("No Windows Activation Key found in WMI." + "`n`nThis could be the result of running in a VM, or not stored in BIOS", 0, "Windows Activation", 64)
-        }
-        else {
-            #Key is not null, so display it in a popup
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Windows Activation Key: " + $HardwareKey + "`n`nKey Copied to Clipboard.", 0, "Windows Activation Key", 64)
-        }
-        
-    })
-$menuWindowsActivation.BackColor = $BGcolor
-$menuWindowsActivation.ForeColor = $TextColor
-$outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsActivation)
-
-#SCCM Functions Button - Displays a list of SCCM Client functions if the client is present on the machine
-#Check to see if the SCCM client is installed and we have the required WMI class
-$sccmClass = Get-WmiObject -Class "SMS_Client" -List -Namespace "root\CCM" -ErrorAction SilentlyContinue
-$sccmClassExists = $sccmClass -ne $null
-
-#Create the SCCM Trigger Schedule Table
-$sccmTSTable = [ordered]@{}
-$sccmTSTable.Add("Application Deployment Evaluation Cycle", "{00000000-0000-0000-0000-000000000121}")
-$sccmTSTable.Add("Discovery Data Collection Cycle", "{00000000-0000-0000-0000-000000000103}")
-$sccmTSTable.Add("File Collection Cycle", "{00000000-0000-0000-0000-000000000104}")
-$sccmTSTable.Add("Hardware Inventory Cycle", "{00000000-0000-0000-0000-000000000001}")
-$sccmTSTable.Add("Machine Policy Retrieval", "{00000000-0000-0000-0000-000000000021}")
-$sccmTSTable.Add("Machine Policy Evaluation Cycle", "{00000000-0000-0000-0000-000000000022}")
-$sccmTSTable.Add("Software Inventory Cycle", "{00000000-0000-0000-0000-000000000002}" )
-$sccmTSTable.Add("Software Metering Usage Report Cycle", "{00000000-0000-0000-0000-000000000106}")
-$sccmTSTable.Add("Software Updates Deployment Evaluation Cycle", "{00000000-0000-0000-0000-000000000114}")
-$sccmTSTable.Add("User Policy Retrieval", "{00000000-0000-0000-0000-000000000026}")
-$sccmTSTable.Add("User Policy Evaluation Cycle", "{00000000-0000-0000-0000-000000000027}")
-$sccmTSTable.Add("Windows Installer Source List Update Cycle", "{00000000-0000-0000-0000-000000000107}")
-
-#SCCM Trigger helper function
-function TriggerSCCMClientFunction {
-    param (
-        $TriggerScheduleGUID,
-        $TriggerScheduleName
-    )
-    Invoke-CimMethod -Namespace 'root\CCM' -ClassName SMS_Client -MethodName TriggerSchedule -Arguments @{sScheduleID = $TriggerScheduleGUID }
-    $wshell = New-Object -ComObject Wscript.Shell
-    $wshell.Popup("SCCM Client Task $TriggerScheduleName Triggered. The selected task will run and might take several minutes to finish.", 0, "SCCM Client Task", 64)
-}
-
-#SCCM Tools Menu Construction
-#If the SCCM Client is not installed on the computer, the menu option will be unavailable.
-if ($sccmClassExists) {
-    #$outputsuppressed = $menu.Items.Add($sccmClientTools)
-}
-$sccmClientTools.Text = "SCCM Tools"
-
-foreach ($key in $($sccmTSTable.Keys)) {
-    $tmpButton = New-Object System.Windows.Forms.ToolStripMenuItem
-    $tmpButton.Text = $key
-    $tmpButton.BackColor = $BGcolor
-    $tmpButton.ForeColor = $TextColor
-    $tmpButton.Add_Click({
-            TriggerSCCMClientFunction -TriggerScheduleGUID $sccmTSTable[$key] -TriggerScheduleName $key
-        })
-    $outputsuppressed = $sccmClientTools.DropDownItems.Add($tmpButton)
-}
-
-#Security TAB Construction
-$menuSecurity.Text = "Security"
-#$outputsuppressed = $menu.Items.Add($menuSecurity)
-
-$hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
-$hostsCompliant = $true
-$hostsText = "Host File Integrity: Unmodified"
-if ($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085") {
-    $hostsCompliant = $false
-    $hostsText = "Host File Integrity: Modified"
-}
-
-$hostsChkButton = New-Object System.Windows.Forms.ToolStripMenuItem
-$hostsChkButton.Text = $hostsText
-$hostsChkButton.BackColor = $BGcolor
-$hostsChkButton.ForeColor = $TextColor
-$outputsuppressed = $menuSecurity.DropDownItems.Add($hostsChkButton)
-
 #Exit Button
 $menuExit.Text = "Exit"
 $menuExit.Add_Click({ $ETT.Close() })
-$outputsuppressed = $menu.Items.Add($menuExit)
-
-#For non-admin mode, show the UAC shield on the buttons that require admin mode
-if ($adminmode -eq $false) {
-    $menuWiFiDiag.Image = $shieldIcon
-    $menuSFCScan.Image = $shieldIcon
-    $menuSuspendBitlocker.Image = $shieldIcon
-    $menuBatteryDiagnostic.Image = $shieldIcon
-}
+[void]$menu.Items.Add($menuExit)
 
 #Add all buttons and functions to the GUI menu
 $ETT.controls.AddRange(@($Logo, $Heading, $ClearLastLogin, $Lapspw, $appUpdate, $PolicyPatch, $menu))
