@@ -390,7 +390,7 @@ $complianceFlag = $false#>
 
 
 #MiniTools Dot Sourcing - For development purpose only. DOT Sourcing doesn't work correctly with ps2exe.
-$Dependencies = "MiniClients\ADLookup.ps1","MiniClients\LAPSTool.ps1","MiniClients\BitlockerTool.ps1","PSAssets\ToolboxFunctions.ps1"
+$Dependencies = "MiniClients\ADLookup.ps1","MiniClients\LAPSToolV2.ps1","MiniClients\BitlockerToolV2.ps1","PSAssets\ToolboxFunctions.ps1", "PSAssets\GenericToolWindow.ps1"
 $Dependencies | ForEach-Object {
     try {
         $psFile = ".\$($_)"
@@ -742,7 +742,7 @@ if ($complianceFlag -eq $true) {
 
 #Create App Buttons
 $ClearLastLogin = Create-ETTButton -ButtonText "Clear Last Login" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 117 -ScriptBlock {ClearLastLogin -adminmode $adminmode -ToastStack $ToastStack}
-$Lapspw = Create-ETTButton -ButtonText "Get LAPS Password" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 267 -ButtonYPosition 117 -ScriptBlock {LAPSTool -BackgroundColor $BGcolor -TextColor $TextColor -BoxColor $BoxColor}
+$Lapspw = Create-ETTButton -ButtonText "Get LAPS Password" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 267 -ButtonYPosition 117 -ScriptBlock {Open-LAPSToolWindow}
 $appUpdate = Create-ETTButton -ButtonText "Update Apps (Winget)" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 219 -ScriptBlock {Start-WingetAppUpdates}
 $PolicyPatch = Create-ETTButton -ButtonText "Windows Policy Update" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 266 -ButtonYPosition 219 -ScriptBlock {Start-PolicyPatch}
 
@@ -839,7 +839,7 @@ if ($sccmClassExists) {
 if ($rsatInfo -eq "Installed") {
     $ADTabArray = New-Object System.Collections.ArrayList
     [void]$ADTabArray.Add((Create-ToolboxListItem -DisplayName "Launch AD Explorer" -ScriptBlock {ADLookup -BackgroundColor $BGcolor -WindowTextColor $TextColor -BrandColor $BrandColor -ButtonTextColor $ButtonTextColor}))
-    [void]$ADTabArray.Add((Create-ToolboxListItem -DisplayName "Get Bitlocker Recovery Key" -ScriptBlock {BitlockerTool -BackgroundColor $BGcolor -WindowTextColor $TextColor -ButtonColor $BrandColor -ButtonTextColor $ButtonTextColor}))
+    [void]$ADTabArray.Add((Create-ToolboxListItem -DisplayName "Get Bitlocker Recovery Key" -ScriptBlock {Open-BitLockerRecoveryWindow}))
     $ADTab = Create-ToolboxTabPage -PageName "AD" -ToolboxItemsArray $ADTabArray
     $ADTab.Add_Click({
         $runThis = [ScriptBlock]::Create($ADTab.SelectedValue)
