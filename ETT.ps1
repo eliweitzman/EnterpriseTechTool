@@ -344,7 +344,7 @@ $ramCheck = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property cap
 $LoadingProgressBar.Value = 80
 
 $loadingLabel.Text = "Getting RSAT Info..."
-Import-Module ActiveDirectory
+Import-Module ActiveDirectory -ErrorAction SilentlyContinue
 if (Get-Module -Name "ActiveDirectory")
 {
     $rsatInfo = "Installed"
