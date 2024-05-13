@@ -4,7 +4,22 @@ function Open-BitLockerRecoveryWindow
         if($SourceEntraIDCheckBox.Checked -and $AzureADHostNameTextBox.Text -ne "")
         {
             try{
-                Connect-MgGraph -Scopes BitlockerKey.Read.All
+                if($UseProxyAppCheckBox.Checked)
+                {
+                    if(($bitLockerAppClientId -ne "" -and $tenantID -ne ""))
+                    {
+                        Connect-MgGraph -TenantId $tenantID -ClientId $bitLockerAppClientId -Scopes Device.Read.All, DeviceLocalCredential.Read.All
+                    }
+                    else {
+                        $wshell = New-Object -ComObject wscript.shell
+                        $wshell.popup("In order to use the Proxy App Configuration, the AzureADTenantId and BitLockerAppClientId needs to be set in the ETT.config file. ", 0, $WindowTitle, 0x00000040)
+                        return
+                    }
+                }
+                else {
+                    Connect-MgGraph -Scopes BitlockerKey.Read.All
+                }
+
                 #Start by getting the recovery key id from Azure
                 $deviceId = Get-MgDevice -Filter "displayName eq '$($AzureADHostNameTextBox.Text)'" -Property DisplayName, DeviceId | Select-Object DeviceId
 
@@ -37,6 +52,10 @@ function Open-BitLockerRecoveryWindow
                     $bitlockerObj = Get-ADObject -Filter { objectclass -eq 'msFVE-RecoveryInformation' } -SearchBase $ADComputer.DistinguishedName -Properties 'msFVE-RecoveryPassword'
                 }
                 $recoveryPassword = $bitlockerObj | Select-Object -ExpandProperty msFVE-RecoveryPassword
+                if ($recoveryPassword -eq $null)
+                {
+                    throw
+                }
             }
             catch {
                 $wshell = New-Object -ComObject wscript.shell

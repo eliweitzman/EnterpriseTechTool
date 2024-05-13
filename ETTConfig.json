@@ -18,6 +18,7 @@
     "WinVersionTarget": "24H2",
     "AzureADTenantId" : "",
     "LAPSAppClientId" : "",
+    "BitLockerAppClientId" : "",
     "AnimeMode" : false,
 
     "CustomFunctions": [

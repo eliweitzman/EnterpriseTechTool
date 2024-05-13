@@ -113,6 +113,7 @@ $winverTarget = (?: {$jsonConfig.WinVersionTarget -ne $null -and $jsonConfig.Win
 #Azure Information
 $azureADTenantId = (?: {$jsonConfig.AzureADTenantId -ne $null -and $jsonConfig.AzureADTenantId -ne ""} {$jsonConfig.AzureADTenantId}{""})
 $lapsAppClientId = (?: {$jsonConfig.LAPSAppClientId -ne $null -and $jsonConfig.LAPSAppClientId -ne ""} {$jsonConfig.LAPSAppClientId}{""})
+$bitLockerAppClientId = (?: {$jsonConfig.BitLockerAppClientId -ne $null -and $jsonConfig.BitLockerAppClientId -ne ""} {$jsonConfig.BitLockerAppClientId}{""})
 
 #Anime Mode
 $animeMode = (?: {$jsonConfig.AnimeMode -ne $null -and $jsonConfig.AnimeMode -ne $false -and $jsonConfig.AnimeMode -ne ""}{$jsonConfig.AnimeMode}{""})
