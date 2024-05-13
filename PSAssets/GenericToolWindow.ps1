@@ -238,9 +238,15 @@ function Create-GenericToolWindow{
             $SourceEntraIDCheckBox.Checked = $false
         }
     }
+
+    $ExecuteButtonScriptBlockOverRide = 
+    {
+        . $ExecuteButtonScriptBlock
+        $MSGraphSessionLabel.Text = "MS Graph Session: $(Get-MGContext | Select -expandproperty Account)"
+    }
     $SourceOnPremCheckBox.Add_Click($SourceChangeLogic)
     $SourceEntraIDCheckBox.Add_Click($SourceChangeLogic)
-    $ExecuteFunctionButton.Add_Click($ExecuteButtonScriptBlock)
+    $ExecuteFunctionButton.Add_Click($ExecuteButtonScriptBlockOverRide)
 
     #Show Form
     $MainForm.ShowDialog()
