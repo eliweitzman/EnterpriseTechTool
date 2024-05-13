@@ -1,3 +1,17 @@
+function Update-MSGraphStatus
+{
+    $MSGraphAccountName = $(Get-MGContext | Select -expandproperty Account)
+    $MSGraphSessionLabel.Text = "MS Graph Session: $MSGraphAccountName"
+
+    if($MSGraphAccountName -ne $null)
+    {
+        $LogoutMSGraphButton.Visible = $true
+    }
+    else {
+        $LogoutMSGraphButton.Visible = $false
+    }
+}
+
 function Create-GenericToolWindow{
     Param(
         [Parameter(Position=0,mandatory=$true)]
@@ -175,6 +189,16 @@ function Create-GenericToolWindow{
     $LogoutMSGraphButton.Add_Click({Disconnect-MgGraph -ErrorAction SilentlyContinue; $MSGraphSessionLabel.Text = "MS Graph Session: $(Get-MGContext | Select -expandproperty Account)"})
     $AzureADQueryPanel.Controls.Add($LogoutMSGraphButton)
 
+    #Create UseProxyAppCheckBox
+    $UseProxyAppCheckBox = New-Object System.Windows.Forms.CheckBox
+    $UseProxyAppCheckBox.Text = "Use Proxy App"
+    $UseProxyAppCheckBox.Width = 104
+    $UseProxyAppCheckBox.Height = 70
+    $UseProxyAppCheckBox.location = New-Object System.Drawing.Point(305, 35)
+    $UseProxyAppCheckBox.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+    $UseProxyAppCheckBox.Checked = $false
+    $AzureADQueryPanel.Controls.Add($UseProxyAppCheckBox)
+
 
     #Create SourcePanel
     $SourcePanel = New-Object system.Windows.Forms.Panel
@@ -230,7 +254,7 @@ function Create-GenericToolWindow{
         {
             $ADQueryPanel.Visible = $false
             $AzureADQueryPanel.Visible = $true
-            $MSGraphSessionLabel.Text = "MS Graph Session: $(Get-MGContext | Select -expandproperty Account)"
+            Update-MSGraphStatus
         }
         else {
             $ADQueryPanel.Visible = $true
@@ -242,7 +266,7 @@ function Create-GenericToolWindow{
     $ExecuteButtonScriptBlockOverRide = 
     {
         . $ExecuteButtonScriptBlock
-        $MSGraphSessionLabel.Text = "MS Graph Session: $(Get-MGContext | Select -expandproperty Account)"
+        Update-MSGraphStatus
     }
     $SourceOnPremCheckBox.Add_Click($SourceChangeLogic)
     $SourceEntraIDCheckBox.Add_Click($SourceChangeLogic)

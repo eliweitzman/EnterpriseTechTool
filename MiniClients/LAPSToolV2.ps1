@@ -34,7 +34,7 @@ function Open-LAPSToolWindow
         # Show LAPS Password and copy to clipboard
         $lapsResult | clip
         $wshell = New-Object -ComObject Wscript.Shell
-        $wshell.Popup("LAPS Password for $($ADHostNameTextBox.Text) is $lapsResult. Copied to clipboard.", 0, $WindowTitle, 0x00000040)
+        $wshell.Popup("LAPS Password is $lapsResult. Copied to clipboard.", 0, $WindowTitle, 0x00000040)
     }
 
     #Test RSAT AD Tools is installed
