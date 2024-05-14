@@ -8,6 +8,7 @@ function Update-MSGraphStatus
         $LogoutMSGraphButton.Visible = $true
     }
     else {
+        $MSGraphSessionLabel.Text = "MS Graph Session: None"
         $LogoutMSGraphButton.Visible = $false
     }
 }
@@ -186,7 +187,7 @@ function Create-GenericToolWindow{
     $LogoutMSGraphButton.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
     $LogoutMSGraphButton.ForeColor = $ExecuteButtonTextColor
     $LogoutMSGraphButton.BackColor = $ExecuteButtonBackgroundColor
-    $LogoutMSGraphButton.Add_Click({Disconnect-MgGraph -ErrorAction SilentlyContinue; $MSGraphSessionLabel.Text = "MS Graph Session: $(Get-MGContext | Select -expandproperty Account)"})
+    $LogoutMSGraphButton.Add_Click({Disconnect-MgGraph -ErrorAction SilentlyContinue; Update-MSGraphStatus})
     $AzureADQueryPanel.Controls.Add($LogoutMSGraphButton)
 
     #Create UseProxyAppCheckBox
@@ -196,6 +197,7 @@ function Create-GenericToolWindow{
     $UseProxyAppCheckBox.Height = 70
     $UseProxyAppCheckBox.location = New-Object System.Drawing.Point(305, 35)
     $UseProxyAppCheckBox.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+    $UseProxyAppCheckBox.ForeColor = $WindowTextColor
     $UseProxyAppCheckBox.Checked = $false
     $AzureADQueryPanel.Controls.Add($UseProxyAppCheckBox)
 
@@ -225,6 +227,7 @@ function Create-GenericToolWindow{
     $SourceOnPremCheckBox.Height = 24
     $SourceOnPremCheckBox.location = New-Object System.Drawing.Point(100, 0)
     $SourceOnPremCheckBox.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+    $SourceOnPremCheckBox.ForeColor = $WindowTextColor
     $SourceOnPremCheckBox.Checked = $true
     $SourcePanel.Controls.Add($SourceOnPremCheckBox)
 
@@ -235,6 +238,7 @@ function Create-GenericToolWindow{
     $SourceEntraIDCheckBox.Height = 24
     $SourceEntraIDCheckBox.location = New-Object System.Drawing.Point(218, 0)
     $SourceEntraIDCheckBox.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+    $SourceEntraIDCheckBox.ForeColor = $WindowTextColor
     $SourcePanel.Controls.Add($SourceEntraIDCheckBox)
 
     #Create ExecuteFunctionButton
@@ -265,6 +269,19 @@ function Create-GenericToolWindow{
 
     $ExecuteButtonScriptBlockOverRide = 
     {
+        #Input fields check
+        if($SourceOnPremCheckBox.Checked -and $ADHostNameTextBox.Text -eq "")
+        {
+            $wshell = New-Object -ComObject wscript.shell
+            $wshell.popup("The Hostname field cannot be blank!", 0, $WindowTitle, 0x00000040)
+            return
+        }
+        elseif ($SourceEntraIDCheckBox.Checked -and $AzureADHostNameTextBox.Text -eq "")
+        {
+            $wshell = New-Object -ComObject wscript.shell
+            $wshell.popup("The Hostname field cannot be blank!", 0, $WindowTitle, 0x00000040)
+            return
+        }
         . $ExecuteButtonScriptBlock
         Update-MSGraphStatus
     }
