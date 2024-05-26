@@ -391,7 +391,7 @@ $complianceFlag = $false#>
 
 
 #MiniTools Dot Sourcing - For development purpose only. DOT Sourcing doesn't work correctly with ps2exe.
-$Dependencies = "MiniClients\ADLookup.ps1","MiniClients\LAPSToolV2.ps1","MiniClients\BitlockerToolV2.ps1","PSAssets\ToolboxFunctions.ps1", "PSAssets\GenericToolWindow.ps1"
+$Dependencies = "MiniClients\ADLookup.ps1","MiniClients\LAPSToolV2.ps1","MiniClients\BitlockerToolV2.ps1","PSAssets\ToolboxFunctions.ps1", "PSAssets\GenericToolWindow.ps1",".\MiniClients\SettingsMenu.ps1"
 $Dependencies | ForEach-Object {
     try {
         $psFile = ".\$($_)"
@@ -926,6 +926,7 @@ $menuLicenses = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuGitHub = New-Object System.Windows.Forms.ToolStripMenuItem
 
 #One-Off Tabs
+$menuSettings = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuExit = New-Object System.Windows.Forms.ToolStripMenuItem
 
 
@@ -1232,6 +1233,14 @@ $menuRenameComputer.Add_Click({
     })
 $menuFunctions.DropDownItems.Add($menuRenameComputer)
 #>
+
+#Settings Button
+$menuSettings.Text = "Settings"
+$menuSettings.Add_Click({
+        #Open the settings window script - SettingsMenu.ps1
+        Open-SettingsMenu
+    })
+[void]$menu.Items.Add($menuSettings)
 
 #Exit Button
 $menuExit.Text = "Exit"
