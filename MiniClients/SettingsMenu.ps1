@@ -474,11 +474,42 @@ $queryFrame.Controls.Add($BitLockerAppClientIdTextBox)
 
 #Create a button to save the settings
 $saveButton = New-Object System.Windows.Forms.Button
-$saveButton.Location = New-Object System.Drawing.Size(10, 560)
+$saveButton.Location = New-Object System.Drawing.Size(650, 560)
 $saveButton.Size = New-Object System.Drawing.Size(75, 23)
 $saveButton.Text = "Save"
 $saveButton.BackColor = $BoxColor
 $saveButton.ForeColor = $ButtonTextColor
+$saveButton.Add_Click({
+    #Save the settings to the ETTConfig.json file
+    $settings.AutoUpdateCheckerEnabled = $autoUpdateCheckerEnabledCheckBox.Checked
+    $settings.AdminMode = $adminModeCheckBox.Checked
+    $settings.BrandColor = $brandColorTextBox.Text
+    $settings.LogoLocation = $logoLocationTextBox.Text
+    $settings.BackgroundImagePath = $backgroundImagePathTextBox.Text
+    $settings.ETTApplicationTitle = $ETTApplicationTitleTextBox.Text
+    $settings.ETTHeaderText = $ETTHeaderTextTextBox.Text
+    $settings.ETTHeaderTextColor = $ETTHeaderTextColorTextBox.Text
+    $settings.ApplicationTimeoutEnabled = $applicationTimeoutEnabledCheckBox.Checked
+    $settings.ApplicationTimeoutLength = $applicationTimeoutLengthTextBox.Text
+    $settings.EnableCustomTools = $enableCustomToolsCheckBox.Checked
+    $settings.RAMCheckActive = $RAMCheckActiveCheckBox.Checked
+    $settings.RAMCheckMinimum = $RAMCheckMinimumTextBox.Text
+    $settings.DriveSpaceCheckActive = $DriveSpaceCheckActiveCheckBox.Checked
+    $settings.DriveSpaceCheckMinimum = $DriveSpaceCheckMinimumTextBox.Text
+    $settings.WinVersionCheckActive = $WinVersionCheckActiveCheckBox.Checked
+    $settings.WinVersionTarget = $WinVersionTargetTextBox.Text
+    $settings.AzureADTenantId = $AzureADTenantIdTextBox.Text
+    $settings.LAPSAppClientId = $LAPSAppClientIdTextBox.Text
+    $settings.BitLockerAppClientId = $BitLockerAppClientIdTextBox.Text
+    $settings.AnimeMode = $animeModeCheckBox.Checked
+
+    #Convert the settings to JSON and save them to the ETTConfig.json file
+    $settings | ConvertTo-Json | Set-Content -Path ".\ETTConfig.json"
+
+    #Close the form
+    $settingsForm.Close()
+})
+$settingsForm.Controls.Add($saveButton)
 
 #Show the form
 $settingsForm.ShowDialog()
