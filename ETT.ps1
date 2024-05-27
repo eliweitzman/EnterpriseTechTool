@@ -56,13 +56,14 @@ set-alias ?: Invoke-Ternary -Option AllScope -Description "PSCX filter alias"
 filter Invoke-Ternary ([scriptblock]$decider, [scriptblock]$ifTrue, [scriptblock]$ifFalse) {
     if (&$decider) { 
         &$ifTrue
-    } else { 
+    }
+    else { 
         &$ifFalse 
     }
 }
 
 #Load ETTConfig.json File
-$jsonConfigString = Get-Content -Path ".\ETTConfig.json"
+$jsonConfigString = Get-Content -Path ".\ETTConfig.json" -ErrorAction SilentlyContinue
 $jsonConfig = $jsonConfigString | ConvertFrom-Json
 
 #Import Winforms API for GUI
@@ -1230,16 +1231,16 @@ $menuFunctions.DropDownItems.Add($menuRenameComputer)
 $menuSettings.Text = "Settings"
 $menuSettings.Add_Click({
         #First, check to see if ETTConfig.json exists in the same directory as the script
-        try {
-            $configFile = Get-Content -Path ".\ETTConfig.json" -ErrorAction SilentlyContinue
-            #If it does, open the settings window script - SettingsMenu.ps1
+        $configtest = Test-Path ".\ETTConfig.json" -ErrorAction SilentlyContinue
+        #First, check to see if the settings file is present
+        if ($configtest -eq $true) {
             Open-SettingsMenu
         }
-        catch {
+        else {
             #Display a quick popup - "No settings file found, would you like to create one?" with a Yes/No option
             $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("No settings file found. Would you like to create one?", 0, "Settings", 4)
-            if ($wshell.Popup -eq 6) {
+            $request = $wshell.Popup("No settings file found. Would you like to create one?", 0, "Settings", 4)
+            if ($request -eq 6) {
                 #If yes, create a new settings file with default settings and open the settings window script
                 $newConfig = @"
                 {
@@ -1284,13 +1285,14 @@ $menuSettings.Add_Click({
                         ]
                     }
 "@
+                #Create the new settings file in the same directory as the script using a here-string
                 $newConfig | Out-File -FilePath ".\ETTConfig.json"
-                #Create a variable to hold the path to the settings file
-                $pwd = (Get-Location).Path
+
                 #Display a message box to the user that the settings file has been created, and the path to it
-                $wshell.Popup("Settings file created at: $pwd\ETTConfig.json. `n`n Now opening settings menu.", 0, "Settings Created", 64)
+                $wshell.Popup("Settings file created. `n`n Now opening settings menu.", 0, "Settings Created", 64)
                 Open-SettingsMenu
-            }else {
+            }
+            else {
                 #If no, do nothing
             }
            
