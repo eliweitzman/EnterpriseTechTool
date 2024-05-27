@@ -53,13 +53,12 @@
 
 # Create the Ternary Operator since PowerShell 5 doesn't have it
 set-alias ?: Invoke-Ternary -Option AllScope -Description "PSCX filter alias"
-filter Invoke-Ternary ([scriptblock]$decider, [scriptblock]$ifTrue, [scriptblock]$ifFalse) 
-{
-   if (&$decider) { 
-      &$ifTrue
-   } else { 
-      &$ifFalse 
-   }
+filter Invoke-Ternary ([scriptblock]$decider, [scriptblock]$ifTrue, [scriptblock]$ifFalse) {
+    if (&$decider) { 
+        &$ifTrue
+    } else { 
+        &$ifFalse 
+    }
 }
 
 #Load ETTConfig.json File
@@ -72,54 +71,53 @@ Add-Type -AssemblyName System.Windows.Forms
 
 #Build Variables
 $ETTVersion = "1.3"
-$AutoUpdateCheckerEnabled = (?: {$jsonConfig.AutoUpdateCheckerEnabled -ne $null -and $jsonConfig.AutoUpdateCheckerEnabled -ne ""} {$jsonConfig.AutoUpdateCheckerEnabled}{$true})
+$AutoUpdateCheckerEnabled = (?: { $jsonConfig.AutoUpdateCheckerEnabled -ne $null -and $jsonConfig.AutoUpdateCheckerEnabled -ne "" } { $jsonConfig.AutoUpdateCheckerEnabled } { $true })
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
 #Admin mode - if auto-elevate is enabled, this will be set to $true. If in EXE mode, this is automatically handled by Windows.
-$adminmode = (?: {$jsonConfig.AdminMode -ne $null -and $jsonConfig.AdminMode -ne ""} {$jsonConfig.AdminMode} {$false})
+$adminmode = (?: { $jsonConfig.AdminMode -ne $null -and $jsonConfig.AdminMode -ne "" } { $jsonConfig.AdminMode } { $false })
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
-$BrandColor = (?: {$jsonConfig.BrandColor-ne $null -and $jsonConfig.BrandColor-ne ""} {$jsonConfig.BrandColor} {'#023a24'}) #Set the color of the form, currently populated with a hex value.
-$LogoLocation = (?: {$jsonConfig.LogoLocation -ne $null -and $jsonConfig.LogoLocation -ne ""} {$jsonConfig.LogoLocation} {$null}) #If you want to use a custom logo, set the path here. Otherwise, leave as $null
+$BrandColor = (?: { $jsonConfig.BrandColor -ne $null -and $jsonConfig.BrandColor -ne "" } { $jsonConfig.BrandColor } { '#023a24' }) #Set the color of the form, currently populated with a hex value.
+$LogoLocation = (?: { $jsonConfig.LogoLocation -ne $null -and $jsonConfig.LogoLocation -ne "" } { $jsonConfig.LogoLocation } { $null }) #If you want to use a custom logo, set the path here. Otherwise, leave as $null
 
 #ETT UI Options
-$backgroundImagePath = (?: {$jsonConfig.BackgroundImagePath -ne $null -and $jsonConfig.BackgroundImagePath -ne ""} {$jsonConfig.BackgroundImagePath} {""}) #Set this to a web URL or local path to change the BG image of ETT
-$ettApplicationTitle = (?: {$jsonConfig.ETTApplicationTitle -ne $null -and $jsonConfig.ETTApplicationTitle -ne ""} {"$($jsonConfig.ETTApplicationTitle) V$ETTVersion"} {"Eli's Enterprise Tech Tool V$ETTVersion"})
-$ettHeaderText =  (?: {($jsonConfig.ETTHeaderText -ne $null -and $jsonConfig.ETTHeaderText -ne "")} {$jsonConfig.ETTHeaderText} {"Enterprise Tech Tool"})
-$ettHeaderTextColor = (?: {$jsonConfig.ETTHeaderTextColor -ne $null -and $jsonConfig.ETTHeaderTextColor -ne ""} {[System.Drawing.Color]::FromName($jsonConfig.ETTHeaderTextColor)} {[System.Drawing.Color]::FromName("White")})#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
-$timeout = (?: {$jsonConfig.ApplicationTimeoutEnabled -ne $null -and $jsonConfig.ApplicationTimeoutEnabled -ne ""} {$jsonConfig.ApplicationTimeoutEnabled} {$false}) #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
-$timeoutLength = (?: {$jsonConfig.ApplicationTimeoutLength -ne $null -and $jsonConfig.ApplicationTimeoutLength -ne ""} {$jsonConfig.ApplicationTimeoutLength} {300}) #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
+$backgroundImagePath = (?: { $jsonConfig.BackgroundImagePath -ne $null -and $jsonConfig.BackgroundImagePath -ne "" } { $jsonConfig.BackgroundImagePath } { "" }) #Set this to a web URL or local path to change the BG image of ETT
+$ettApplicationTitle = (?: { $jsonConfig.ETTApplicationTitle -ne $null -and $jsonConfig.ETTApplicationTitle -ne "" } { "$($jsonConfig.ETTApplicationTitle) V$ETTVersion" } { "Eli's Enterprise Tech Tool V$ETTVersion" })
+$ettHeaderText = (?: { ($jsonConfig.ETTHeaderText -ne $null -and $jsonConfig.ETTHeaderText -ne "") } { $jsonConfig.ETTHeaderText } { "Enterprise Tech Tool" })
+$ettHeaderTextColor = (?: { $jsonConfig.ETTHeaderTextColor -ne $null -and $jsonConfig.ETTHeaderTextColor -ne "" } { [System.Drawing.Color]::FromName($jsonConfig.ETTHeaderTextColor) } { [System.Drawing.Color]::FromName("White") })#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
+$timeout = (?: { $jsonConfig.ApplicationTimeoutEnabled -ne $null -and $jsonConfig.ApplicationTimeoutEnabled -ne "" } { $jsonConfig.ApplicationTimeoutEnabled } { $false }) #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
+$timeoutLength = (?: { $jsonConfig.ApplicationTimeoutLength -ne $null -and $jsonConfig.ApplicationTimeoutLength -ne "" } { $jsonConfig.ApplicationTimeoutLength } { 300 }) #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
 
 #Custom Toolbox - CHANGE THIS TO MATCH YOUR PREFERENCE
-$customTools = (?: {$jsonConfig.EnableCustomTools -ne $null -and $jsonConfig.EnableCustomTools -ne ""} {$jsonConfig.EnableCustomTools} {$true}) #Set this to $true to enable custom functions. Otherwise, set to $false
+$customTools = (?: { $jsonConfig.EnableCustomTools -ne $null -and $jsonConfig.EnableCustomTools -ne "" } { $jsonConfig.EnableCustomTools } { $true }) #Set this to $true to enable custom functions. Otherwise, set to $false
 
 <#Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #>
 
 #RAM Check
-$ramCheckActive = (?: {$jsonConfig.RAMCheckActive -ne $null -and $jsonConfig.RAMCheckActive -ne ""} {$jsonConfig.RAMCheckActive} {$false})
-$ramMinimum = (?: {$jsonConfig.RAMCheckMinimum -ne $null -and $jsonConfig.RAMCheckMinimum -ne ""} {$jsonConfig.RAMCheckMinimum} {8}) #SET MINIMUM RAM IN GB
+$ramCheckActive = (?: { $jsonConfig.RAMCheckActive -ne $null -and $jsonConfig.RAMCheckActive -ne "" } { $jsonConfig.RAMCheckActive } { $false })
+$ramMinimum = (?: { $jsonConfig.RAMCheckMinimum -ne $null -and $jsonConfig.RAMCheckMinimum -ne "" } { $jsonConfig.RAMCheckMinimum } { 8 }) #SET MINIMUM RAM IN GB
 
 #Drivespace Check
-$drivespaceCheckActive = (?: {$jsonConfig.DriveSpaceCheckActive -ne $null -and $jsonConfig.DriveSpaceCheckActive -ne ""} {$jsonConfig.DriveSpaceCheckActive} {$false})
-$drivespaceMinimum = (?: {$jsonConfig.DriveSpaceCheckMinimum -ne $null -and $jsonConfig.DriveSpaceCheckMinimum -ne ""} {$jsonConfig.DriveSpaceCheckMinimum} {20}) #SET MINIMUM DRIVESPACE IN GB
+$drivespaceCheckActive = (?: { $jsonConfig.DriveSpaceCheckActive -ne $null -and $jsonConfig.DriveSpaceCheckActive -ne "" } { $jsonConfig.DriveSpaceCheckActive } { $false })
+$drivespaceMinimum = (?: { $jsonConfig.DriveSpaceCheckMinimum -ne $null -and $jsonConfig.DriveSpaceCheckMinimum -ne "" } { $jsonConfig.DriveSpaceCheckMinimum } { 20 }) #SET MINIMUM DRIVESPACE IN GB
 
 #Windows Version Check
-$winverCheckActive = (?: {$jsonConfig.WinVersionCheckActive -ne $null -and $jsonConfig.WinVersionCheckActive -ne ""} {$jsonConfig.WinVersionCheckActive} {$false})
-$winverTarget = (?: {$jsonConfig.WinVersionTarget -ne $null -and $jsonConfig.WinVersionTarget -ne ""} {$jsonConfig.WinVersionTarget} {"24H2"}) #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
+$winverCheckActive = (?: { $jsonConfig.WinVersionCheckActive -ne $null -and $jsonConfig.WinVersionCheckActive -ne "" } { $jsonConfig.WinVersionCheckActive } { $false })
+$winverTarget = (?: { $jsonConfig.WinVersionTarget -ne $null -and $jsonConfig.WinVersionTarget -ne "" } { $jsonConfig.WinVersionTarget } { "24H2" }) #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
 
 #Azure Information
-$azureADTenantId = (?: {$jsonConfig.AzureADTenantId -ne $null -and $jsonConfig.AzureADTenantId -ne ""} {$jsonConfig.AzureADTenantId}{""})
-$lapsAppClientId = (?: {$jsonConfig.LAPSAppClientId -ne $null -and $jsonConfig.LAPSAppClientId -ne ""} {$jsonConfig.LAPSAppClientId}{""})
-$bitLockerAppClientId = (?: {$jsonConfig.BitLockerAppClientId -ne $null -and $jsonConfig.BitLockerAppClientId -ne ""} {$jsonConfig.BitLockerAppClientId}{""})
+$azureADTenantId = (?: { $jsonConfig.AzureADTenantId -ne $null -and $jsonConfig.AzureADTenantId -ne "" } { $jsonConfig.AzureADTenantId } { "" })
+$lapsAppClientId = (?: { $jsonConfig.LAPSAppClientId -ne $null -and $jsonConfig.LAPSAppClientId -ne "" } { $jsonConfig.LAPSAppClientId } { "" })
+$bitLockerAppClientId = (?: { $jsonConfig.BitLockerAppClientId -ne $null -and $jsonConfig.BitLockerAppClientId -ne "" } { $jsonConfig.BitLockerAppClientId } { "" })
 
 #Anime Mode
-$animeMode = (?: {$jsonConfig.AnimeMode -ne $null -and $jsonConfig.AnimeMode -ne $false -and $jsonConfig.AnimeMode -ne ""}{$jsonConfig.AnimeMode}{""})
-$animeImageArr = @("https://cache.desktopnexus.com/thumbseg/2451/2451508-bigthumbnail.jpg","https://wallpapercave.com/wp/wp9498801.jpg","https://itsaboutanime.files.wordpress.com/2019/12/12-best-anime-wallpapers-in-hd-and-4k-that-you-must-get-now.jpg")
-if ($animeMode)
-{
+$animeMode = (?: { $jsonConfig.AnimeMode -ne $null -and $jsonConfig.AnimeMode -ne $false -and $jsonConfig.AnimeMode -ne "" } { $jsonConfig.AnimeMode } { "" })
+$animeImageArr = @("https://cache.desktopnexus.com/thumbseg/2451/2451508-bigthumbnail.jpg", "https://wallpapercave.com/wp/wp9498801.jpg", "https://itsaboutanime.files.wordpress.com/2019/12/12-best-anime-wallpapers-in-hd-and-4k-that-you-must-get-now.jpg")
+if ($animeMode) {
     $selectedAnimeImage = $animeImageArr | Get-Random
     $backgroundImagePath = $selectedAnimeImage
 }
@@ -185,7 +183,7 @@ if (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\Eli's Enterp
 
 #Check for updates
 
-if ($AutoUpdateCheckerEnabled = $true){
+if ($AutoUpdateCheckerEnabled = $true) {
     # GitHub API endpoint for tags
     $apiUrl = "https://api.github.com/repos/eliweitzman/EnterpriseTechTool/tags"
     # Make a web request to the GitHub API
@@ -346,8 +344,7 @@ $LoadingProgressBar.Value = 80
 
 $loadingLabel.Text = "Getting RSAT Info..."
 Import-Module ActiveDirectory -ErrorAction SilentlyContinue
-if (Get-Module -Name "ActiveDirectory")
-{
+if (Get-Module -Name "ActiveDirectory") {
     $rsatInfo = "Installed"
 }
 else {
@@ -391,12 +388,13 @@ $complianceFlag = $false#>
 
 
 #MiniTools Dot Sourcing - For development purpose only. DOT Sourcing doesn't work correctly with ps2exe.
-$Dependencies = "MiniClients\ADLookup.ps1","MiniClients\LAPSToolV2.ps1","MiniClients\BitlockerToolV2.ps1","PSAssets\ToolboxFunctions.ps1", "PSAssets\GenericToolWindow.ps1",".\MiniClients\SettingsMenu.ps1"
+$Dependencies = "MiniClients\ADLookup.ps1", "MiniClients\LAPSToolV2.ps1", "MiniClients\BitlockerToolV2.ps1", "PSAssets\ToolboxFunctions.ps1", "PSAssets\GenericToolWindow.ps1", ".\MiniClients\SettingsMenu.ps1"
 $Dependencies | ForEach-Object {
     try {
         $psFile = ".\$($_)"
         . $psFile
-    } catch {
+    }
+    catch {
         # Do Nothing Here. We will always land here in a compiled version of ETT.
     }
 }
@@ -582,20 +580,19 @@ function notificationPush {
     
 }
 
-function Create-ETTButton
-{
+function Create-ETTButton {
     param(
-        [Parameter(Position=0,mandatory=$true)]
+        [Parameter(Position = 0, mandatory = $true)]
         $ButtonText,
-        [Parameter(Position=1,mandatory=$true)]
+        [Parameter(Position = 1, mandatory = $true)]
         $ButtonWidth,
-        [Parameter(Position=2,mandatory=$true)]
+        [Parameter(Position = 2, mandatory = $true)]
         $ButtonHeight,
-        [Parameter(Position=3,mandatory=$true)]
+        [Parameter(Position = 3, mandatory = $true)]
         $ButtonXPosition,
-        [Parameter(Position=4,mandatory=$true)]
+        [Parameter(Position = 4, mandatory = $true)]
         $ButtonYPosition,
-        [Parameter(Position=5,mandatory=$true)]
+        [Parameter(Position = 5, mandatory = $true)]
         $ScriptBlock
     )
     $tmpButton = New-Object system.Windows.Forms.Button
@@ -613,7 +610,7 @@ function Create-ETTButton
     return $tmpButton
 }
 
-function Create-ToolboxListItem{
+function Create-ToolboxListItem {
     param(
         $DisplayName,
         $Description,
@@ -622,26 +619,24 @@ function Create-ToolboxListItem{
         $ScriptBlock
     )
     $tmpObject = [PSCustomObject]@{ 
-        displayName = $DisplayName
-        description = $Description
-        tab = $Tab
+        displayName  = $DisplayName
+        description  = $Description
+        tab          = $Tab
         requireAdmin = $RequireAdmin
-        codeBlock = $ScriptBlock
+        codeBlock    = $ScriptBlock
     }
-    if ($RequireAdmin -ne $null -and $RequireAdmin -eq $true)
-    {
+    if ($RequireAdmin -ne $null -and $RequireAdmin -eq $true) {
         $tmpObject.displayName = "$DisplayName $shieldIconEmoji"
     }
     return $tmpObject
 }
 
 #Constructs a new tab and returns the List object of created tab
-function Create-ToolboxTabPage
-{
+function Create-ToolboxTabPage {
     param(
-        [Parameter(Position=0,mandatory=$true)]
+        [Parameter(Position = 0, mandatory = $true)]
         $PageName,
-        [Parameter(Position=1,mandatory=$false)]
+        [Parameter(Position = 1, mandatory = $false)]
         [System.Collections.ArrayList]$ToolboxItemsArray
     )
     #Construct Tab Page
@@ -656,7 +651,7 @@ function Create-ToolboxTabPage
     $tmpList = New-Object System.Windows.Forms.Listbox
     $tmpList.Width = 312
     $tmpList.height = 259
-    $tmpList.location = New-Object System.Drawing.Point(0,0)
+    $tmpList.location = New-Object System.Drawing.Point(0, 0)
     $tmpList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
     $tmpList.ForeColor = $TextColor
     $tmpList.BackColor = $BGcolor
@@ -742,10 +737,10 @@ if ($complianceFlag -eq $true) {
 }
 
 #Create App Buttons
-$ClearLastLogin = Create-ETTButton -ButtonText "Clear Last Login" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 117 -ScriptBlock {ClearLastLogin -adminmode $adminmode -ToastStack $ToastStack}
-$Lapspw = Create-ETTButton -ButtonText "Get LAPS Password" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 267 -ButtonYPosition 117 -ScriptBlock {Open-LAPSToolWindow}
-$appUpdate = Create-ETTButton -ButtonText "Update Apps (Winget)" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 219 -ScriptBlock {Start-WingetAppUpdates}
-$PolicyPatch = Create-ETTButton -ButtonText "Windows Policy Update" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 266 -ButtonYPosition 219 -ScriptBlock {Start-PolicyPatch}
+$ClearLastLogin = Create-ETTButton -ButtonText "Clear Last Login" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 117 -ScriptBlock { ClearLastLogin -adminmode $adminmode -ToastStack $ToastStack }
+$Lapspw = Create-ETTButton -ButtonText "Get LAPS Password" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 267 -ButtonYPosition 117 -ScriptBlock { Open-LAPSToolWindow }
+$appUpdate = Create-ETTButton -ButtonText "Update Apps (Winget)" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 219 -ScriptBlock { Start-WingetAppUpdates }
+$PolicyPatch = Create-ETTButton -ButtonText "Windows Policy Update" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 266 -ButtonYPosition 219 -ScriptBlock { Start-PolicyPatch }
 
 #"The Toolbox" - a side menu for additional tools
 
@@ -773,40 +768,40 @@ $ETT.Controls.Add($ToolboxMenu) | Out-Null
 
 #Tab 1 - Actions Tab Creation
 $ActionsTabArray = New-Object System.Collections.ArrayList
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (GUI)" -ScriptBlock {Start-DriverUpdateGUI -manufacturer $manufacturer}))
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (CLI)" -ScriptBlock {Start-DriverUpdateCLI  -manufacturer $manufacturer}))
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "SFC Scan" -RequireAdmin $true -ScriptBlock {Start-SFCScan}))
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Suspend Bitlocker" -RequireAdmin $true -ScriptBlock {Start-SuspendBitlockerAction -adminmode $adminmode}))
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Test Network" -ScriptBlock {Start-NetworkTest}))
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "WiFi Diagnostics" -RequireAdmin $true -ScriptBlock {Start-WiFiDiagnostics -adminmode $adminmode}))
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Battery Diagnostics" -RequireAdmin $true -ScriptBlock {Start-BatteryDiagnostics -adminmode $adminmode}))
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Quick Reboot" -ScriptBlock {QuickReboot}))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (GUI)" -ScriptBlock { Start-DriverUpdateGUI -manufacturer $manufacturer }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (CLI)" -ScriptBlock { Start-DriverUpdateCLI  -manufacturer $manufacturer }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "SFC Scan" -RequireAdmin $true -ScriptBlock { Start-SFCScan }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Suspend Bitlocker" -RequireAdmin $true -ScriptBlock { Start-SuspendBitlockerAction -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Test Network" -ScriptBlock { Start-NetworkTest }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "WiFi Diagnostics" -RequireAdmin $true -ScriptBlock { Start-WiFiDiagnostics -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Battery Diagnostics" -RequireAdmin $true -ScriptBlock { Start-BatteryDiagnostics -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Quick Reboot" -ScriptBlock { QuickReboot }))
 $ActionsTab = Create-ToolboxTabPage -PageName "Actions" -ToolboxItemsArray $ActionsTabArray
 $ActionsTab.Add_Click({
-    $runThis = [ScriptBlock]::Create($ActionsTab.SelectedValue)
-    &$runThis
-})
+        $runThis = [ScriptBlock]::Create($ActionsTab.SelectedValue)
+        &$runThis
+    })
 
 #Tab 2 - Windows Tab Creation
 $WindowsTabArray = New-Object System.Collections.ArrayList
-[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Full Sweep" -ScriptBlock {CheckForWindowsUpdates -windowTitle "All Windows Updates" -noUpdatesMessage "No updates available." -updateSearchQuery "IsHidden=0 and IsInstalled=0"}))
-[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Defender Only" -ScriptBlock {CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'"}))
-[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation" -ScriptBlock {Get-WindowsActivationKey}))
-[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation Type" -ScriptBlock {Get-WindowsActivationType}))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Full Sweep" -ScriptBlock { CheckForWindowsUpdates -windowTitle "All Windows Updates" -noUpdatesMessage "No updates available." -updateSearchQuery "IsHidden=0 and IsInstalled=0" }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Defender Only" -ScriptBlock { CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'" }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation" -ScriptBlock { Get-WindowsActivationKey }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation Type" -ScriptBlock { Get-WindowsActivationType }))
 $WindowsTab = Create-ToolboxTabPage -PageName "Windows" -ToolboxItemsArray $WindowsTabArray
 $WindowsTab.Add_Click({
-    $runThis = [ScriptBlock]::Create($WindowsTab.SelectedValue)
-    &$runThis
-})
+        $runThis = [ScriptBlock]::Create($WindowsTab.SelectedValue)
+        &$runThis
+    })
 
 #Tab 3 - Security Tab Creation
 $SecurityTabArray = New-Object System.Collections.ArrayList
 [void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "$(Get-HostsFileIntegrity)" -ScriptBlock {}))
 $SecurityTab = Create-ToolboxTabPage -PageName "Security" -ToolboxItemsArray $SecurityTabArray
 $SecurityTab.Add_Click({
-    $runThis = [ScriptBlock]::Create($SecurityTab.SelectedValue)
-    &$runThis
-})
+        $runThis = [ScriptBlock]::Create($SecurityTab.SelectedValue)
+        &$runThis
+    })
 
 #Tab 4 - SCCM (if enabled) Tab Creation
 
@@ -816,22 +811,22 @@ $sccmClassExists = $sccmClass -ne $null
 
 if ($sccmClassExists) {
     $SCCMTabArray = New-Object System.Collections.ArrayList
-    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Application Deployment Evaluation Cycle" -ScriptBlock {Start-SCCMClientFunction -TriggerScheduleName "Application Deployment Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000121}"}))
-    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Discovery Data Collection Cycle" -ScriptBlock {Start-SCCMClientFunction -TriggerScheduleName "Discovery Data Collection Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000103}"}))
-    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "File Collection Cycle" -ScriptBlock {Start-SCCMClientFunction -TriggerScheduleName "File Collection Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000104}"}))
-    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Hardware Inventory Cycle" -ScriptBlock {Start-SCCMClientFunction -TriggerScheduleName "Hardware Inventory Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000001}"}))
-    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Machine Policy Retrieval" -ScriptBlock {Start-SCCMClientFunction -TriggerScheduleName "Machine Policy Retrieval" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000021}"}))
-    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Machine Policy Evaluation Cycle" -ScriptBlock {Start-SCCMClientFunction -TriggerScheduleName "Machine Policy Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000022}"}))
-    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Software Inventory Cycle" -ScriptBlock {Start-SCCMClientFunction -TriggerScheduleName "Software Inventory Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000002}"}))
-    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Software Metering Usage Report Cycle" -ScriptBlock {Start-SCCMClientFunction -TriggerScheduleName "Software Metering Usage Report Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000106}"}))
-    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "User Policy Retrieval" -ScriptBlock {Start-SCCMClientFunction -TriggerScheduleName "User Policy Retrieval" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000026}"}))
-    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "User Policy Evaluation Cycle" -ScriptBlock {Start-SCCMClientFunction -TriggerScheduleName "User Policy Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000027}"}))
-    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Installer Source List Update Cycle" -ScriptBlock {Start-SCCMClientFunction -TriggerScheduleName "Windows Installer Source List Update Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000107}"}))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Application Deployment Evaluation Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Application Deployment Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000121}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Discovery Data Collection Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Discovery Data Collection Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000103}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "File Collection Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "File Collection Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000104}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Hardware Inventory Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Hardware Inventory Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000001}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Machine Policy Retrieval" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Machine Policy Retrieval" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000021}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Machine Policy Evaluation Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Machine Policy Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000022}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Software Inventory Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Software Inventory Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000002}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Software Metering Usage Report Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Software Metering Usage Report Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000106}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "User Policy Retrieval" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "User Policy Retrieval" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000026}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "User Policy Evaluation Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "User Policy Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000027}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Installer Source List Update Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Windows Installer Source List Update Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000107}" }))
     $SCCMTab = Create-ToolboxTabPage -PageName "SCCM" -ToolboxItemsArray $SCCMTabArray
     $SCCMTab.Add_Click({
-        $runThis = [ScriptBlock]::Create($SCCMTab.SelectedValue)
-        &$runThis
-    })
+            $runThis = [ScriptBlock]::Create($SCCMTab.SelectedValue)
+            &$runThis
+        })
 }
 
 #Tab 5 - AD Tab Creation (Centered Text for title) - if RSAT is installed
@@ -839,13 +834,13 @@ if ($sccmClassExists) {
 #Check to see if RSAT is installed
 if ($rsatInfo -eq "Installed") {
     $ADTabArray = New-Object System.Collections.ArrayList
-    [void]$ADTabArray.Add((Create-ToolboxListItem -DisplayName "Launch AD Explorer" -ScriptBlock {ADLookup -BackgroundColor $BGcolor -WindowTextColor $TextColor -BrandColor $BrandColor -ButtonTextColor $ButtonTextColor}))
-    [void]$ADTabArray.Add((Create-ToolboxListItem -DisplayName "Get Bitlocker Recovery Key" -ScriptBlock {Open-BitLockerRecoveryWindow}))
+    [void]$ADTabArray.Add((Create-ToolboxListItem -DisplayName "Launch AD Explorer" -ScriptBlock { ADLookup -BackgroundColor $BGcolor -WindowTextColor $TextColor -BrandColor $BrandColor -ButtonTextColor $ButtonTextColor }))
+    [void]$ADTabArray.Add((Create-ToolboxListItem -DisplayName "Get Bitlocker Recovery Key" -ScriptBlock { Open-BitLockerRecoveryWindow }))
     $ADTab = Create-ToolboxTabPage -PageName "AD" -ToolboxItemsArray $ADTabArray
     $ADTab.Add_Click({
-        $runThis = [ScriptBlock]::Create($ADTab.SelectedValue)
-        &$runThis
-    })
+            $runThis = [ScriptBlock]::Create($ADTab.SelectedValue)
+            &$runThis
+        })
 }
 
 #Tab 6 - Custom Tools Tab Creation
@@ -855,17 +850,14 @@ if ($customTools -eq $true) {
 
     #Process hardcoded Custom Functions
     $userFunctions = Get-Command | Where-Object { $_.CommandType -eq 'Function' -and $_.Name -like 'custom_*' }
-    ForEach ($func in $userFunctions)
-    {
-        $tmpObject = Create-ToolboxListItem -DisplayName $($toolboxIcon + " "  + $func.Name) -ScriptBlock $func.Name
+    ForEach ($func in $userFunctions) {
+        $tmpObject = Create-ToolboxListItem -DisplayName $($toolboxIcon + " " + $func.Name) -ScriptBlock $func.Name
         [void]$CustomTabArray.Add($tmpObject)
     }
 
     #Process Config File Custom Functions
-    if($jsonConfig.CustomFunctions -ne $null)
-    {
-        ForEach ($customFunction in $jsonConfig.CustomFunctions)
-        {
+    if ($jsonConfig.CustomFunctions -ne $null) {
+        ForEach ($customFunction in $jsonConfig.CustomFunctions) {
             $customFunctionDisplayName = "$toolboxIcon $($customFunction.displayName)"
             $tmpObject = Create-ToolboxListItem -DisplayName $customFunctionDisplayName -Description $customFunction.description -Tab $customFunction.tab -RequireAdmin $customFunction.requireAdmin -ScriptBlock $customFunction.codeBlock
             [void]$CustomTabArray.Add($tmpObject)
@@ -873,11 +865,11 @@ if ($customTools -eq $true) {
     }
 
     #Create the Custom Tab GUI
-    $CustomTab= Create-ToolboxTabPage -PageName "Custom" -ToolboxItemsArray $CustomTabArray
+    $CustomTab = Create-ToolboxTabPage -PageName "Custom" -ToolboxItemsArray $CustomTabArray
     $CustomTab.Add_Click({
-        $runThis = [ScriptBlock]::Create($CustomTab.SelectedValue)
-        &$runThis
-    })
+            $runThis = [ScriptBlock]::Create($CustomTab.SelectedValue)
+            &$runThis
+        })
 }
 
 #TAB MENU
@@ -1237,8 +1229,72 @@ $menuFunctions.DropDownItems.Add($menuRenameComputer)
 #Settings Button
 $menuSettings.Text = "Settings"
 $menuSettings.Add_Click({
-        #Open the settings window script - SettingsMenu.ps1
-        Open-SettingsMenu
+        #First, check to see if ETTConfig.json exists in the same directory as the script
+        try {
+            $configFile = Get-Content -Path ".\ETTConfig.json" -ErrorAction SilentlyContinue
+            #If it does, open the settings window script - SettingsMenu.ps1
+            Open-SettingsMenu
+        }
+        catch {
+            #Display a quick popup - "No settings file found, would you like to create one?" with a Yes/No option
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("No settings file found. Would you like to create one?", 0, "Settings", 4)
+            if ($wshell.Popup -eq 6) {
+                #If yes, create a new settings file with default settings and open the settings window script
+                $newConfig = @"
+                {
+                    "ETTSettingsGUI" : true,
+                    "AutoUpdateCheckerEnabled" : true,
+                    "AdminMode" : false,
+                    "BrandColor" : "#023a24",
+                    "LogoLocation" : null,
+                    "BackgroundImagePath" : "",
+                    "ETTApplicationTitle" : "",
+                    "ETTHeaderText" : "",
+                    "ETTHeaderTextColor" : "White",
+                    "ApplicationTimeoutEnabled" : false,
+                    "ApplicationTimeoutLength" : 300,
+                    "EnableCustomTools" : true,
+                    "RAMCheckActive": false,
+                    "RAMCheckMinimum" : 8,
+                    "DriveSpaceCheckActive" : false,
+                    "DriveSpaceCheckMinimum" : 20,
+                    "WinVersionCheckActive" : false,
+                    "WinVersionTarget": "24H2",
+                    "AzureADTenantId" : "",
+                    "LAPSAppClientId" : "",
+                    "BitLockerAppClientId" : "",
+                    "AnimeMode" : false,
+                
+                    "CustomFunctions": [
+                        {
+                          "displayName": "Display Hello World",
+                          "description": "Returns a friendly 'Hello, World!' message.",
+                          "tab" : "",
+                          "requireAdmin" : true,
+                          "codeBlock": "$wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup('Hello, World!', 0, 'Hello, World!', 0x1)"
+                        },
+                        {
+                          "displayName": "Display Random Number",
+                          "description": "Generates a random number between 1 and 100.",
+                          "tab": "",
+                          "requireAdmin" : false,
+                          "codeBlock": "$rand =  (Get-Random -Minimum 1 -Maximum 100); $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup($rand, 0, $rand, 0x1)"
+                        }
+                        ]
+                    }
+"@
+                $newConfig | Out-File -FilePath ".\ETTConfig.json"
+                #Create a variable to hold the path to the settings file
+                $pwd = (Get-Location).Path
+                #Display a message box to the user that the settings file has been created, and the path to it
+                $wshell.Popup("Settings file created at: $pwd\ETTConfig.json. `n`n Now opening settings menu.", 0, "Settings Created", 64)
+                Open-SettingsMenu
+            }else {
+                #If no, do nothing
+            }
+           
+        }
     })
 [void]$menu.Items.Add($menuSettings)
 
