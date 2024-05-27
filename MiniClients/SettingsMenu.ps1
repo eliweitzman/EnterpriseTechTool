@@ -598,29 +598,35 @@ function Open-SettingsMenu {
         $saveSettingsButton = New-Object System.Windows.Forms.Button
         $saveSettingsButton.Location = New-Object System.Drawing.Size(9, 20)
         $saveSettingsButton.Size = New-Object System.Drawing.Size(348, 50)
-        $saveSettingsButton.Text = "Save And Restart ETT"
+        $saveSettingsButton.Text = "Save And Exit"
         $saveSettingsButton.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
         $saveSettingsButton.BackColor = $BoxColor
         $saveSettingsButton.ForeColor = $ButtonTextColor
         $saveSettingsButton.Add_Click({
+                #IF logo location is blank, set to null
+                if ($logoLocationTextBox.Text -eq "") {
+                    $logolocationresult = $null
+                }else{
+                    $logolocationresult = $logoLocationTextBox.Text
+                }
                 #Load the settings file
                 $settings = Get-Content -Path ".\ETTConfig.json" | ConvertFrom-Json
-                #Update the settings file with the new values
+                #Update the settings file with the new values - if blank, set to null
                 $settings.AutoUpdateCheckerEnabled = $autoUpdateCheckerEnabledCheckBox.Checked
                 $settings.AdminMode = $adminModeCheckBox.Checked
                 $settings.BrandColor = $brandColorTextBox.Text
-                $settings.LogoLocation = $logoLocationTextBox.Text
+                $settings.LogoLocation = $logolocationresult
                 $settings.BackgroundImagePath = $backgroundImagePathTextBox.Text
                 $settings.ETTApplicationTitle = $ETTApplicationTitleTextBox.Text
                 $settings.ETTHeaderText = $ETTHeaderTextTextBox.Text
                 $settings.ETTHeaderTextColor = $ETTHeaderTextColorTextBox.Text
                 $settings.ApplicationTimeoutEnabled = $applicationTimeoutEnabledCheckBox.Checked
-                $settings.ApplicationTimeoutLength = $applicationTimeoutLengthTextBox.Text
+                $settings.ApplicationTimeoutLength = [int]$applicationTimeoutLengthTextBox.Text
                 $settings.EnableCustomTools = $enableCustomToolsCheckBox.Checked
                 $settings.RAMCheckActive = $RAMCheckActiveCheckBox.Checked
-                $settings.RAMCheckMinimum = $RAMCheckMinimumTextBox.Text
+                $settings.RAMCheckMinimum = [int]$RAMCheckMinimumTextBox.Text
                 $settings.DriveSpaceCheckActive = $DriveSpaceCheckActiveCheckBox.Checked
-                $settings.DriveSpaceCheckMinimum = $DriveSpaceCheckMinimumTextBox.Text
+                $settings.DriveSpaceCheckMinimum = [double]$DriveSpaceCheckMinimumTextBox.Text
                 $settings.WinVersionCheckActive = $WinVersionCheckActiveCheckBox.Checked
                 $settings.WinVersionTarget = $WinVersionTargetTextBox.Text
                 $settings.AzureADTenantId = $AzureADTenantIdTextBox.Text
