@@ -64,7 +64,7 @@ ETT can run in a few different ways, depending on preference, and on your own pe
 
 Standard Install:
 ```
-winget install --id=EliWeitzman.ETT
+winget install --id=EliWeitzman.ETT -s winget
 ```
 
 2. Self-extracting Installer
