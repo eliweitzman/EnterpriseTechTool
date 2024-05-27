@@ -289,6 +289,25 @@ function Open-SettingsMenu {
     $applicationTimeoutEnabledLabel.ForeColor = $TextColor
     $runtimeFrame.Controls.Add($applicationTimeoutEnabledLabel)
 
+     #Add a textbox for the application timeout length
+     $applicationTimeoutLengthTextBox = New-Object System.Windows.Forms.TextBox
+     $applicationTimeoutLengthTextBox.Location = New-Object System.Drawing.Size(225, 108)
+     $applicationTimeoutLengthTextBox.Size = New-Object System.Drawing.Size(100, 20)
+     $applicationTimeoutLengthTextBox.Text = $ApplicationTimeoutLength
+     $applicationTimeoutLengthTextBox.Font = New-Object System.Drawing.Font("Segoe UI", 8)
+     #IF ApplicationTimeoutEnabled is false, make the ApplicationTimeoutLengthTextBox readonly, else make it editable
+     if ($applicationTimeoutEnabledCheckBox.Checked -eq $false) {
+         $applicationTimeoutLengthTextBox.ReadOnly = $true
+         $applicationTimeoutLengthTextBox.ForeColor = 'DarkGray'
+         $applicationTimeoutLengthTextBox.BackColor = 'LightGray'
+     }
+     else {
+         $applicationTimeoutLengthTextBox.ReadOnly = $false
+         $applicationTimeoutLengthTextBox.ForeColor = 'Black'
+         $applicationTimeoutLengthTextBox.BackColor = 'White'
+     }
+     $runtimeFrame.Controls.Add($applicationTimeoutLengthTextBox)
+
     #Add a checkbox for the application timeout enabled
     $applicationTimeoutEnabledCheckBox = New-Object System.Windows.Forms.CheckBox
     $applicationTimeoutEnabledCheckBox.Location = New-Object System.Drawing.Size(225, 78)
@@ -328,25 +347,6 @@ function Open-SettingsMenu {
         $applicationTimeoutLengthTextBox.BackColor = 'White'
     }
     $runtimeFrame.Controls.Add($applicationTimeoutLengthLabel)
-
-    #Add a textbox for the application timeout length
-    $applicationTimeoutLengthTextBox = New-Object System.Windows.Forms.TextBox
-    $applicationTimeoutLengthTextBox.Location = New-Object System.Drawing.Size(225, 108)
-    $applicationTimeoutLengthTextBox.Size = New-Object System.Drawing.Size(100, 20)
-    $applicationTimeoutLengthTextBox.Text = $ApplicationTimeoutLength
-    $applicationTimeoutLengthTextBox.Font = New-Object System.Drawing.Font("Segoe UI", 8)
-    #IF ApplicationTimeoutEnabled is false, make the ApplicationTimeoutLengthTextBox readonly, else make it editable
-    if ($applicationTimeoutEnabledCheckBox.Checked -eq $false) {
-        $applicationTimeoutLengthTextBox.ReadOnly = $true
-        $applicationTimeoutLengthTextBox.ForeColor = 'DarkGray'
-        $applicationTimeoutLengthTextBox.BackColor = 'LightGray'
-    }
-    else {
-        $applicationTimeoutLengthTextBox.ReadOnly = $false
-        $applicationTimeoutLengthTextBox.ForeColor = 'Black'
-        $applicationTimeoutLengthTextBox.BackColor = 'White'
-    }
-    $runtimeFrame.Controls.Add($applicationTimeoutLengthTextBox)
 
     #Create a label for the enable custom tools
     $enableCustomToolsLabel = New-Object System.Windows.Forms.Label
