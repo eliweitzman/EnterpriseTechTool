@@ -337,6 +337,7 @@ $LoadingProgressBar.Value = 60
 
 $LoadingLabel.Text = "Getting Drive Info..."
 $drivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
+$freedrivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output $('{0:N2}' -f ($_.FreeSpace/1gb)) }
 $LoadingProgressBar.Value = 70
 
 $LoadingLabel.Text = "Getting RAM Info..."
@@ -419,7 +420,7 @@ else {
 
 #Drivespace Check
 if ($drivespaceCheckActive -eq $true) {
-    if ($drivespace -ge $drivespaceMinimum) {
+    if ($freedrivespace -ge $drivespaceMinimum) {
         $complianceStatus = 'Compliant'
         $drivespaceCompliant = $true
     }
