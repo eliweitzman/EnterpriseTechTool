@@ -1,4 +1,5 @@
 {
+    "ETTSettingsGUI" : true,
     "AutoUpdateCheckerEnabled" : true,
     "AdminMode" : false,
     "BrandColor" : "#023a24",
