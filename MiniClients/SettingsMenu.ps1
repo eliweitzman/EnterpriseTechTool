@@ -29,6 +29,7 @@ function Open-SettingsMenu {
         $LAPSAppClientId = $settings.LAPSAppClientId
         $BitLockerAppClientId = $settings.BitLockerAppClientId
         $AnimeMode = $settings.AnimeMode
+        $DefenderEnrollCheck = $settings.DefenderEnrollCheckActive
 
         #Import the required assemblies
         Add-Type -AssemblyName System.Windows.Forms
@@ -536,6 +537,22 @@ function Open-SettingsMenu {
             $WinVersionTargetTextBox.BackColor = 'White'
         }
         $complianceFrame.Controls.Add($WinVersionTargetTextBox)
+
+        #Add a checkbox for the defender enrollment check active
+        $defenderEnrollCheckActiveLabel = New-Object System.Windows.Forms.Label
+        $defenderEnrollCheckActiveLabel.Location = New-Object System.Drawing.Size(10, 200)
+        $defenderEnrollCheckActiveLabel.Size = New-Object System.Drawing.Size(210, 20)
+        $defenderEnrollCheckActiveLabel.Text = "Defender Enrollment Check:"
+        $defenderEnrollCheckActiveLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+        $defenderEnrollCheckActiveLabel.ForeColor = $TextColor
+        $complianceFrame.Controls.Add($defenderEnrollCheckActiveLabel)
+
+        #Add a checkbox for the defender enrollment check active
+        $defenderEnrollCheckActiveCheckBox = New-Object System.Windows.Forms.CheckBox
+        $defenderEnrollCheckActiveCheckBox.Location = New-Object System.Drawing.Size(225, 198)
+        $defenderEnrollCheckActiveCheckBox.Size = New-Object System.Drawing.Size(20, 20)
+        $defenderEnrollCheckActiveCheckBox.Checked = $DefenderEnrollCheckActive
+        $complianceFrame.Controls.Add($defenderEnrollCheckActiveCheckBox)
 
         #QUERY SETTINGS
         #Query Settings include the following: Azure AD Tenant ID, LAPS App Client ID, BitLocker App Client ID

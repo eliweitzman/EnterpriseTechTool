@@ -17,6 +17,7 @@
     "DriveSpaceCheckMinimum" : 20,
     "WinVersionCheckActive" : false,
     "WinVersionTarget": "24H2",
+    "DefenderEnrollCheckActive" : false,
     "AzureADTenantId" : "",
     "LAPSAppClientId" : "",
     "BitLockerAppClientId" : "",

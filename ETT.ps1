@@ -110,6 +110,9 @@ $drivespaceMinimum = (?: { $jsonConfig.DriveSpaceCheckMinimum -ne $null -and $js
 $winverCheckActive = (?: { $jsonConfig.WinVersionCheckActive -ne $null -and $jsonConfig.WinVersionCheckActive -ne "" } { $jsonConfig.WinVersionCheckActive } { $false })
 $winverTarget = (?: { $jsonConfig.WinVersionTarget -ne $null -and $jsonConfig.WinVersionTarget -ne "" } { $jsonConfig.WinVersionTarget } { "24H2" }) #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
 
+#Defender Enrollment Check
+$defenderEnrollCheckActive = (?: { $jsonConfig.DefenderEnrollCheckActive -ne $null -and $jsonConfig.DefenderEnrollCheckActive -ne "" } { $jsonConfig.DefenderEnrollCheckActive } { $false })
+
 #Azure Information
 $azureADTenantId = (?: { $jsonConfig.AzureADTenantId -ne $null -and $jsonConfig.AzureADTenantId -ne "" } { $jsonConfig.AzureADTenantId } { "" })
 $lapsAppClientId = (?: { $jsonConfig.LAPSAppClientId -ne $null -and $jsonConfig.LAPSAppClientId -ne "" } { $jsonConfig.LAPSAppClientId } { "" })
@@ -344,6 +347,15 @@ $LoadingLabel.Text = "Getting RAM Info..."
 $ramCheck = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
 $LoadingProgressBar.Value = 80
 
+$LoadingLabel.Text = "Getting Defender Enrollment Status..."
+$checkDefenderEnroll = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows Advanced Threat Protection\Status" -ErrorAction SilentlyContinue).OnboardingState
+if ($checkDefenderEnroll -eq 1) {
+    $defenderEnrollStatus = $true
+}else {
+    $defenderEnrollStatus = $false
+}
+$LoadingProgressBar.Value = 82
+
 $loadingLabel.Text = "Getting RSAT Info..."
 Import-Module ActiveDirectory -ErrorAction SilentlyContinue
 if (Get-Module -Name "ActiveDirectory") {
@@ -365,6 +377,8 @@ $LoadingProgressBar.Value = 95
 $LoadingLabel.Text = "Getting Drive Type..."
 $drivetype = Get-PhysicalDisk | Where-Object DeviceID -eq 0 | Select-Object -ExpandProperty MediaType
 $LoadingProgressBar.Value = 100
+
+
 
 $LoadingLabel.Text = "Loading Complete!"
 
@@ -448,6 +462,22 @@ if ($winverCheckActive -eq $true) {
 }
 else {
     $winverCompliant = $true
+}
+
+#Defender Enrollment Check
+if ($defenderEnrollCheckActive -eq $true) {
+    if ($defenderEnrollStatus -eq $true) {
+        $complianceStatus = 'Compliant'
+        $defenderEnrollCompliant = $true
+    }
+    else {
+        $complianceStatus = 'Non-Compliant'
+        $defenderEnrollCompliant = $false
+        $complianceFlag = $true
+    }
+}
+else {
+    $defenderEnrollCompliant = $true
 }
 
 #Device Type conversion
@@ -908,6 +938,7 @@ $storageInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $ramInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $cpuInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $adminInfo = New-Object System.Windows.Forms.ToolStripMenuItem
+$defenderInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoPrint = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoClipboard = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoTicket = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1105,6 +1136,25 @@ $adminInfo.BackColor = $BGcolor
 $adminInfo.ForeColor = $TextColor
 $adminInfo.ToolTipText = "Current ETT Admin Mode." + "`nClick to copy ETT Admin Mode to clipboard."
 [void]$menuInfo.DropDownItems.Add($adminInfo)
+
+#Defender Info Display
+$defenderInfo.Text = "Defender ATP Enrollment Status: " + $defenderEnrollStatus
+$defenderInfo.Add_Click({
+        Set-Clipboard -Value $defenderEnrollStatus
+        $wshell = New-Object -ComObject Wscript.Shell
+        $wshell.Popup("Defender Status copied to clipboard", 0, "Defender Status Copied", 64)
+    })
+#Set color to red if Defender ATP is not enrolled and compliance check is enabled
+if ($defenderStatus -eq "Not Enrolled" -and $complianceFlag -eq $true) {
+    $defenderInfo.BackColor = 'Red'
+    $defenderInfo.ForeColor = 'White'
+}
+else {
+    $defenderInfo.BackColor = $BGcolor
+    $defenderInfo.ForeColor = $TextColor
+}
+$defenderInfo.ToolTipText = "Current Defender ATP Enrollment Status." + "`nClick to copy Defender ATP Enrollment Status to clipboard."
+[void]$menuInfo.DropDownItems.Add($defenderInfo)
 
 #Device Info Print to Text File in C Temp
 $deviceInfoPrint.Text = "Print Device Info to Text File"
