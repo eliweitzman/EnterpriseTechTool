@@ -117,6 +117,7 @@ function Get-WindowsActivationKey{
     }
     else {
         #Key is not null, so display it in a popup
+        $HardwareKey | Set-Clipboard
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("Windows Activation Key: " + $HardwareKey + "`n`nKey Copied to Clipboard.", 0, "Windows Activation Key", 64)
     }
