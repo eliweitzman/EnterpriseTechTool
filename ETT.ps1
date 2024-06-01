@@ -17,13 +17,11 @@
 .NOTES
     Version:        1.3
     Creation Date:  12-26-22
-    Last Updated:   12-17-23
-    Purpose/Change: Timeout implementation
 
 .LICENSE
     BSD 3-Clause License
 
-    Copyright (c) 2023-2024, Eli Weitzman
+    Copyright (c) 2024, Eli Weitzman
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
