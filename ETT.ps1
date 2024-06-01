@@ -334,6 +334,16 @@ $LoadingLabel.Text = "Getting Model..."
 $model = Get-WmiObject -Class Win32_ComputerSystem -Property Model | Select-Object -ExpandProperty Model
 $LoadingProgressBar.Value = 50
 
+$LoadingLabel.Text = "Checking Hosts File..."
+$hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
+    $hostsCompliant = $true
+    $hostsText = "Host File Integrity: Unmodified"
+    if ($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085") {
+        $hostsCompliant = $false
+        $hostsText = "Host File Integrity: Modified"
+    }
+$LoadingProgressBar.Value = 55
+
 $LoadingLabel.Text = "Getting Domain..."
 $domain = (Get-CIMInstance -ClassName Win32_ComputerSystem).Domain
 $LoadingProgressBar.Value = 60
@@ -506,6 +516,8 @@ Model: $model
 RAM: $ramCheck GB
 CPU: $cpuCheck
 Domain: $domain
+Defender ATP Enrollment: $defenderEnrollStatus
+Hosts File: $hostsText
 System Type: $systemType
 Storage: $drivespace
 Storage Type: $drivetype
@@ -938,6 +950,8 @@ $storageInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $ramInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $cpuInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $adminInfo = New-Object System.Windows.Forms.ToolStripMenuItem
+$securityInfo = New-Object System.Windows.Forms.ToolStripMenuItem
+$hostsInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $defenderInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoPrint = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoClipboard = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1137,6 +1151,24 @@ $adminInfo.ForeColor = $TextColor
 $adminInfo.ToolTipText = "Current ETT Admin Mode." + "`nClick to copy ETT Admin Mode to clipboard."
 [void]$menuInfo.DropDownItems.Add($adminInfo)
 
+#Security Info Top-Level Folder
+$securityInfo.Text = "Security Information"
+$securityInfo.BackColor = $BGcolor
+$securityInfo.ForeColor = $TextColor
+[void]$menuInfo.DropDownItems.Add($securityInfo)
+
+#Hosts File Info Display
+$hostsInfo.Text = $hostsText
+$hostsInfo.Add_Click({
+        Set-Clipboard -Value $hostsInfo.Text
+        $wshell = New-Object -ComObject Wscript.Shell
+        $wshell.Popup("Hosts File copied to clipboard", 0, "Hosts File Copied", 64)
+    })
+$hostsInfo.BackColor = $BGcolor
+$hostsInfo.ForeColor = $TextColor
+$hostsInfo.ToolTipText = "Current Hosts File Modification Status." + "`nClick to copy Hosts File to clipboard."
+[void]$securityInfo.DropDownItems.Add($hostsInfo)
+
 #Defender Info Display
 $defenderInfo.Text = "Defender ATP Enrollment Status: " + $defenderEnrollStatus
 $defenderInfo.Add_Click({
@@ -1154,7 +1186,7 @@ else {
     $defenderInfo.ForeColor = $TextColor
 }
 $defenderInfo.ToolTipText = "Current Defender ATP Enrollment Status." + "`nClick to copy Defender ATP Enrollment Status to clipboard."
-[void]$menuInfo.DropDownItems.Add($defenderInfo)
+[void]$SecurityInfo.DropDownItems.Add($defenderInfo)
 
 #Device Info Print to Text File in C Temp
 $deviceInfoPrint.Text = "Print Device Info to Text File"
@@ -1192,7 +1224,7 @@ if ($null -eq $ticketType) {
     $deviceInfoTicket.BackColor = $BGcolor
     $deviceInfoTicket.ForeColor = $TextColor
     $deviceInfoTicket.Enabled = $false
-    $deviceInfoTicket.ToolTipText = "Sends device info to ticketing system. Not configured presently. Coming in 1.2.1"
+    $deviceInfoTicket.ToolTipText = "Sends device info to ticketing system. Not configured presently. Coming soon."
     [void]$menuInfo.DropDownItems.Add($deviceInfoTicket)
 }
 else {
