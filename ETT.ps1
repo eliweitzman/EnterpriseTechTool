@@ -336,12 +336,12 @@ $LoadingProgressBar.Value = 50
 
 $LoadingLabel.Text = "Checking Hosts File..."
 $hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
-    $hostsCompliant = $true
-    $hostsText = "Host File Integrity: Unmodified"
-    if ($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085") {
-        $hostsCompliant = $false
-        $hostsText = "Host File Integrity: Modified"
-    }
+$hostsCompliant = $true
+$hostsText = "Host File Integrity: Unmodified"
+if ($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085") {
+    $hostsCompliant = $false
+    $hostsText = "Host File Integrity: Modified"
+}
 $LoadingProgressBar.Value = 55
 
 $LoadingLabel.Text = "Getting Domain..."
@@ -350,7 +350,7 @@ $LoadingProgressBar.Value = 60
 
 $LoadingLabel.Text = "Getting Drive Info..."
 $drivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
-$freedrivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output $('{0:N2}' -f ($_.FreeSpace/1gb)) }
+$freedrivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output $('{0:N2}' -f ($_.FreeSpace / 1gb)) }
 $LoadingProgressBar.Value = 70
 
 $LoadingLabel.Text = "Getting RAM Info..."
@@ -361,7 +361,8 @@ $LoadingLabel.Text = "Getting Defender Enrollment Status..."
 $checkDefenderEnroll = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows Advanced Threat Protection\Status" -ErrorAction SilentlyContinue).OnboardingState
 if ($checkDefenderEnroll -eq 1) {
     $defenderEnrollStatus = $true
-}else {
+}
+else {
     $defenderEnrollStatus = $false
 }
 $LoadingProgressBar.Value = 82
@@ -1313,19 +1314,21 @@ $menuFunctions.DropDownItems.Add($menuRenameComputer)
 #Settings Button
 $menuSettings.Text = "Settings"
 $menuSettings.Add_Click({
-        #First, check to see if ETTConfig.json exists in the same directory as the script
-        $configtest = Test-Path ".\ETTConfig.json" -ErrorAction SilentlyContinue
-        #First, check to see if the settings file is present
-        if ($configtest -eq $true) {
-            Open-SettingsMenu
-        }
-        else {
-            #Display a quick popup - "No settings file found, would you like to create one?" with a Yes/No option
-            $wshell = New-Object -ComObject Wscript.Shell
-            $request = $wshell.Popup("No settings file found. Would you like to create one?", 0, "Settings", 4)
-            if ($request -eq 6) {
-                #If yes, create a new settings file with default settings and open the settings window script
-                $newConfig = @"
+        #First, check to see if running in admin mode
+        if ($adminmode -eq $true -or $installType -eq "Portable") {
+            #Next, check to see if ETTConfig.json exists in the same directory as the script
+            $configtest = Test-Path ".\ETTConfig.json" -ErrorAction SilentlyContinue
+            #First, check to see if the settings file is present
+            if ($configtest -eq $true) {
+                Open-SettingsMenu
+            }
+            else {
+                #Display a quick popup - "No settings file found, would you like to create one?" with a Yes/No option
+                $wshell = New-Object -ComObject Wscript.Shell
+                $request = $wshell.Popup("No settings file found. Would you like to create one?", 0, "Settings", 4)
+                if ($request -eq 6) {
+                    #If yes, create a new settings file with default settings and open the settings window script
+                    $newConfig = @"
                 {
                     "ETTSettingsGUI" : true,
                     "AutoUpdateCheckerEnabled" : true,
@@ -1368,17 +1371,23 @@ $menuSettings.Add_Click({
                         ]
                     }
 "@
-                #Create the new settings file in the same directory as the script using a here-string
-                $newConfig | Out-File -FilePath ".\ETTConfig.json"
+                    #Create the new settings file in the same directory as the script using a here-string
+                    $newConfig | Out-File -FilePath ".\ETTConfig.json"
 
-                #Display a message box to the user that the settings file has been created, and the path to it
-                $wshell.Popup("Settings file created. `n`n Now opening settings menu.", 0, "Settings Created", 64)
-                Open-SettingsMenu
-            }
-            else {
-                #If no, do nothing
-            }
+                    #Display a message box to the user that the settings file has been created, and the path to it
+                    $wshell.Popup("Settings file created. `n`n Now opening settings menu.", 0, "Settings Created", 64)
+                    Open-SettingsMenu
+                }
+                else {
+                    #If no, do nothing
+                }
            
+            }
+        }
+        else {
+            #If we are not in admin mode, display a message box
+            $wshell = New-Object -ComObject Wscript.Shell
+            $wshell.Popup("You must be in Admin Mode to access settings.", 0, "Settings Error", 48)
         }
     })
 [void]$menu.Items.Add($menuSettings)
