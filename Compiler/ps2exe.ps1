@@ -146,6 +146,7 @@ function Invoke-ps2exe
 		Write-Output "              [-DPIAware] [-winFormsDPIAware] [-requireAdmin] [-supportOS] [-virtualize] [-longPaths]`n"
 		Write-Output "       inputFile = Powershell script that you want to convert to executable (file has to be UTF8 or UTF16 encoded)"
 		Write-Output "      outputFile = destination executable file name or folder, defaults to inputFile with extension '.exe'"
+		Write-Output "	   resources = destination file names that need to be added as resoruces to the application '-resources 'helloworld.ps1''"
 		Write-Output "    prepareDebug = create helpful information for debugging"
 		Write-Output "      x86 or x64 = compile for 32-bit or 64-bit runtime only"
 		Write-Output "            lcid = location ID for the compiled executable. Current user culture if not specified"
@@ -2825,3 +2826,24 @@ $(if (!$noConsole) {@"
 		}
 	}
 }
+
+#Enter the script file location
+$scriptFile = Read-Host "Enter the location of the script file to compile"
+
+#Enter the icon file location
+$iconFile = Read-Host "Enter the location of the icon file to use for the compiled executable"
+
+#Get the version number
+$version = Read-Host "Enter the version number for the compiled executable"
+
+#Additional details
+$title = "Elis Enterprise Tech Toolkit"
+
+#Description
+$description = "A useful set of PS Tools for Windows maintenance and administration"
+
+#Company
+$company = "Eli Weitzman"
+
+#Compile the script
+Invoke-ps2exe -inputFile $scriptFile -outputFile "ETT.exe" -x64 -noConsole -iconFile $iconFile -title $title -description $description -company $company -version $version -resources #Resource location!
