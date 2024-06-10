@@ -650,6 +650,7 @@ function Open-SettingsMenu {
                 $settings.LAPSAppClientId = $LAPSAppClientIdTextBox.Text
                 $settings.BitLockerAppClientId = $BitLockerAppClientIdTextBox.Text
                 $settings.AnimeMode = $animeModeCheckBox.Checked
+                $settings.DefenderEnrollCheckActive = $defenderEnrollCheckActiveCheckBox.Checked
                 #Save the settings file
                 $settings | ConvertTo-Json | Set-Content -Path ".\ETTConfig.json"
                 #Show popup that settings have been saved

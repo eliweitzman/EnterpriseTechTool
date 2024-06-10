@@ -1314,7 +1314,7 @@ $menuFunctions.DropDownItems.Add($menuRenameComputer)
 $menuSettings.Text = "Settings"
 $menuSettings.Add_Click({
         #First, check to see if running in admin mode
-        if ($adminmode -eq $true -or $installType -eq "Portable") {
+        if (($adminmode -eq $true) -or ($installType -eq "Portable")) {
             #Next, check to see if ETTConfig.json exists in the same directory as the script
             $configtest = Test-Path ".\ETTConfig.json" -ErrorAction SilentlyContinue
             #First, check to see if the settings file is present
