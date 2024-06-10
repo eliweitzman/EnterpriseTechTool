@@ -185,7 +185,8 @@ if (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\Eli's Enterp
 
 #Check for updates
 
-if ($AutoUpdateCheckerEnabled = $true) {
+if ($AutoUpdateCheckerEnabled -eq $false) {
+
     # GitHub API endpoint for tags
     $apiUrl = "https://api.github.com/repos/eliweitzman/EnterpriseTechTool/tags"
     # Make a web request to the GitHub API
