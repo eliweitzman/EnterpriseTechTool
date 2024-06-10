@@ -1351,6 +1351,7 @@ $menuSettings.Add_Click({
                     "LAPSAppClientId" : "",
                     "BitLockerAppClientId" : "",
                     "AnimeMode" : false,
+                    "DefenderEnrollCheckActive" : false,
                 
                     "CustomFunctions": [
                         {

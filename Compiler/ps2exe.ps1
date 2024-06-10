@@ -2846,4 +2846,4 @@ $description = "A useful set of PS Tools for Windows maintenance and administrat
 $company = "Eli Weitzman"
 
 #Compile the script
-Invoke-ps2exe -inputFile $scriptFile -outputFile "ETT.exe" -x64 -noConsole -iconFile $iconFile -title $title -description $description -company $company -version $version -resources #Resource location!
+Invoke-ps2exe -inputFile $scriptFile -outputFile "ETT.exe" -x64 -noConsole -iconFile $iconFile -title $title -description $description -company $company -version $version -resources 
