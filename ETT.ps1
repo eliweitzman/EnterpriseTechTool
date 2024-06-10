@@ -1190,11 +1190,11 @@ $defenderInfo.ToolTipText = "Current Defender ATP Enrollment Status." + "`nClick
 #Device Info Print to Text File in C Temp
 $deviceInfoPrint.Text = "Print Device Info to Text File"
 $deviceInfoPrint.Add_Click({
-        $saveDialog = New-Object System.Windows.Forms.SaveFileDialog | Out-Null
+        $saveDialog = New-Object System.Windows.Forms.SaveFileDialog
         $saveDialog.Filter = "Text Files (*.txt)|*.txt"
         $saveDialog.Title = "Save Device Info to Text File"
         $saveDialog.InitialDirectory = "C:\Temp"
-        $saveDialog.FileName = "DeviceInfo.txt"
+        $saveDialog.FileName = "Device_Info.txt"
 
         if ($saveDialog.ShowDialog() -eq "OK") {
             $deviceInfo | Out-File -FilePath $saveDialog.FileName

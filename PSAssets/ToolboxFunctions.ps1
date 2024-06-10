@@ -80,11 +80,11 @@ function CheckForWindowsUpdates {
     }
 }
 
-function ClearLastLogin{
+function ClearLastLogin {
     param(
-        [Parameter(Position=0,mandatory=$true)]
+        [Parameter(Position = 0, mandatory = $true)]
         $adminmode, 
-        [Parameter(Position=1,mandatory=$true)]
+        [Parameter(Position = 1, mandatory = $true)]
         $ToastStack
     )
     #Check if admin mode is enabled. Depending on the result, run the appropriate command    
@@ -107,7 +107,7 @@ function ClearLastLogin{
     $ToastStack.Visible = $true
 }
 
-function Get-WindowsActivationKey{
+function Get-WindowsActivationKey {
     $HardwareKey = (Get-WmiObject -query 'select * from SoftwareLicensingService' | Select-Object OA3xOriginalProductKey).OA3xOriginalProductKey
         
     #Verify that the key is not null
@@ -122,22 +122,22 @@ function Get-WindowsActivationKey{
         $wshell.Popup("Windows Activation Key: " + $HardwareKey + "`n`nKey Copied to Clipboard.", 0, "Windows Activation Key", 64)
     }
 }
-function Get-HostsFileIntegrity{
+function Get-HostsFileIntegrity {
     $hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
     $hostsCompliant = $true
     $hostsText = "Host File Integrity: Unmodified"
     if ($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085") {
         $hostsCompliant = $false
         $hostsText = "Host File Integrity: Modified"
-    return $hostsText
-}
+        return $hostsText
+    }
 }
 
-function Get-WindowsActivationType{
+function Get-WindowsActivationType {
     slmgr.vbs /dli
 }
 
-function Start-WingetAppUpdates{
+function Start-WingetAppUpdates {
     #Upgrade applications on the machine
 
     #Main try-catch test to verify newest version of WPM (winget) is installed
@@ -156,12 +156,12 @@ function Start-WingetAppUpdates{
     Start-Process powershell.exe -ArgumentList "-command winget upgrade --all"
 }
 
-function Start-PolicyPatch{
+function Start-PolicyPatch {
     Start-Process powershell.exe -ArgumentList "-command gpupdate /force"
 }
-function Start-DriverUpdateCLI{
+function Start-DriverUpdateCLI {
     param(
-        [Parameter(Position=0,mandatory=$true)]
+        [Parameter(Position = 0, mandatory = $true)]
         $manufacturer
     )
     #Launch Driver Updater
@@ -182,9 +182,9 @@ function Start-DriverUpdateCLI{
     }
 }
 
-function Start-DriverUpdateGUI{
+function Start-DriverUpdateGUI {
     param(
-        [Parameter(Position=0,mandatory=$true)]
+        [Parameter(Position = 0, mandatory = $true)]
         $manufacturer
     )
     #Launch Driver Updater
@@ -203,14 +203,14 @@ function Start-DriverUpdateGUI{
     }
 }
 
-function Start-SFCScan{
+function Start-SFCScan {
     #SFC Scan
     Start-Process powershell.exe -ArgumentList "-command sfc /scannow" -PassThru -Verb RunAs
 }
 
-function Start-SuspendBitlockerAction{
+function Start-SuspendBitlockerAction {
     param(
-        [Parameter(Position=0,mandatory=$true)]
+        [Parameter(Position = 0, mandatory = $true)]
         $adminmode
     )
     #Check if adminmode is enabled
@@ -235,14 +235,14 @@ function Start-SuspendBitlockerAction{
     }
 }
 
-function Start-NetworkTest{
+function Start-NetworkTest {
     #Test Network
     Start-Process powershell.exe -ArgumentList "-command Test-NetConnection -ComputerName google.com; pause" -PassThru -Wait
 }
 
-function Start-WiFiDiagnostics{
+function Start-WiFiDiagnostics {
     param(
-        [Parameter(Position=0,mandatory=$true)]
+        [Parameter(Position = 0, mandatory = $true)]
         $adminmode
     )
     #Test Wi-Fi
@@ -262,34 +262,45 @@ function Start-WiFiDiagnostics{
     }
 }
 
-function Start-BatteryDiagnostics{
+function Start-BatteryDiagnostics {
     param(
-        [Parameter(Position=0,mandatory=$true)]
+        [Parameter(Position = 0, mandatory = $true)]
         $adminmode
     )
     #Test Battery, first check if device is a laptop
     if ($systemType -eq "Mobile" -or $systemType -eq "Appliance PC" -or $systemType -eq "Slate") {
         #Device is a laptop, now check if adminmode is enabled
         if ($adminmode -eq "True") {
-            #Check to see if C:\Temp\ exists, if not, create it
-            if ((Test-Path -path "C:\Temp\") -eq $false) {
-                New-Item -Path 'C:\Temp\' -ItemType Directory
-            }
+            #Open a save dialog to save the battery report
+            $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+            $saveFileDialog.Filter = "HTML files (*.html)|*.html"
+            $saveFileDialog.Title = "Save Battery Report"
+            $saveFileDialog.InitialDirectory = "C:\Temp"
+            $saveFileDialog.FileName = "Battery.html"
 
-            #Adminmode is enabled, so run the battery report
-            Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru -Wait
-            Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
+            if ($saveFileDialog.ShowDialog() -eq "OK") {
+                #Get the file path and run the battery report
+                $batteryReportPath = $saveFileDialog.FileName
+                Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output $batteryReportPath" -PassThru -Wait
+                Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
+            }
         }
         else {
             #Adminmode is not enabled, so run the battery report in a sub-process shell, but catch if UAC is not accepted and do nothing
             try {
-                #Check to see if C:\Temp\ exists, if not, create it
-                if ((Test-Path -path "C:\Temp\") -eq $false) {
-                    New-Item -Path 'C:\Temp\' -ItemType Directory
-                }
+                #Open a save dialog to save the battery report
+                $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+                $saveFileDialog.Filter = "HTML files (*.html)|*.html"
+                $saveFileDialog.Title = "Save Battery Report"
+                $saveFileDialog.InitialDirectory = "C:\Temp"
+                $saveFileDialog.FileName = "Battery.html"
 
-                Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru -Verb RunAs -Wait
+                if ($saveFileDialog.ShowDialog() -eq "OK") {
+                #Get the file path and run the battery report
+                $batteryReportPath = $saveFileDialog.FileName
+                Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output $batteryReportPath" -PassThru -Verb RunAs -Wait
                 Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
+                }
             }
             catch {
                 #Do nothing...
@@ -313,7 +324,7 @@ function Start-SCCMClientFunction {
     $wshell.Popup("SCCM Client Task $TriggerScheduleName Triggered. The selected task will run and might take several minutes to finish.", 0, "SCCM Client Task", 64)
 }
 
-function QuickReboot{
+function QuickReboot {
     #First, confirm reboot
     $wshell = New-Object -ComObject Wscript.Shell
     if ($wshell.Popup("Are you sure you want to reboot? Make sure everything is saved before proceeding.", 0, "Reboot", 4 + 32) -eq 6) {
