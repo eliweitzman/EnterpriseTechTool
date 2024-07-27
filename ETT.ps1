@@ -118,7 +118,7 @@ $bitLockerAppClientId = (?: { $jsonConfig.BitLockerAppClientId -ne $null -and $j
 
 #Anime Mode
 $animeMode = (?: { $jsonConfig.AnimeMode -ne $null -and $jsonConfig.AnimeMode -ne $false -and $jsonConfig.AnimeMode -ne "" } { $jsonConfig.AnimeMode } { "" })
-$animeImageArr = @("https://cache.desktopnexus.com/thumbseg/2451/2451508-bigthumbnail.jpg", "https://wallpapercave.com/wp/wp9498801.jpg", "https://itsaboutanime.files.wordpress.com/2019/12/12-best-anime-wallpapers-in-hd-and-4k-that-you-must-get-now.jpg")
+$animeImageArr = @("https://cache.desktopnexus.com/thumbseg/2451/2451508-bigthumbnail.jpg", "https://wallpapercave.com/wp/wp9498801.jpg", "https://itsaboutanime.files.wordpress.com/2019/12/12-best-anime-wallpapers-in-hd-and-4k-that-you-must-get-now.jpg", "https://i.redd.it/qe5tn9xjubkc1.jpeg","https://images.hdqwalls.com/wallpapers/kawaii-neon-anime-girl-jr.jpg")
 if ($animeMode) {
     $selectedAnimeImage = $animeImageArr | Get-Random
     $backgroundImagePath = $selectedAnimeImage
