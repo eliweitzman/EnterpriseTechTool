@@ -170,7 +170,7 @@ function Create-GenericToolWindow{
 
     #Create MSGraphSessionLabel
     $MSGraphSessionLabel = New-Object system.Windows.Forms.Label
-    $MSGraphSessionLabel.Text = "MS Graph Session: $(Get-MGContext | Select -expandproperty Account)"
+    #$MSGraphSessionLabel.Text = "MS Graph Session: $(Get-MGContext | Select -expandproperty Account)"
     $MSGraphSessionLabel.width = 500
     $MSGraphSessionLabel.height = 17
     $MSGraphSessionLabel.location = New-Object System.Drawing.Point(16, 30)
@@ -283,11 +283,22 @@ function Create-GenericToolWindow{
             return
         }
         . $ExecuteButtonScriptBlock
-        Update-MSGraphStatus
+        if (Get-Command -Name Get-MGContext -ErrorAction SilentlyContinue) {
+            Update-MSGraphStatus
+        }
+        
     }
     $SourceOnPremCheckBox.Add_Click($SourceChangeLogic)
     $SourceEntraIDCheckBox.Add_Click($SourceChangeLogic)
     $ExecuteFunctionButton.Add_Click($ExecuteButtonScriptBlockOverRide)
+
+    #Test if MSGraph Tools is installed
+    if (Get-Command -Name Get-MGContext -ErrorAction SilentlyContinue) {
+        $MSGraphSessionLabel.Text = "MS Graph Session: $(Get-MGContext | Select -expandproperty Account)"
+    }
+    else {
+        $SourceEntraIDCheckBox.Enabled = $false
+    }
 
     #Show Form
     $MainForm.ShowDialog()
