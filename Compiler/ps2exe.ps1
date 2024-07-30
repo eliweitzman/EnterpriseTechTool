@@ -1,5 +1,13 @@
 ﻿#Requires -Version 3.0
 
+param(
+    [STRING]$inputFile = $NULL, 
+	[STRING]$outputFile = $NULL,
+	[STRING]$iconFile = $NULL,
+	[STRING]$version = $NULL,
+	[string[]]$resources
+)
+
 <#
 .SYNOPSIS
 Converts powershell scripts to standalone executables.
@@ -2827,15 +2835,6 @@ $(if (!$noConsole) {@"
 	}
 }
 
-#Enter the script file location
-$scriptFile = Read-Host "Enter the location of the script file to compile"
-
-#Enter the icon file location
-$iconFile = Read-Host "Enter the location of the icon file to use for the compiled executable"
-
-#Get the version number
-$version = Read-Host "Enter the version number for the compiled executable"
-
 #Additional details
 $title = "Elis Enterprise Tech Toolkit"
 
@@ -2846,4 +2845,4 @@ $description = "A useful set of PS Tools for Windows maintenance and administrat
 $company = "Eli Weitzman"
 
 #Compile the script
-Invoke-ps2exe -inputFile $scriptFile -outputFile "ETT.exe" -x64 -noConsole -iconFile $iconFile -title $title -description $description -company $company -version $version -resources $resources
+Invoke-ps2exe -inputFile $inputFile -outputFile $outputFile -x64 -noConsole -iconFile $iconFile -title $title -description $description -company $company -version $version -resources $resources
