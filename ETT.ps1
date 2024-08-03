@@ -212,7 +212,7 @@ if ($AutoUpdateCheckerEnabled -eq $true) {
         if ($updatePrompt -eq "Yes") {
             #This is for if an application was installed with Winget, or with the self-extracting installer, and is a regular ETT variant
             if (($installType -eq "Installed")) {
-                winget.exe upgrade --id=EliWeitzman.ETT
+                Start-Process powershell.exe -ArgumentList "-command winget upgrade --id EliWeitzman.ETT -e"
             }
             #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
             elseif ($installType -eq "Portable") {
