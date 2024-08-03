@@ -8,7 +8,7 @@ Welcome to Eli's Enterprise Tech Tool (ETT, or Enterprise Tech Tool, for short).
 ## Features
 
 <p align="center">
-  <img src="https://github.com/eliweitzman/EnterpriseTechTool/blob/1.3-Dev/ImageAssets/ETTToolbox.png?raw=true" alt="A screenshot of the application window." width=60% height=60%/>
+  <img src="https://raw.githubusercontent.com/eliweitzman/EnterpriseTechTool/main/ImageAssets/ETTToolbox.png" alt="A screenshot of the application window." width=60% height=60%/>
 </p>
 
 ### Core Functions
