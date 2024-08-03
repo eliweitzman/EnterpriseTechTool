@@ -8,7 +8,7 @@ Welcome to Eli's Enterprise Tech Tool (ETT, or Enterprise Tech Tool, for short).
 ## Features
 
 <p align="center">
-  <img src="https://github.com/eliweitzman/EnterpriseTechTool/blob/main/ImageAssets/UI%20Screenshot.png" alt="A screenshot of the application window." width=50% height=50%/>
+  <img src="https://github.com/eliweitzman/EnterpriseTechTool/blob/1.3-Dev/ImageAssets/ETTToolbox.png?raw=true" alt="A screenshot of the application window." width=60% height=60%/>
 </p>
 
 ### Core Functions
@@ -20,6 +20,7 @@ Welcome to Eli's Enterprise Tech Tool (ETT, or Enterprise Tech Tool, for short).
 - System-aware dark/light mode!
 - Retreive device information details
 - Set hardware/software compliance flags
+- Embed custom powershell scripts
 - And more!
 
 ### Additional Modules!
@@ -59,11 +60,11 @@ ETT can run in a few different ways, depending on preference, and on your own pe
 
 ## Install Methods
 
-1. Using the Windows Package Manager (Machine-wide only... [info](https://github.com/eliweitzman/EnterpriseTechTool/edit/main/README.md#runtime-options))
+1. Using the Windows Package Manager (Machine-wide only... [info](https://github.com/eliweitzman/EnterpriseTechTool/wiki/Compiling-and-Runtime-How%E2%80%90To))
 
 Standard Install:
 ```
-winget install --id=EliWeitzman.ETT
+winget install --id=EliWeitzman.ETT -s winget
 ```
 
 2. Self-extracting Installer
@@ -87,35 +88,11 @@ The application is designed to run as a PowerShell Script, but as well is compil
 
 ## Customizing for your Deployment
 
-In the first few lines of the program, there are a few sections that are commented out, allowing for color customization, as well as other customizations to compliance checking thresholds. These are customizable as needed, but the stock is as well provided, and disables any compliance checks. To understand what each flag does, check out this [Wiki](https://github.com/eliweitzman/EnterpriseTechTool/wiki/Customization-Overview) page for more!
+Starting with ETT 1.3, ETT now supports the implementation of custom config files! The ETTConfig.json file contains all settings that support the various business needs surrounding customization and enhancement. Additionally, ETT now features a graphical settings UI, which will allow for simpler configuration management. Settings GUI can as well be disabled through manual modification of the ETTConfig file. 
 
-```
-#Admin mode - if auto-elevate is enabled, this will be set to $true. If in EXE mode, this is automatically handled by Windows.
-$adminmode = $false
+## Custom Scripts!
 
-#Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
-$BrandColor = '#023a24' #Set the color of the form, currently populated with a hex value.
-$LogoLocation = $null #If you want to use a custom logo, set the path here. Otherwise, leave as $null
-
-#ETT UI Options
-$backgroundImagePath = "" #Set this to a web URL or local path to change the BG image of ETT
-$ettHeaderTextColor = [System.Drawing.Color]::FromName("White")#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
-$timeout = $false #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
-$timeoutLength = 300 #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
-
-#Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
-#RAM Check
-$ramCheckActive = $false
-$ramMinimum = 8 #SET MINIMUM RAM IN GB
-
-#Drivespace Check
-$drivespaceCheckActive = $false
-$drivespaceMinimum = 20 #SET MINIMUM DRIVESPACE IN GB
-
-#Windows Version Check
-$winverCheckActive = $false
-$winverTarget = '22h2' #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
-```
+Included in versions 1.3 and newer, ETT now has baked-in support for custom function imports! For more information, check out the [wiki](https://github.com/eliweitzman/EnterpriseTechTool/wiki) for detailed steps.
 
 ## Contributing
 

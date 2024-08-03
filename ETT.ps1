@@ -15,15 +15,13 @@
 .AUTHOR
     Eli Weitzman
 .NOTES
-    Version:        1.2.1
+    Version:        1.3
     Creation Date:  12-26-22
-    Last Updated:   12-17-23
-    Purpose/Change: Timeout implementation
 
 .LICENSE
     BSD 3-Clause License
 
-    Copyright (c) 2023, Eli Weitzman
+    Copyright (c) 2024, Eli Weitzman
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
@@ -51,43 +49,98 @@
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #>
 
+# Create the Ternary Operator since PowerShell 5 doesn't have it
+set-alias ?: Invoke-Ternary -Option AllScope -Description "PSCX filter alias"
+filter Invoke-Ternary ([scriptblock]$decider, [scriptblock]$ifTrue, [scriptblock]$ifFalse) {
+    if (&$decider) { 
+        &$ifTrue
+    }
+    else { 
+        &$ifFalse 
+    }
+}
+
+#Load ETTConfig.json File
+$jsonConfigString = Get-Content -Path ".\ETTConfig.json" -ErrorAction SilentlyContinue
+$jsonConfig = $jsonConfigString | ConvertFrom-Json
+
 #Import Winforms API for GUI
 Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 #Build Variables
-$ETTVersion = "1.2.1"
-
+$ETTVersion = "1.3"
+$AutoUpdateCheckerEnabled = (?: { $jsonConfig.AutoUpdateCheckerEnabled -ne $null -and $jsonConfig.AutoUpdateCheckerEnabled -ne "" } { $jsonConfig.AutoUpdateCheckerEnabled } { $true })
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
 #Admin mode - if auto-elevate is enabled, this will be set to $true. If in EXE mode, this is automatically handled by Windows.
-$adminmode = $false
+$adminmode = (?: { $jsonConfig.AdminMode -ne $null -and $jsonConfig.AdminMode -ne "" } { $jsonConfig.AdminMode } { $false })
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
-$BrandColor = '#023a24' #Set the color of the form, currently populated with a hex value.
-$LogoLocation = $null #If you want to use a custom logo, set the path here. Otherwise, leave as $null
+$BrandColor = (?: { $jsonConfig.BrandColor -ne $null -and $jsonConfig.BrandColor -ne "" } { $jsonConfig.BrandColor } { '#023a24' }) #Set the color of the form, currently populated with a hex value.
+$LogoLocation = (?: { $jsonConfig.LogoLocation -ne $null -and $jsonConfig.LogoLocation -ne "" } { $jsonConfig.LogoLocation } { $null }) #If you want to use a custom logo, set the path here. Otherwise, leave as $null
 
 #ETT UI Options
-$backgroundImagePath = "" #Set this to a web URL or local path to change the BG image of ETT
-$ettHeaderTextColor = [System.Drawing.Color]::FromName("White")#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
-$timeout = $false #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
-$timeoutLength = 300 #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
+$backgroundImagePath = (?: { $jsonConfig.BackgroundImagePath -ne $null -and $jsonConfig.BackgroundImagePath -ne "" } { $jsonConfig.BackgroundImagePath } { "" }) #Set this to a web URL or local path to change the BG image of ETT
+$ettApplicationTitle = (?: { $jsonConfig.ETTApplicationTitle -ne $null -and $jsonConfig.ETTApplicationTitle -ne "" } { "$($jsonConfig.ETTApplicationTitle) V$ETTVersion" } { "Eli's Enterprise Tech Tool V$ETTVersion" })
+$ettHeaderText = (?: { ($jsonConfig.ETTHeaderText -ne $null -and $jsonConfig.ETTHeaderText -ne "") } { $jsonConfig.ETTHeaderText } { "Enterprise Tech Tool" })
+$ettHeaderTextColor = (?: { $jsonConfig.ETTHeaderTextColor -ne $null -and $jsonConfig.ETTHeaderTextColor -ne "" } { [System.Drawing.Color]::FromName($jsonConfig.ETTHeaderTextColor) } { [System.Drawing.Color]::FromName("White") })#Override the color of the ETT header if a BG image is set. Otherwise, it will change based on system theme
+$timeout = (?: { $jsonConfig.ApplicationTimeoutEnabled -ne $null -and $jsonConfig.ApplicationTimeoutEnabled -ne "" } { $jsonConfig.ApplicationTimeoutEnabled } { $false }) #Set this to $true to enable a timeout for ETT. Otherwise, set to $false
+$timeoutLength = (?: { $jsonConfig.ApplicationTimeoutLength -ne $null -and $jsonConfig.ApplicationTimeoutLength -ne "" } { $jsonConfig.ApplicationTimeoutLength } { 300 }) #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
 
-#Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
+#Custom Toolbox - CHANGE THIS TO MATCH YOUR PREFERENCE
+$customTools = (?: { $jsonConfig.EnableCustomTools -ne $null -and $jsonConfig.EnableCustomTools -ne "" } { $jsonConfig.EnableCustomTools } { $true }) #Set this to $true to enable custom functions. Otherwise, set to $false
+
+<#Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#>
+
 #RAM Check
-$ramCheckActive = $false
-$ramMinimum = 8 #SET MINIMUM RAM IN GB
+$ramCheckActive = (?: { $jsonConfig.RAMCheckActive -ne $null -and $jsonConfig.RAMCheckActive -ne "" } { $jsonConfig.RAMCheckActive } { $false })
+$ramMinimum = (?: { $jsonConfig.RAMCheckMinimum -ne $null -and $jsonConfig.RAMCheckMinimum -ne "" } { $jsonConfig.RAMCheckMinimum } { 8 }) #SET MINIMUM RAM IN GB
 
 #Drivespace Check
-$drivespaceCheckActive = $false
-$drivespaceMinimum = 20 #SET MINIMUM DRIVESPACE IN GB
+$drivespaceCheckActive = (?: { $jsonConfig.DriveSpaceCheckActive -ne $null -and $jsonConfig.DriveSpaceCheckActive -ne "" } { $jsonConfig.DriveSpaceCheckActive } { $false })
+$drivespaceMinimum = (?: { $jsonConfig.DriveSpaceCheckMinimum -ne $null -and $jsonConfig.DriveSpaceCheckMinimum -ne "" } { $jsonConfig.DriveSpaceCheckMinimum } { 20 }) #SET MINIMUM DRIVESPACE IN GB
 
 #Windows Version Check
-$winverCheckActive = $false
-$winverTarget = '22h2' #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
+$winverCheckActive = (?: { $jsonConfig.WinVersionCheckActive -ne $null -and $jsonConfig.WinVersionCheckActive -ne "" } { $jsonConfig.WinVersionCheckActive } { $false })
+$winverTarget = (?: { $jsonConfig.WinVersionTarget -ne $null -and $jsonConfig.WinVersionTarget -ne "" } { $jsonConfig.WinVersionTarget } { "24H2" }) #SET TARGET WINDOWS VERSION (21h1, 21h2, 22h2)
 
-<#Notification Framework - COMING IN 1.2.1
+#Defender Enrollment Check
+$defenderEnrollCheckActive = (?: { $jsonConfig.DefenderEnrollCheckActive -ne $null -and $jsonConfig.DefenderEnrollCheckActive -ne "" } { $jsonConfig.DefenderEnrollCheckActive } { $false })
+
+#Azure Information
+$azureADTenantId = (?: { $jsonConfig.AzureADTenantId -ne $null -and $jsonConfig.AzureADTenantId -ne "" } { $jsonConfig.AzureADTenantId } { "" })
+$lapsAppClientId = (?: { $jsonConfig.LAPSAppClientId -ne $null -and $jsonConfig.LAPSAppClientId -ne "" } { $jsonConfig.LAPSAppClientId } { "" })
+$bitLockerAppClientId = (?: { $jsonConfig.BitLockerAppClientId -ne $null -and $jsonConfig.BitLockerAppClientId -ne "" } { $jsonConfig.BitLockerAppClientId } { "" })
+
+#Anime Mode
+$animeMode = (?: { $jsonConfig.AnimeMode -ne $null -and $jsonConfig.AnimeMode -ne $false -and $jsonConfig.AnimeMode -ne "" } { $jsonConfig.AnimeMode } { "" })
+$animeImageArr = @("https://cache.desktopnexus.com/thumbseg/2451/2451508-bigthumbnail.jpg", "https://wallpapercave.com/wp/wp9498801.jpg", "https://itsaboutanime.files.wordpress.com/2019/12/12-best-anime-wallpapers-in-hd-and-4k-that-you-must-get-now.jpg", "https://i.redd.it/qe5tn9xjubkc1.jpeg","https://images.hdqwalls.com/wallpapers/kawaii-neon-anime-girl-jr.jpg")
+if ($animeMode) {
+    $selectedAnimeImage = $animeImageArr | Get-Random
+    $backgroundImagePath = $selectedAnimeImage
+}
+
+<#Custom Functions - Place custom functions below:
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Naming must follow this format in order to work: "custom_FUNCTIONNAME"
+#>
+
+#Custom Test Functions
+function custom_ExampleFunction {
+    $wshell = New-Object -ComObject Wscript.Shell
+    $wshell.Popup("This example function was triggered from a Custom Function list click.", 0, "Example Function", 0x1)
+}
+
+<#
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+END CUSTOM FUNCTIONS
+#>
+
+<#Notification Framework - COMING SOON(TM)
 
 #Set ticketing system - CHANGE THIS TO MATCH YOUR PREFERENCE (Jira or ServiceNow or Email. Null will disable)
 $ticketType = $null
@@ -132,35 +185,39 @@ if (($ScriptPath -eq "C:\Users\$env:UserName\AppData\Local\Programs\Eli's Enterp
 
 #Check for updates
 
-# GitHub API endpoint for tags
-$apiUrl = "https://api.github.com/repos/eliweitzman/EnterpriseTechTool/tags"
-# Make a web request to the GitHub API
-try {
-    $response = Invoke-RestMethod -Uri $apiUrl -Method Get -ErrorAction SilentlyContinue
+if ($AutoUpdateCheckerEnabled -eq $true) {
 
-    # Extract the name of the latest tag
-    $latestTag = $response[0].name
+    # GitHub API endpoint for tags
+    $apiUrl = "https://api.github.com/repos/eliweitzman/EnterpriseTechTool/tags"
+    # Make a web request to the GitHub API
+    try {
+        $response = Invoke-RestMethod -Uri $apiUrl -Method Get -ErrorAction SilentlyContinue
 
-    #Check the tag against our current application version
-    $applicationVersion = [System.Version]::new($ETTVersion)
-    $githubVersion = [System.Version]::new($latestTag)
-}
-catch {
-    #IF Device is offline, don't check for updates, and thus set these to a value that will not trigger an update prompt
-    $applicationVersion = $true
-    $githubVersion = $true
-}
+        # Extract the name of the latest tag
+        $latestTag = $response[0].name
 
-if ($applicationVersion -lt $githubVersion) {
-    $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
-    if ($updatePrompt -eq "Yes") {
-        #This is for if an application was installed with Winget, or with the self-extracting installer, and is a regular ETT variant
-        if (($installType -eq "Installed")) {
-            winget.exe upgrade --id=EliWeitzman.ETT
-        }
-        #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
-        elseif ($installType -eq "Portable") {
-            Start-Process "https://github.com/eliweitzman/EnterpriseTechTool"
+        #Check the tag against our current application version
+        $applicationVersion = [System.Version]::new($ETTVersion)
+        $githubVersion = [System.Version]::new($latestTag)
+    }
+    catch {
+        #IF Device is offline, don't check for updates, and thus set these to a value that will not trigger an update prompt
+        $applicationVersion = $true
+        $githubVersion = $true
+    }
+
+    #Update Checker
+    if ($applicationVersion -lt $githubVersion) {
+        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
+        if ($updatePrompt -eq "Yes") {
+            #This is for if an application was installed with Winget, or with the self-extracting installer, and is a regular ETT variant
+            if (($installType -eq "Installed")) {
+                winget.exe upgrade --id=EliWeitzman.ETT
+            }
+            #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
+            elseif ($installType -eq "Portable") {
+                Start-Process "https://github.com/eliweitzman/EnterpriseTechTool"
+            }
         }
     }
 }
@@ -175,14 +232,14 @@ if ($theme -eq 0) {
     #DARK MODE
     $BGcolor = 'Black'
     $TextColor = 'White'
-    $ButtonText = 'White'
+    $ButtonTextColor = 'White'
     $BoxColor = $BrandColor
 }
 else {
     #LIGHT MODE
     $BGcolor = 'WhiteSmoke'
     $TextColor = 'Black'
-    $ButtonText = 'White'
+    $ButtonTextColor = 'White'
     $BoxColor = $BrandColor
 }
 
@@ -205,6 +262,8 @@ $shieldIconBytes = [Convert]::FromBase64String($shieldIconBase64)
 $shieldMemoryStream = New-Object IO.MemoryStream($shieldIconBytes, 0, $shieldIconBytes.Length)
 $shieldMemoryStream.Write($shieldIconBytes, 0, $shieldIconBytes.Length)
 $shieldIcon = [System.Drawing.Image]::FromStream($shieldMemoryStream, $true)
+#Convert icon to usable in text string (emoji)
+$shieldIconEmoji = [char]::ConvertFromUtf32(0x1F6E1)
 
 
 #Capture Machine Info, and make a loading screen
@@ -243,8 +302,8 @@ $LoadingProgressBar.TabIndex = 1
 $LoadingProgressBar.Value = 0
 
 #Add controls to form
-$LoadingForm.Controls.Add($LoadingLabel)
-$LoadingForm.Controls.Add($LoadingProgressBar)
+$LoadingForm.Controls.Add($LoadingLabel) | Out-Null
+$LoadingForm.Controls.Add($LoadingProgressBar) | Out-Null
 
 #Show the form
 [void]$LoadingForm.Show()
@@ -252,47 +311,84 @@ $LoadingForm.Controls.Add($LoadingProgressBar)
 #Conditions to load
 $LoadingLabel.Text = "Getting username..."
 $username = whoami.exe
-$outputsuppressed = $LoadingProgressBar.Value = 10
+$LoadingProgressBar.Value = 10
 
 $LoadingLabel.Text = "Getting hostname..."
 $hostname = HOSTNAME.EXE
-$outputsuppressed = $LoadingProgressBar.Value = 20
+$LoadingProgressBar.Value = 20
 
 $LoadingLabel.Text = "Getting Windows Version..."
 $winver = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").DisplayVersion
-$outputsuppressed = $LoadingProgressBar.Value = 30
+$LoadingProgressBar.Value = 30
+
+$LoadingLabel.Text = "Getting Windows Defender Status..."
+$defenderEnrollmentStatus = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows Advanced Threat Protection\Status" -ErrorAction SilentlyContinue).OnboardingState
+$LoadingProgressBar.Value = 35
 
 $LoadingLabel.Text = "Getting Manufacturer..."
 $manufacturer = Get-WmiObject -Class Win32_ComputerSystemProduct | Select-Object -ExpandProperty Vendor
-$outputsuppressed = $LoadingProgressBar.Value = 40
+$LoadingProgressBar.Value = 40
 
 $LoadingLabel.Text = "Getting Model..."
 $model = Get-WmiObject -Class Win32_ComputerSystem -Property Model | Select-Object -ExpandProperty Model
-$outputsuppressed = $LoadingProgressBar.Value = 50
+$LoadingProgressBar.Value = 50
+
+$LoadingLabel.Text = "Checking Hosts File..."
+$hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
+$hostsCompliant = $true
+$hostsText = "Host File Integrity: Unmodified"
+if ($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085") {
+    $hostsCompliant = $false
+    $hostsText = "Host File Integrity: Modified"
+}
+$LoadingProgressBar.Value = 55
 
 $LoadingLabel.Text = "Getting Domain..."
 $domain = (Get-CIMInstance -ClassName Win32_ComputerSystem).Domain
-$outputsuppressed = $LoadingProgressBar.Value = 60
+$LoadingProgressBar.Value = 60
 
 $LoadingLabel.Text = "Getting Drive Info..."
 $drivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
-$outputsuppressed = $LoadingProgressBar.Value = 70
+$freedrivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output $('{0:N2}' -f ($_.FreeSpace / 1gb)) }
+$LoadingProgressBar.Value = 70
 
 $LoadingLabel.Text = "Getting RAM Info..."
 $ramCheck = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
-$outputsuppressed = $LoadingProgressBar.Value = 80
+$LoadingProgressBar.Value = 80
+
+$LoadingLabel.Text = "Getting Defender Enrollment Status..."
+$checkDefenderEnroll = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows Advanced Threat Protection\Status" -ErrorAction SilentlyContinue).OnboardingState
+if ($checkDefenderEnroll -eq 1) {
+    $defenderEnrollStatus = $true
+}
+else {
+    $defenderEnrollStatus = $false
+}
+$LoadingProgressBar.Value = 82
+
+$loadingLabel.Text = "Getting RSAT Info..."
+Import-Module ActiveDirectory -ErrorAction SilentlyContinue
+if (Get-Module -Name "ActiveDirectory") {
+    $rsatInfo = "Installed"
+}
+else {
+    $rsatInfo = "NotPresent"
+}
+$LoadingProgressBar.Value = 85
 
 $LoadingLabel.Text = "Getting CPU Info..."
 $cpuCheck = Get-WmiObject -Class Win32_Processor | Select-Object -ExpandProperty Name
-$outputsuppressed = $LoadingProgressBar.Value = 90
+$LoadingProgressBar.Value = 90
 
 $LoadingLabel.Text = "Getting Device Type..."
 $devicetype = (Get-WmiObject -Class Win32_ComputerSystem -Property PCSystemType).PCSystemType
-$outputsuppressed = $LoadingProgressBar.Value = 95
+$LoadingProgressBar.Value = 95
 
 $LoadingLabel.Text = "Getting Drive Type..."
 $drivetype = Get-PhysicalDisk | Where-Object DeviceID -eq 0 | Select-Object -ExpandProperty MediaType
-$outputsuppressed = $LoadingProgressBar.Value = 100
+$LoadingProgressBar.Value = 100
+
+
 
 $LoadingLabel.Text = "Loading Complete!"
 
@@ -316,784 +412,17 @@ $cpuCheck = (Get-Process -Id $PID).ProcessorName
 $drivetype = (Get-PhysicalDisk | Where-Object DeviceID -eq 0).MediaType
 $complianceFlag = $false#>
 
-#Function for AD Computer or User Lookup, depending on the value of $ADLookupType parameter - DISABLED FOR INITIAL RELEASE, WILL BE RE-ENABLED IN FUTURE, after fixing bugs
 
-function ADLookup {
-    <# 
-.NAME
-    Active Directory Explorer
-.SYNOPSIS
-    A simplified version of Active Directory
-.DESCRIPTION
-    Imagine Active Directory Users and Computers... but with massive training wheels. Introducing AD Explorer!     
-.AUTHOR
-    Eli Weitzman
-.NOTES
-    Version:        1.0
-    Creation Date:  4-24-23
-    Last Updated:   4-24-23
-    Purpose/Change: Initial Build
-
-    MUST COMPILE WITH x64
-#>
-
-    # Import Modules
-
-    #Import Winforms API for GUI
-    $outputsuppressed = Add-Type -AssemblyName System.Windows.Forms
-    [System.Windows.Forms.Application]::EnableVisualStyles()
-
-    #Initial Declarations
-    $outputSuppressed # A Buffer for GUI Processing
-
-    #GUI
-    $ADForm = New-Object System.Windows.Forms.Form
-    $ADForm.Text = "Active Directory Explorer"
-    $ADForm.Width = 800
-    $ADForm.Height = 600
-    $ADForm.StartPosition = "CenterScreen"
-    $ADForm.FormBorderStyle = "Fixed3D"
-    $ADForm.MaximizeBox = $false
-    $ADForm.MinimizeBox = $false
-    $ADForm.ShowIcon = $false
-    $ADForm.TopMost = $true
-    $ADForm.BackColor = $BGcolor
-
-    #Label next to Search Field - Call it "Search Query:"
-    $SearchLabel = New-Object System.Windows.Forms.Label
-    $SearchLabel.Location = New-Object System.Drawing.Point(10, 10)
-    $SearchLabel.Width = 105
-    $SearchLabel.Height = 20
-    $SearchLabel.Text = "Search Query:"
-    $SearchLabel.Font = New-Object System.Drawing.Font("Arial", 11)
-    $SearchLabel.ForeColor = $TextColor
-    $SearchLabel.TabIndex = 0
-    $SearchLabel.TextAlign = "MiddleLeft"
-    $SearchLabel.UseMnemonic = $false
-    $SearchLabel.Visible = $true
-    $ADForm.Controls.Add($SearchLabel)
-
-    #Field for User Input - Call it "Search"
-    $Search = New-Object System.Windows.Forms.TextBox
-    $Search.Location = New-Object System.Drawing.Point(115, 10)
-    $Search.Width = 300
-    $Search.Height = 20
-    $Search.Multiline = $false
-    $Search.ReadOnly = $false
-    $Search.ScrollBars = "None"
-    $Search.TextAlign = "Left"
-    $Search.WordWrap = $false
-    $Search.Font = New-Object System.Drawing.Font("Arial", 10)
-    $Search.BackColor = "White"
-    $Search.ForeColor = "Black"
-    $Search.BorderStyle = "FixedSingle"
-    $Search.TabIndex = 0
-    $Search.AcceptsReturn = $false
-    $Search.AcceptsTab = $false
-    $Search.HideSelection = $true
-    $Search.ShortcutsEnabled = $true
-    $Search.ImeMode = "NoControl"
-    $ADForm.Controls.Add($Search)
-
-    #Dropdown for User Input - Choose User, Group, or Computer
-    $SearchType = New-Object System.Windows.Forms.ComboBox
-    $SearchType.Location = New-Object System.Drawing.Point(420, 10)
-    $SearchType.Width = 100
-    $SearchType.Height = 20
-    $SearchType.Text = "Search Type"
-    $SearchType.Font = New-Object System.Drawing.Font("Arial", 10)
-    $SearchType.BackColor = "White"
-    $SearchType.ForeColor = "Black"
-    $SearchType.DropDownStyle = "DropDownList"
-    $SearchType.TabIndex = 2
-    $SearchType.Items.Add("User")
-    $SearchType.Items.Add("Group")
-    $SearchType.Items.Add("Computer")
-    $ADForm.Controls.Add($SearchType)
-
-    #Button for User Input - Call it "Search"
-    $SearchButton = New-Object System.Windows.Forms.Button
-    $SearchButton.Location = New-Object System.Drawing.Point(530, 10)
-    $SearchButton.Width = 100
-    $SearchButton.Height = 23
-    $SearchButton.Text = "Search"
-    $SearchButton.Font = New-Object System.Drawing.Font("Arial", 10)
-    $SearchButton.BackColor = $BrandColor
-    $SearchButton.ForeColor = $ButtonText
-    $SearchButton.FlatStyle = "Flat"
-    $SearchButton.TabIndex = 1
-    $ADForm.Controls.Add($SearchButton)
-
-    #DomainLabel for User Input - Call it "Domain:"
-    $DomainLabel = New-Object System.Windows.Forms.Label
-    $DomainLabel.Location = New-Object System.Drawing.Point(10, 40)
-    $DomainLabel.Width = 75
-    $DomainLabel.Height = 20
-    $DomainLabel.Text = "Domain:"
-    $DomainLabel.Font = New-Object System.Drawing.Font("Arial", 11)
-    $DomainLabel.ForeColor = $TextColor
-    $DomainLabel.TabIndex = 0
-    $DomainLabel.TextAlign = "MiddleLeft"
-    $DomainLabel.UseMnemonic = $false
-    $DomainLabel.Visible = $true
-    $ADForm.Controls.Add($DomainLabel)
-
-    #DomainBox for User Input - TextInput for Domain
-    $DomainBox = New-Object System.Windows.Forms.TextBox
-    $DomainBox.Location = New-Object System.Drawing.Point(115, 40)
-    $DomainBox.Width = 230
-    $DomainBox.Height = 20
-    $DomainBox.Multiline = $false
-    $DomainBox.ReadOnly = $false
-    $DomainBox.ScrollBars = "None"
-    $DomainBox.TextAlign = "Left"
-    $DomainBox.WordWrap = $false
-    $DomainBox.Font = New-Object System.Drawing.Font("Arial", 10)
-    $DomainBox.BackColor = "White"
-    $DomainBox.ForeColor = "Black"
-    $DomainBox.BorderStyle = "FixedSingle"
-    $DomainBox.TabIndex = 0
-    $DomainBox.AcceptsReturn = $false
-    $DomainBox.Enabled = $false
-    $DomainBox.Text = $env:USERDNSDOMAIN
-    $ADForm.Controls.Add($DomainBox)
-
-    #Domain Checkbox to enable Domain Search
-    $DomainCheck = New-Object System.Windows.Forms.CheckBox
-    $DomainCheck.Location = New-Object System.Drawing.Point(85, 40)
-    $DomainCheck.Width = 20
-    $DomainCheck.Height = 20
-    $DomainCheck.Checked = $false
-    $ADForm.Controls.Add($DomainCheck)
-
-    $DomainCheck.Add_Click({
-            if ($DomainCheck.Checked -eq $true) {
-                $DomainBox.Enabled = $true
-                #Clear DomainBox
-                $DomainBox.Text = $null
-                #White out DomainBox
-                $DomainBox.BackColor = "White"
-                $DomainBox.ReadOnly = $false
-            }
-            else {
-                $DomainBox.Enabled = $false
-                #Grab Domain from System
-                $DomainBox.Text = $env:USERDNSDOMAIN
-                #Grey out DomainBox
-                $DomainBox.BackColor = "LightGray"
-                $DomainBox.ReadOnly = $true
-            }
-        })
-
-    #Dynamic Frame for Results
-    $Results = New-Object System.Windows.Forms.ListBox
-    $Results.Location = New-Object System.Drawing.Point(10, 80)
-    $Results.Width = 760
-    $Results.Height = 500
-    $Results.Text = "Results"
-    $Results.Font = New-Object System.Drawing.Font("Arial", 10)
-    $Results.BackColor = "White"
-    $Results.ForeColor = "Black"
-    $Results.TabIndex = 3
-    $Results.TabStop = $false
-    $Results.Visible = $true
-    $Results.Enabled = $true
-    $Results.Items.Add("Results:")
-    $ADForm.Controls.Add($Results)
-
-    #Create logic for on search button click, with a switch statement for the search type
-
-    #Search Button Click Event
-    $searchOnClick = ({
-            try {
-                if ($SearchType.Text -eq "User") {
-                    #Capture ADUser Object from Search, and add properties (DistinguishedName, Enabled, GivenName, Name, ObjectClass, ObjectGUID, SamAccountName, SID, Surname, UserPrincipalName) as rows to an array
-                    $Info = Get-ADUser $Search.Text -Server $DomainBox.Text -Properties Name, SamAccountName, Description, DistinguishedName, Enabled, GivenName, Surname, SID, UserPrincipalName
-                    foreach ($User in $Info) {
-                        $UserArray = @()
-                        $UserArray += "Name: " + $User.Name
-                        $UserArray += "SamAccountName: " + $User.SamAccountName
-                        $UserArray += "Description: " + $User.Description
-                        $UserArray += "DistinguishedName: " + $User.DistinguishedName
-                        $UserArray += "Enabled: " + $User.Enabled
-                        $UserArray += "GivenName: " + $User.GivenName
-                        $UserArray += "Surname: " + $User.Surname
-                        $UserArray += "SID: " + $User.SID
-                        $UserArray += "UserPrincipalName: " + $User.UserPrincipalName
-                    }
-                    #Populate Results Frame with User Results
-                    $Results.Items.Clear()
-                    $Results.Items.AddRange(@($UserArray))
-    
-                }
-                elseif ($SearchType.Text -eq "Group") {
-                    $Info = Get-ADGroup -Identity $Search.Text -Server $DomainBox.Text -Properties DistinguishedName, GroupCategory, GroupScope, Name, SamAccountName, Description, Members
-                    #Populate Results Frame with Group Results
-                    foreach ($Group in $Info) {
-                        $GroupArray = @()
-                        $GroupArray += "Name: " + $Group.Name
-                        $GroupArray += "SamAccountName: " + $Group.SamAccountName
-                        $GroupArray += "Description: " + $Group.Description
-                        $GroupArray += "DistinguishedName: " + $Group.DistinguishedName
-                        $GroupArray += "GroupCategory: " + $Group.GroupCategory
-                        $GroupArray += "GroupScope: " + $Group.GroupScope
-                        $GroupArray += "Members: " + $Group.Members
-                    }
-                    $Results.Items.Clear()
-                    $Results.Items.AddRange(@($GroupArray))
-    
-                }
-                elseif ($SearchType.Text -eq "Computer") {
-                    $Info = Get-ADComputer -Identity $Search.Text -Server $DomainBox.Text -Properties Description, DistinguishedName, DNSHostName, Enabled, LastLogonDate, LockedOut, Name, ObjectClass, ObjectGUID, OperatingSystem, OperatingSystemVersion, SamAccountName, SID, WhenChanged, WhenCreated, WhenCreated
-                    #Populate Results Frame with Computer Results
-                    foreach ($Computer in $Info) {
-                        $ComputerArray = @()
-                        $ComputerArray += "Name: " + $Computer.Name
-                        $ComputerArray += "SamAccountName: " + $Computer.SamAccountName
-                        $ComputerArray += "Description: " + $Computer.Description
-                        $ComputerArray += "DistinguishedName: " + $Computer.DistinguishedName
-                        $ComputerArray += "DNSHostName: " + $Computer.DNSHostName
-                        $ComputerArray += "Enabled: " + $Computer.Enabled
-                        $ComputerArray += "LastLogonDate: " + $Computer.LastLogonDate
-                        $ComputerArray += "LockedOut: " + $Computer.LockedOut
-                        $ComputerArray += "OperatingSystem: " + $Computer.OperatingSystem
-                        $ComputerArray += "OperatingSystemVersion: " + $Computer.OperatingSystemVersion
-                        $ComputerArray += "SID: " + $Computer.SID
-                        $ComputerArray += "WhenChanged: " + $Computer.WhenChanged
-                        $ComputerArray += "WhenCreated: " + $Computer.WhenCreated
-                    }
-    
-                    $Results.Items.Clear()
-                    $Results.Items.AddRange(@($ComputerArray))
-                }
-                else {
-                    #Fallback, populate with error to select a search type
-                    $Results.Items.Clear()
-                    $Results.Items.AddRange("Please select a search type")
-                }
-            }
-            catch {
-                $Results.Items.Clear()
-                $Results.Items.AddRange("Error: " + $_.Exception.Message)
-            }
-        })
-
-    #Add Event Handler to Search Button
-    $SearchButton.add_Click($searchOnClick)
-
-    #Add Enter Key Event Handler to Search Field
-    $Search.add_KeyDown({
-            if ($_.KeyCode -eq "Enter") {
-                $searchOnClick.Invoke()
-            }
-        })
-
-    #Show GUI
-    $ADForm.ShowDialog()
-    
-}
-
-function LAPSTool {
-    # Import the module
-    Add-Type -AssemblyName System.Windows.Forms
-    [System.Windows.Forms.Application]::EnableVisualStyles()
-
-    #Create box
-    $LapsForm = New-Object system.Windows.Forms.Form
-    $LapsForm.ClientSize = New-Object System.Drawing.Point(450, 301)
-    $LapsForm.text = "LAPS GUI"
-    $LapsForm.BackColor = $BGcolor
-    $LapsForm.ForeColor = $TextColor
-    $LapsForm.FormBorderStyle = 'FixedDialog'
-    $LapsForm.StartPosition = 'CenterScreen'
-
-    #Title for box
-    $titleTag = New-Object system.Windows.Forms.Label
-    $titleTag.text = "LAPS GUI"
-    $titleTag.width = 25
-    $titleTag.height = 10
-    $titleTag.location = New-Object System.Drawing.Point(88, 20)
-    $titleTag.Font = New-Object System.Drawing.Font('Segoe UI', 16, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-    $titleTag.AutoSize = $true
-    $titleTag.ForeColor = $TextColor
-
-    #Logo sourced from choccolatey gal
-    $Lapslogo = New-Object system.Windows.Forms.PictureBox
-    $Lapslogo.width = 106
-    $Lapslogo.height = 72
-    $Lapslogo.location = New-Object System.Drawing.Point(313, 17)
-    $Lapslogo.imageLocation = "https://community.chocolatey.org/content/packageimages/laps.6.2.0.20210403.png"
-    $Lapslogo.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::zoom
-
-    #Checkbox for using Windows LAPS
-    $windowsLaps = New-Object system.Windows.Forms.CheckBox
-    $windowsLaps.text = "Use Windows LAPS"
-    $windowsLaps.AutoSize = $true
-    $windowsLaps.width = 25
-    $windowsLaps.height = 10
-    $windowsLaps.location = New-Object System.Drawing.Point(17, 60)
-
-    #To the right of the checkbox for using Windows LAPS, add a LAPS Azure AD option checkbox
-    $azureLaps = New-Object system.Windows.Forms.CheckBox
-    $azureLaps.text = "Use Azure AD LAPS"
-    $azureLaps.AutoSize = $true
-    $azureLaps.width = 25
-    $azureLaps.height = 10
-    $azureLaps.location = New-Object System.Drawing.Point(150, 60)
-
-    #IF Azure LAPS is checked, disable the Windows LAPS checkbox, and domain input box
-    $azureLaps.Add_CheckStateChanged({
-            if ($azureLaps.Checked -eq $true) {
-                #Re-enable the start button if it was disabled by RSAT not being installed
-                $lapsStart.Enabled = $true
-
-                $windowsLaps.Checked = $false
-                $windowsLaps.Enabled = $false
-                $altCreds.Enabled = $false
-                $altCreds.Checked = $false
-
-                #If azure LAPS is checked, change the domain input box to the Azure AD tenant ID input box
-                $domainLabel.Text = "Tenant ID:"
-                $domainInput.Text = ""
-
-                #Move the domain input box to the right to make room for title text
-                $domainInput.Location = New-Object System.Drawing.Point(90, 114)
-
-                #If Azure LAPS is checked, change the hostname input box to the device ID input box
-                $hostnameLabel.Text = "Device ID:"
-                $hostnameInput.Text = ""
-            
-
-                #Align the username input box with the hostname input box
-                $usernameInfo.Location = New-Object System.Drawing.Point(16, 189)
-
-                #If Azure LAPS is checked, change the username input box to the client ID input box
-                $usernameInfo.Text = "Client ID:"
-                $usernameInput.Text = ""
-                $usernameInput.Enabled = $true
-
-                #Enable the domain input box, and remove the domain from the input box
-                $domainInput.Enabled = $true
-                $domainInput.Text = ""
-
-                #If Azure LAPS is checked, change the start button to say "Get Password"
-                $lapsStart.Text = "Get Password"
-            }
-            else {
-                $windowsLaps.Enabled = $true
-                $domainInput.Enabled = $true
-                $altCreds.Enabled = $true
-
-                #If Azure LAPS is not checked, change the domain input box to the domain input box
-                $domainLabel.Text = "Domain:"
-                $domainInput.Text = $domain
-
-                #Reset the domain input box to the left
-                $domainInput.Location = New-Object System.Drawing.Point(80, 114)
-
-                #If Azure LAPS is not checked, change the hostname input box to the hostname input box
-                $hostnameLabel.Text = "Machine Hostname:"
-                $hostnameInput.Text = ""
-            
-                #If Azure LAPS is not checked, change the username input box to the username input box
-                $usernameInfo.Text = "Your Username:"
-                $usernameInput.Text = $domain + "\" + $env:USERNAME
-                $usernameInput.Enabled = $false
-
-                #If Azure LAPS is not checked, change the start button to say "Start"
-                $lapsStart.Text = "Start"
-
-                #Also, check to see if RSAT is installed. If not, disable the start button
-                if (Get-Module -ListAvailable -Name ActiveDirectory) {
-                    $lapsStart.Enabled = $true
-                }
-                else {
-                    $lapsStart.Enabled = $false
-                    #set text to say RSAT is not installed
-                    $lapsStart.Text = "RSAT Missing"
-                }
-            }
-        })
-
-    #Checkbox for using alternate credentials
-    $altCreds = New-Object system.Windows.Forms.CheckBox
-    $altCreds.text = "Use Alternate Credentials"
-    $altCreds.AutoSize = $true
-    $altCreds.width = 25
-    $altCreds.height = 10
-    $altCreds.location = New-Object System.Drawing.Point(17, 80)
-
-    #Label for domain info
-    $domainLabel = New-Object system.Windows.Forms.Label
-    $domainLabel.text = "Domain:"
-    $domainLabel.AutoSize = $true
-    $domainLabel.width = 25
-    $domainLabel.height = 10
-    $domainLabel.location = New-Object System.Drawing.Point(16, 116)
-    $domainLabel.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-    $domainLabel.ForeColor = $TextColor
-
-    #Domain input box
-    $domainInput = New-Object system.Windows.Forms.TextBox
-    $domainInput.multiline = $false
-    $domainInput.width = 300
-    $domainInput.height = 20
-    $domainInput.Anchor = 'top'
-    $domainInput.location = New-Object System.Drawing.Point(80, 114)
-    $domainInput.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
-
-    #Hostname information label
-    $hostnameLabel = New-Object system.Windows.Forms.Label
-    $hostnameLabel.text = "Machine Hostname:"
-    $hostnameLabel.AutoSize = $true
-    $hostnameLabel.width = 25
-    $hostnameLabel.height = 10
-    $hostnameLabel.location = New-Object System.Drawing.Point(16, 152)
-    $hostnameLabel.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-    $hostnameLabel.ForeColor = $TextColor
-
-    #Input field for hostname
-    $hostnameInput = New-Object system.Windows.Forms.TextBox
-    $hostnameInput.multiline = $false
-    $hostnameInput.width = 269
-    $hostnameInput.height = 20
-    $hostnameInput.location = New-Object System.Drawing.Point(154, 152)
-    $hostnameInput.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
-    $hostname = $hostnameInput.Text
-
-    #Username information label
-    $usernameInfo = New-Object system.Windows.Forms.Label
-    $usernameInfo.text = "Your Username:"
-    $usernameInfo.AutoSize = $true
-    $usernameInfo.width = 25
-    $usernameInfo.height = 10
-    $usernameInfo.location = New-Object System.Drawing.Point(16, 189)
-    $usernameInfo.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-    $usernameInfo.ForeColor = $TextColor
-
-    #Username input box
-    $usernameInput = New-Object system.Windows.Forms.TextBox
-    $usernameInput.multiline = $false
-    $usernameInput.width = 406
-    $usernameInput.height = 20
-    $usernameInput.location = New-Object System.Drawing.Point(17, 216)
-    $usernameInput.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
-    #Lock input box until alternate credentials is checked
-    $usernameInput.Text = $domain + "\" + $env:USERNAME
-    $usernameInput.Enabled = $false
-
-    #Logic to enable/disable username input box - if alternate credentials is checked, enable the username input box. If not, disable it, unless Azure LAPS is checked
-    $altCreds.Add_CheckStateChanged({
-            if ($altCreds.Checked -eq $true) {
-                $usernameInput.Enabled = $true
-            }
-            else {
-                if ($azureLaps.Checked -eq $false) {
-                    $usernameInput.Enabled = $false
-                }
-                else {
-                    $usernameInput.Enabled = $false
-                }
-            }
-        })
-
-    #Logic to update the username input box when the domain input box is updated, but only if Azure LAPS is not checked
-    $domainInput.Add_TextChanged({
-            if ($azureLaps.Checked -eq $false) {
-                $usernameInput.Text = $domainInput.Text + "\" + $env:USERNAME
-            }
-        })
-
-    #Start button that closes window to run
-    $lapsStart = New-Object system.Windows.Forms.Button
-    $lapsStart.text = "Start"
-    $lapsStart.width = 125
-    $lapsStart.height = 30
-    $lapsStart.location = New-Object System.Drawing.Point(154, 251)
-    $lapsStart.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-    $lapsStart.BackColor = $BoxColor
-    $lapsStart.ForeColor = $TextColor
-    $lapsStart.Add_Click({ 
-            <#Based on toggle switches, there are a few different ways to run the script
-        1. Standard LAPS, no alternate credentials
-        2. Standard LAPS, alternate credentials
-        3. Windows LAPS, no alternate credentials
-        4. Windows LAPS, alternate credentials
-        5. Azure LAPS (no alternate credentials)
-        #>
-
-            #If Azure LAPS is checked, run the Azure LAPS process
-            if ($azureLaps.Checked -eq $true -and $altCreds.Checked -eq $false -and $windowsLaps.Checked -eq $false) {
-                #First, get the Azure AD Tenant ID
-                $tenantID = $domainInput.Text
-                $clientID = $usernameInput.Text
-
-
-                #test to see if Microsoft Graph PowerShell module is installed. If not, show a popup and exit
-                if (Get-Module -ListAvailable -Name Microsoft.Graph.Authentication) {
-                    #Next, verify the Azure AD Tenant ID and Client ID and Device ID are not blank
-                    if ($tenantID -eq "" -or $clientID -eq "" -or $hostnameInput.Text -eq "") {
-                        $wshell = New-Object -ComObject Wscript.Shell
-                        $wshell.Popup("Tenant ID and Client ID cannot be blank", 0, "Error", 0x1)
-                    }
-                    else {
-                        #Next, actually connect to the MS Graph API
-                        Connect-MgGraph -TenantId $tenantID -ClientId $clientID
-                        #Now, get the password
-                        $lapsResult = (Get-LapsAADPassword -DeviceIds $hostnameInput.Text -IncludePasswords -AsPlainText).Password
-                        #If the output is null, the computer is not in Azure AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
-                        if ($null -eq $lapsResult) {
-                            $wshell = New-Object -ComObject Wscript.Shell
-                            $wshell.Popup("Computer not found in Azure AD", 0, "Error", 0x1)
-                        }
-                        else {
-                            #If the output is not null, the computer is in Azure AD and the password is returned
-                            $lapsResult | clip
- 
-                            $wshell = New-Object -ComObject Wscript.Shell
-                            $wshell.Popup("Password for $hostname is $lapsResult. Copied to clipboard.", 0, "Password", 0x0)
-                        }
-                    }
-                }
-                else {
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("Microsoft Graph PowerShell module not installed. Please install the module and try again.", 0, "Error", 0x1)
-                }
-            }
-            #If Windows LAPS is checked, run the Windows LAPS process
-            if ($windowsLaps.Checked -eq $true -and $altCreds.Checked -eq $false) {
-                $output = Get-LapsADPassword $hostnameInput.Text -AsPlainText -Domain $domainInput.Text | Select-Object -ExpandProperty Password
-            
-                #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
-                if ($null -eq $output) {
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
-                }
-                else {
-                    #If the output is not null, the computer is in AD and the password is returned
-                    $output | clip
-
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
-                }
-            }
-            #If Windows LAPS is checked, and alternate credentials are checked, run the Windows LAPS process with alternate credentials
-            if ($windowsLaps.Checked -eq $true -and $altCreds.Checked -eq $true -and $azureLaps.Checked -eq $false) {
-                $altcredCheck = Get-Credential -Credential $usernameInput.Text
-                #IF Windows LAPS is on, alternate credentials is on, run the command with alternate credentials
-                $output = Get-LapsADPassword  $hostnameInput.Text -Credential $altcredCheck -DecryptionCredential $altcredCheck -Domain $domainInput.Text $altcredCheck -AsPlainText
-            
-                #If the output is null, the computer is not in AD. If Output is a secure string, the LAPS is encrypted and requires a decryption credential
-                if ($null -eq $output) {
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
-                }
-                else {
-                    #If the output is not null, the computer is in AD and the password is returned
-                    $output | clip
-
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
-                }
-            }
-            #If Windows LAPS is not checked, and alternate credentials are not checked, run the standard LAPS process
-            if ($windowsLaps.Checked -eq $false -and $altCreds.Checked -eq $false -and $azureLaps.Checked -eq $false) {
-                $output = Get-ADComputer $hostname -Server $domain -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
-        
-                #If the output is null, the computer is not in AD
-                if ($null -eq $output) {
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
-                }
-                else {
-                    #If the output is not null, the computer is in AD and the password is returned
-                    $output | clip
-
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
-                }
-            }
-            #If Windows LAPS is not checked, and alternate credentials are checked, run the standard LAPS process with alternate credentials
-            if ($windowsLaps.Checked -eq $false -and $altCreds.Checked -eq $true -and $azureLaps.Checked -eq $false) {
-                $output = Get-ADComputer $hostname -Server $domain -Credential (Get-Credential -Credential $usernameInput.Text) -Properties ms-Mcs-AdmPwd | Select-Object -ExpandProperty ms-Mcs-AdmPwd
-        
-                #If the output is null, the computer is not in AD
-                if ($null -eq $output) {
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("Computer not found in Active Directory", 0, "Error", 0x1)
-                }
-                else {
-                    #If the output is not null, the computer is in AD and the password is returned
-                    $output | clip
-
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $wshell.Popup("Password for $hostname is $output. Copied to clipboard.", 0, "Password", 0x0)
-                }
-            }
-        })
-    #Add keypress event to start button
-    $LapsForm.KeyPreview = $true
-    $LapsForm.Add_KeyDown({ if ($_.KeyCode -eq "Enter") { $lapsStart.PerformClick() } })
-
-    #check to see if RSAT is installed. If not, disable the start button
-    if (Get-Module -ListAvailable -Name ActiveDirectory) {
-        $lapsStart.Enabled = $true
+#MiniTools Dot Sourcing - For development purpose only. DOT Sourcing doesn't work correctly with ps2exe.
+$Dependencies = "MiniClients\ADLookup.ps1", "MiniClients\LAPSToolV2.ps1", "MiniClients\BitlockerToolV2.ps1", "PSAssets\ToolboxFunctions.ps1", "PSAssets\GenericToolWindow.ps1", ".\MiniClients\SettingsMenu.ps1"
+$Dependencies | ForEach-Object {
+    try {
+        $psFile = ".\$($_)"
+        . $psFile
     }
-    else {
-        $lapsStart.Enabled = $false
-        #set text to say RSAT is not installed
-        $lapsStart.Text = "RSAT Missing"
+    catch {
+        # Do Nothing Here. We will always land here in a compiled version of ETT.
     }
-
-    #Print the above GUI applets in the box
-    $LapsForm.controls.AddRange(@($Lapslogo, $domainInput, $domainLabel, $titleTag, $hostnameLabel, $hostnameInput, $usernameInfo, $usernameInput, $lapsStart, $windowsLaps, $altCreds, $azureLaps))
-
-    #SHOW ME THE MONEY
-    [void]$LapsForm.ShowDialog()
-
-}
-
-function bitlockerTool {
-    #Test RSAT AD Tools is installed
-    if (Get-Command -Name Get-ADComputer -ErrorAction SilentlyContinue) {
-        #RSAT is installed
-        $RSATStatus = "Installed"
-    }
-    else {
-        #RSAT is not installed
-        $RSATStatus = "Not Installed"
-    }
-
-    # Import the module
-    Add-Type -AssemblyName System.Windows.Forms
-    [System.Windows.Forms.Application]::EnableVisualStyles()
-
-    #Create box
-    $BForm = New-Object system.Windows.Forms.Form
-    $BForm.ClientSize = New-Object System.Drawing.Point(500, 200)
-    $BForm.text = "BitLocker Retreival"
-    $BForm.TopMost = $true
-    $BForm.BackColor = $BGcolor
-    $BForm.MaximizeBox = $false
-    $BForm.MaximumSize = $BForm.Size
-    $BForm.MinimumSize = $BForm.Size
-
-    #Title for box
-    $BTitle = New-Object system.Windows.Forms.Label
-    $BTitle.text = "Bitlocker Retreival"
-    $BTitle.AutoSize = $true
-    $BTitle.width = 25
-    $BTitle.height = 10
-    $BTitle.location = New-Object System.Drawing.Point(88, 10)
-    $BTitle.Font = New-Object System.Drawing.Font('Segoe UI', 16, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-    $BTitle.ForeColor = $TextColor
-    $BForm.Controls.Add($BTitle)
-
-    #Logo (sourced from WinAero gal)
-    $BLogo = New-Object system.Windows.Forms.PictureBox
-    $BLogo.width = 75
-    $BLogo.height = 75
-    $BLogo.location = New-Object System.Drawing.Point(375, 17)
-    $BLogo.imageLocation = "https://winaero.com/blog/wp-content/uploads/2020/04/BitLocker-Big-256-Icon-2.png"
-    $BLogo.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::zoom
-    $BForm.Controls.Add($BLogo)
-
-    #Hostname INPUT FIELD and LABEL
-    $BHostname = New-Object system.Windows.Forms.Label
-    $BHostname.text = "Hostname:"
-    $BHostname.AutoSize = $true
-    $BHostname.width = 25
-    $BHostname.height = 10
-    $BHostname.location = New-Object System.Drawing.Point(16, 60)
-    $BHostname.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-    $BHostname.ForeColor = $TextColor
-    $BForm.Controls.Add($BHostname)
-
-    $BHostnameInput = New-Object system.Windows.Forms.TextBox
-    $BHostnameInput.multiline = $false
-    $BHostnameInput.width = 269
-    $BHostnameInput.height = 20
-    $BHostnameInput.location = New-Object System.Drawing.Point(90, 60)
-    $BHostnameInput.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
-    $BHostname = $BHostnameInput.Text
-    $BForm.Controls.Add($BHostnameInput)
-
-    #Username INPUT FIELD and LABEL
-    $BUsername = New-Object system.Windows.Forms.Label
-    $BUsername.text = "Username:"
-    $BUsername.AutoSize = $true
-    $BUsername.width = 25
-    $BUsername.height = 10
-    $BUsername.location = New-Object System.Drawing.Point(16, 90)
-    $BUsername.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-    $BUsername.ForeColor = $TextColor
-    $BForm.Controls.Add($BUsername)
-
-    $BUsernameInput = New-Object system.Windows.Forms.TextBox
-    $BUsernameInput.multiline = $false
-    $BUsernameInput.width = 269
-    $BUsernameInput.height = 20
-    $BUsernameInput.location = New-Object System.Drawing.Point(90, 90)
-    $BUsernameInput.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
-    $BUsername = $BUsernameInput.Text
-    $BForm.Controls.Add($BUsernameInput)
-
-    #Set default username to current user
-    $BUsernameInput.Text = (whoami.exe)
-
-    #Submit button
-    $BSubmit = New-Object system.Windows.Forms.Button
-    $BSubmit.text = "Submit"
-    $BSubmit.width = 60
-    $BSubmit.height = 30
-    $BSubmit.location = New-Object System.Drawing.Point(90, 120)
-    $BSubmit.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-    $BSubmit.ForeColor = $TextColor
-    $BSubmit.BackColor = $BoxColor
-
-    #If RSAT is not installed, disable button
-    if ($RSATStatus -eq "Not Installed") {
-        $BSubmit.Enabled = $false
-        $BSubmit.BackColor = 'Gray'
-        $BSubmit.ForeColor = 'Black'
-        $BSubmit.Text = "RSAT Not Installed"
-    }
-
-    $BSubmit.Add_Click({
-            $hostname = $BHostnameInput.Text
-
-            #Check if hostname is empty
-            if ($hostname -eq "") {
-                $wshell = New-Object -ComObject Wscript.Shell
-                $wshell.Popup("Hostname cannot be empty", 0, "Error", 0x1)
-
-                #Stop action
-                return
-            }
-            
-            try {
-                $ADComputer = Get-ADComputer -Identity $hostname
-                $bitlockerObj = Get-ADObject -Filter { objectclass -eq 'msFVE-RecoveryInformation' } -SearchBase $ADComputer.DistinguishedName -Properties 'msFVE-RecoveryPassword'
-                $recoveryPassword = $bitlockerObj | Select-Object -ExpandProperty msFVE-RecoveryPassword
-            }
-            catch {
-                $recoveryPassword = "Error: Computer not found"
-            }
-
-        
-            #Copy to clipboard
-            $recoveryPassword | clip
-
-            #Wshell popup window with password, and show on top
-            $wshell = New-Object -ComObject wscript.shell
-            $wshell.popup("BitLocker Key: " + $recoveryPassword + "`nResult copied to clipboard.", 0, "Bitlocker Key", 0x00000040)
-
-        })
-
-    $BForm.Controls.Add($BSubmit)
-
-    #Show Form
-    $BForm.ShowDialog()
 }
 
 #Device Compliance Checks
@@ -1115,7 +444,7 @@ else {
 
 #Drivespace Check
 if ($drivespaceCheckActive -eq $true) {
-    if ($drivespace -ge $drivespaceMinimum) {
+    if ($freedrivespace -ge $drivespaceMinimum) {
         $complianceStatus = 'Compliant'
         $drivespaceCompliant = $true
     }
@@ -1145,6 +474,22 @@ else {
     $winverCompliant = $true
 }
 
+#Defender Enrollment Check
+if ($defenderEnrollCheckActive -eq $true) {
+    if ($defenderEnrollStatus -eq $true) {
+        $complianceStatus = 'Compliant'
+        $defenderEnrollCompliant = $true
+    }
+    else {
+        $complianceStatus = 'Non-Compliant'
+        $defenderEnrollCompliant = $false
+        $complianceFlag = $true
+    }
+}
+else {
+    $defenderEnrollCompliant = $true
+}
+
 #Device Type conversion
 #A switch statement to convert the devicetype variable to a human readable format in a new systemType variable
 switch ($devicetype) {
@@ -1171,6 +516,8 @@ Model: $model
 RAM: $ramCheck GB
 CPU: $cpuCheck
 Domain: $domain
+Defender ATP Enrollment: $defenderEnrollStatus
+Hosts File: $hostsText
 System Type: $systemType
 Storage: $drivespace
 Storage Type: $drivetype
@@ -1277,90 +624,94 @@ function notificationPush {
     
 }
 
-function CheckForWindowsUpdates {
+function Create-ETTButton {
     param(
-        [string]$windowTitle,
-        [string]$updateSearchQuery,
-        [string]$noUpdatesMessage
+        [Parameter(Position = 0, mandatory = $true)]
+        $ButtonText,
+        [Parameter(Position = 1, mandatory = $true)]
+        $ButtonWidth,
+        [Parameter(Position = 2, mandatory = $true)]
+        $ButtonHeight,
+        [Parameter(Position = 3, mandatory = $true)]
+        $ButtonXPosition,
+        [Parameter(Position = 4, mandatory = $true)]
+        $ButtonYPosition,
+        [Parameter(Position = 5, mandatory = $true)]
+        $ScriptBlock
     )
+    $tmpButton = New-Object system.Windows.Forms.Button
+    $tmpButton.text = $ButtonText
+    $tmpButton.width = $ButtonWidth
+    $tmpButton.height = $ButtonHeight
+    $tmpButton.Anchor = 'top'
+    $tmpButton.location = New-Object System.Drawing.Point($ButtonXPosition, $ButtonYPosition)
+    $tmpButton.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+    $tmpButton.ForeColor = $ButtonTextColor
+    $tmpButton.BackColor = $BoxColor
 
-    #Create our Update Session and Update Searcher
-    $updateSession = new-object -com "Microsoft.Update.Session"
-    $updateSearcher = $updateSession.CreateupdateSearcher()
-    $searchResult = $updateSearcher.Search($updateSearchQuery)
+    #Enable clicking to run the action above
+    $tmpButton.Add_Click($ScriptBlock)
+    return $tmpButton
+}
 
-    if ($searchResult.Updates.Count -eq 0) {
-        #If no updates are found, show a popup
-        $wshell = New-Object -ComObject Wscript.Shell
-        $wshell.popup($noUpdatesMessage, 0, $windowTitle, 64)
-    } else {
-        #Check if admin mode is enabled. Depending on the result, run the appropriate command
-        if ($adminmode -eq $true) {
-            #If yes, install updates
-            $wshell = New-Object -ComObject Wscript.Shell
-            if ($wshell.Popup("Do you want to continue and download updates?", 0, "Update Confirm", 0x00000004) -eq 6) {
-                #Check the status to see if we need to download or just install updates
-                $downloadReq = $false
-                foreach ($update in $searchResult.Updates) {
-                    if ($update.IsDownloaded -eq $false) {
-                        $downloadReq = $true
-                    }
-                }
-
-                #If we need to download updates, we do that here.
-                if ($downloadReq) {
-                    $updatesToDownload = new-object -com "Microsoft.Update.UpdateColl"
-                    foreach ($update in $searchResult.Updates) {
-                        $updatesToDownload.Add($update) | out-null
-                    }
-                    $downloader = $updateSession.CreateUpdateDownloader() 
-                    $downloader.Updates = $updatesToDownload
-                    $downloader.Download()
-                }
-
-                $updatesToInstall = new-object -com "Microsoft.Update.UpdateColl"
-                foreach ($update in $searchResult.Updates) {
-                    if ( $update.IsDownloaded ) {
-                        $updatesToInstall.Add($update) | out-null
-                    }
-                }
-                if ( $updatesToInstall.Count -eq 0 ) {
-                    #Not ready for install.
-                }
-                else {
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $installer = $updateSession.CreateUpdateInstaller()
-                    $installer.Updates = $updatesToInstall
-                    $installationResult = $installer.Install()
-                    if ( $installationResult.ResultCode -eq 2 ) {
-                        $wshell.popup("Updates installed successfully.", 0, $windowTitle, 64)
-                    }
-                    else {
-                        $wshell.popup("Some updates could not installed.", 0, $windowTitle, 64)
-                    }
-                    if ( $installationResult.RebootRequired ) {
-                        $wshell.popup("One or more updates are requiring reboot.", 0, $windowTitle, 64)
-                    }
-                    else {
-                        $wshell.popup("Finished. Reboot are not required.", 0, $windowTitle, 64)
-                    }
-                }
-            }
-            else {
-                #Do nothing
-            }
-        }else{
-            #If no, show a popup that updates are available, but admin mode needs to be run
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.popup("Updates found. Please run ETT in admin mode to install updates.", 0, $windowTitle, 64)
-        }
+function Create-ToolboxListItem {
+    param(
+        $DisplayName,
+        $Description,
+        $Tab,
+        $RequireAdmin,
+        $ScriptBlock
+    )
+    $tmpObject = [PSCustomObject]@{ 
+        displayName  = $DisplayName
+        description  = $Description
+        tab          = $Tab
+        requireAdmin = $RequireAdmin
+        codeBlock    = $ScriptBlock
     }
+    if ($RequireAdmin -ne $null -and $RequireAdmin -eq $true) {
+        $tmpObject.displayName = "$DisplayName $shieldIconEmoji"
+    }
+    return $tmpObject
+}
+
+#Constructs a new tab and returns the List object of created tab
+function Create-ToolboxTabPage {
+    param(
+        [Parameter(Position = 0, mandatory = $true)]
+        $PageName,
+        [Parameter(Position = 1, mandatory = $false)]
+        [System.Collections.ArrayList]$ToolboxItemsArray
+    )
+    #Construct Tab Page
+    $tmpTab = New-Object System.Windows.Forms.TabPage
+    $tmpTab.text = $PageName
+    $tmpTab.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+    $tmpTab.ForeColor = $TextColor
+    $tmpTab.BackColor = $BGcolor
+    [void]$ToolboxMenu.Controls.Add($tmpTab)
+
+    #Construct List
+    $tmpList = New-Object System.Windows.Forms.Listbox
+    $tmpList.Width = 312
+    $tmpList.height = 259
+    $tmpList.location = New-Object System.Drawing.Point(0, 0)
+    $tmpList.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+    $tmpList.ForeColor = $TextColor
+    $tmpList.BackColor = $BGcolor
+    $tmpList.SelectionMode = "One"
+    $tmpTab.Controls.Add($tmpList)
+    $tmpList.DataSource = $ToolboxItemsArray
+    $tmpList.DisplayMember = "displayName"
+    $tmpList.ValueMember = "codeBlock"
+    
+    return $tmpList
 }
 
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
-$ETT.ClientSize = New-Object System.Drawing.Point(519, 330)
-$ETT.text = "Eli's Enterprise Tech Tool V$ETTVersion"
+$ETT.ClientSize = New-Object System.Drawing.Point(850, 330)
+$ETT.text = "$ettApplicationTitle [Admin Mode: $adminmode]"
 $ETT.StartPosition = 'CenterScreen'
 $ETT.MaximizeBox = $false
 $ETT.MaximumSize = $ETT.Size
@@ -1379,18 +730,19 @@ if ($backgroundImagePath -ne "") {
 }
 
 #Import and load in logo icon
-$Logo = New-Object system.Windows.Forms.PictureBox
+$Logo = New-Object System.Windows.Forms.PictureBox
 $Logo.width = 126
 $Logo.height = 73
 $Logo.location = New-Object System.Drawing.Point(377, 29)
 $Logo.imageLocation = $LogoLocation
 $Logo.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::zoom
+$Logo.BackColor = [System.Drawing.Color]::FromName("Transparent")
 if ($null -eq $LogoLocation) {
     $Logo.Visible = $false
 }
 
-$Heading = New-Object system.Windows.Forms.Label
-$Heading.text = "Enterprise Tech Tool"
+$Heading = New-Object System.Windows.Forms.Label
+$Heading.text = $ettHeaderText
 $Heading.BackColor = [System.Drawing.Color]::FromName("Transparent")
 $Heading.AutoSize = $true
 $Heading.width = 25
@@ -1414,129 +766,155 @@ $ToastStack = New-Object System.Windows.Forms.NotifyIcon
 $Path = 'C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe'
 $ToastStack.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($path)
 $ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
-$ToastStack.BalloonTipTitle = "Eli's Enterprise Tech Tool"
-$ToastStack.BalloonTipText = "Welcome to Eli's Enterprise Tech Tool!"
+$ToastStack.BalloonTipTitle = $ettApplicationTitle
+$ToastStack.BalloonTipText = "Welcome to $ettApplicationTitle!"
 $ToastStack.Visible = $true
 $ToastStack.ShowBalloonTip(5000)
 
 #IF Compliance Flag is true, add a flyout notification
 if ($complianceFlag -eq $true) {
     $ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Error
-    $ToastStack.BalloonTipTitle = "Eli's Enterprise Tech Tool"
+    $ToastStack.BalloonTipTitle = $ettApplicationTitle
     $ToastStack.BalloonTipText = "This device is non-compliant!"
     $ToastStack.Visible = $true
     $ToastStack.ShowBalloonTip(5000)
 }
 
-#Button placeholder for clearing last login
-$ClearLastLogin = New-Object system.Windows.Forms.Button
-$ClearLastLogin.text = "Clear Last Login"
-$ClearLastLogin.width = 237
-$ClearLastLogin.height = 89
-$ClearLastLogin.location = New-Object System.Drawing.Point(13, 117)
-$ClearLastLogin.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-$ClearLastLogin.ForeColor = $ButtonText
-$ClearLastLogin.BackColor = $BoxColor
+#Create App Buttons
+$ClearLastLogin = Create-ETTButton -ButtonText "Clear Last Login" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 117 -ScriptBlock { ClearLastLogin -adminmode $adminmode -ToastStack $ToastStack }
+$Lapspw = Create-ETTButton -ButtonText "Get LAPS Password" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 267 -ButtonYPosition 117 -ScriptBlock { Open-LAPSToolWindow }
+$appUpdate = Create-ETTButton -ButtonText "Update Apps (Winget)" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 219 -ScriptBlock { Start-WingetAppUpdates }
+$PolicyPatch = Create-ETTButton -ButtonText "Windows Policy Update" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 266 -ButtonYPosition 219 -ScriptBlock { Start-PolicyPatch }
 
-$ClearLastLogin_Action = {
+#"The Toolbox" - a side menu for additional tools
 
-    #Check if admin mode is enabled. Depending on the result, run the appropriate command    
-    if ($adminmode -eq $true) {
-        #With admin mode enabled, run the commands without UAC
-        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnSAMUser -Value "" -Force
-        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnUser -Value ""  -Force
-        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnUserSID -Value "" -Force
-    }
-    elseif ($adminmode -eq $false) {
-        #Without admin mode enabled, run the commands with UAC, in a sub-process shell
-        Start-Process powershell.exe -Verb runAs -ArgumentList '-Command', 'New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnSAMUser -Value "" -Force; New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnUser -Value ""  -Force; New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnUserSID -Value "" -Force' -Wait
-    }
+#Title
+$ToolboxTitle = New-Object System.Windows.Forms.Label
+$ToolboxTitle.text = "The Toolbox"
+$ToolboxTitle.AutoSize = $true
+$ToolboxTitle.width = 25
+$ToolboxTitle.height = 10
+$ToolboxTitle.location = New-Object System.Drawing.Point(600, 10)
+$ToolboxTitle.Font = New-Object System.Drawing.Font('Segoe UI', 16, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+$ToolboxTitle.ForeColor = $TextColor
+$ToolboxTitle.BackColor = [System.Drawing.Color]::FromName("Transparent")
+$ETT.Controls.Add($ToolboxTitle)
 
-    #Display a notification that the last login has been cleared
-    $ToastStack.BalloonTipText = "Last Login Cleared!"
-    $ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
-    $ToastStack.BalloonTipTitle = "Login Status"
-    $ToastStack.ShowBalloonTip(5000)
-    $ToastStack.Visible = $true
+#Tabbed Menu Box for Toolbox
+$ToolboxMenu = New-Object System.Windows.Forms.TabControl
+$ToolboxMenu.width = 320
+$ToolboxMenu.height = 275
+$ToolboxMenu.location = New-Object System.Drawing.Point(520, 45)
+$ToolboxMenu.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
+$ToolboxMenu.ForeColor = $TextColor
+$ToolboxMenu.BackColor = $BGcolor
+$ETT.Controls.Add($ToolboxMenu) | Out-Null
 
-}
-$ClearLastLogin.Add_Click($ClearLastLogin_Action)
+#Tab 1 - Actions Tab Creation
+$ActionsTabArray = New-Object System.Collections.ArrayList
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (GUI)" -ScriptBlock { Start-DriverUpdateGUI -manufacturer $manufacturer }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (CLI)" -ScriptBlock { Start-DriverUpdateCLI  -manufacturer $manufacturer }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "SFC Scan" -RequireAdmin $true -ScriptBlock { Start-SFCScan }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Suspend Bitlocker" -RequireAdmin $true -ScriptBlock { Start-SuspendBitlockerAction -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Test Network" -ScriptBlock { Start-NetworkTest }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "WiFi Diagnostics" -RequireAdmin $true -ScriptBlock { Start-WiFiDiagnostics -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Battery Diagnostics" -RequireAdmin $true -ScriptBlock { Start-BatteryDiagnostics -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Quick Reboot" -ScriptBlock { QuickReboot }))
+$ActionsTab = Create-ToolboxTabPage -PageName "Actions" -ToolboxItemsArray $ActionsTabArray
+$ActionsTab.Add_Click({
+        $runThis = [ScriptBlock]::Create($ActionsTab.SelectedValue)
+        &$runThis
+    })
 
-#LAPS button
-$Lapspw = New-Object system.Windows.Forms.Button
-$Lapspw.text = "Get LAPS Password"
-$Lapspw.width = 237
-$Lapspw.height = 89
-$Lapspw.Anchor = 'top'
-$Lapspw.location = New-Object System.Drawing.Point(267, 117)
-$Lapspw.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-$Lapspw.ForeColor = $ButtonText
-$Lapspw.BackColor = $BoxColor
+#Tab 2 - Windows Tab Creation
+$WindowsTabArray = New-Object System.Collections.ArrayList
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Full Sweep" -ScriptBlock { CheckForWindowsUpdates -windowTitle "All Windows Updates" -noUpdatesMessage "No updates available." -updateSearchQuery "IsHidden=0 and IsInstalled=0" }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Defender Only" -ScriptBlock { CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'" }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation" -ScriptBlock { Get-WindowsActivationKey }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation Type" -ScriptBlock { Get-WindowsActivationType }))
+$WindowsTab = Create-ToolboxTabPage -PageName "Windows" -ToolboxItemsArray $WindowsTabArray
+$WindowsTab.Add_Click({
+        $runThis = [ScriptBlock]::Create($WindowsTab.SelectedValue)
+        &$runThis
+    })
 
-#A seperate GUI applet for LAPS openable when the function is selected
-$Lapspw_Action = {
-    LAPSTool
-}
+#Tab 3 - Security Tab Creation
+$SecurityTabArray = New-Object System.Collections.ArrayList
+[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "$(Get-HostsFileIntegrity)" -ScriptBlock {}))
+$SecurityTab = Create-ToolboxTabPage -PageName "Security" -ToolboxItemsArray $SecurityTabArray
+$SecurityTab.Add_Click({
+        $runThis = [ScriptBlock]::Create($SecurityTab.SelectedValue)
+        &$runThis
+    })
 
-#Enable clicking to run the action above
-$Lapspw.Add_Click($Lapspw_Action)
+#Tab 4 - SCCM (if enabled) Tab Creation
 
-#Button to run a winget upgrade sequence
-$appUpdate = New-Object system.Windows.Forms.Button
-$appUpdate.text = "Update Apps (Winget)"
-$appUpdate.width = 237
-$appUpdate.height = 89
-$appUpdate.Anchor = 'bottom,left'
-$appUpdate.location = New-Object System.Drawing.Point(13, 219)
-$appUpdate.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-$appUpdate.ForeColor = $ButtonText
-$appUpdate.BackColor = $BoxColor
+#Check to see if the SCCM client is installed and we have the required WMI class
+$sccmClass = Get-WmiObject -Class "SMS_Client" -List -Namespace "root\CCM" -ErrorAction SilentlyContinue
+$sccmClassExists = $sccmClass -ne $null
 
-#Winget upgrading function
-$appUpdate_onClick = {
-    #Upgrade applications on the machine
-
-    #Main try-catch test to verify newest version of WPM (winget) is installed
-    try {
-        winget.exe
-    }
-    catch {
-        #IF winget is not installed, open the store and close the script
-        { 1: $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Error: Winget not Installed.", 0, "Winget Issue", 32)
-            Start-Process ms-windows-store:
-            Exit-PSSession }
-    }
-    
-    #If winget is installed, run an upgrade on all apps in new administator powershell window.
-    Start-Process powershell.exe -ArgumentList "-command winget upgrade --all"
-
-}
-
-#Assign function to the button
-$appUpdate.Add_Click($appUpdate_onClick)
-
-#A button to run a policy update (GPUpdate and Intune Sync)
-$PolicyPatch = New-Object system.Windows.Forms.Button
-$PolicyPatch.text = "Windows Policy Update"
-$PolicyPatch.width = 237
-$PolicyPatch.height = 89
-$PolicyPatch.location = New-Object System.Drawing.Point(266, 219)
-$PolicyPatch.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]([System.Drawing.FontStyle]::Bold))
-$PolicyPatch.ForeColor = $ButtonText
-$PolicyPatch.BackColor = $BoxColor
-
-#BATCH MENU = Policy Update!
-
-$PolicyPatch_OnClick = {
-    #First, run GPUpdate
-    Start-Process powershell.exe -ArgumentList "-command gpupdate /force"
-
-    #Any additional commands can be added here, depending on policy and compliance needs
+if ($sccmClassExists) {
+    $SCCMTabArray = New-Object System.Collections.ArrayList
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Application Deployment Evaluation Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Application Deployment Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000121}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Discovery Data Collection Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Discovery Data Collection Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000103}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "File Collection Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "File Collection Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000104}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Hardware Inventory Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Hardware Inventory Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000001}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Machine Policy Retrieval" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Machine Policy Retrieval" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000021}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Machine Policy Evaluation Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Machine Policy Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000022}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Software Inventory Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Software Inventory Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000002}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Software Metering Usage Report Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Software Metering Usage Report Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000106}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "User Policy Retrieval" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "User Policy Retrieval" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000026}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "User Policy Evaluation Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "User Policy Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000027}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Installer Source List Update Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Windows Installer Source List Update Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000107}" }))
+    $SCCMTab = Create-ToolboxTabPage -PageName "SCCM" -ToolboxItemsArray $SCCMTabArray
+    $SCCMTab.Add_Click({
+            $runThis = [ScriptBlock]::Create($SCCMTab.SelectedValue)
+            &$runThis
+        })
 }
 
-#Make button do stuff
-$PolicyPatch.Add_Click($PolicyPatch_OnClick)
+#Tab 5 - AD Tab Creation (Centered Text for title) - if RSAT is installed
+
+#Check to see if RSAT is installed
+if ($rsatInfo -eq "Installed") {
+    $ADTabArray = New-Object System.Collections.ArrayList
+    [void]$ADTabArray.Add((Create-ToolboxListItem -DisplayName "Launch AD Explorer" -ScriptBlock { ADLookup -BackgroundColor $BGcolor -WindowTextColor $TextColor -BrandColor $BrandColor -ButtonTextColor $ButtonTextColor }))
+    [void]$ADTabArray.Add((Create-ToolboxListItem -DisplayName "Get Bitlocker Recovery Key" -ScriptBlock { Open-BitLockerRecoveryWindow }))
+    $ADTab = Create-ToolboxTabPage -PageName "AD" -ToolboxItemsArray $ADTabArray
+    $ADTab.Add_Click({
+            $runThis = [ScriptBlock]::Create($ADTab.SelectedValue)
+            &$runThis
+        })
+}
+
+#Tab 6 - Custom Tools Tab Creation
+if ($customTools -eq $true) {
+    $CustomTabArray = New-Object System.Collections.ArrayList
+    $toolboxIcon = [char]::ConvertFromUtf32(0x1F9F0)
+
+    #Process hardcoded Custom Functions
+    $userFunctions = Get-Command | Where-Object { $_.CommandType -eq 'Function' -and $_.Name -like 'custom_*' }
+    ForEach ($func in $userFunctions) {
+        $tmpObject = Create-ToolboxListItem -DisplayName $($toolboxIcon + " " + $func.Name) -ScriptBlock $func.Name
+        [void]$CustomTabArray.Add($tmpObject)
+    }
+
+    #Process Config File Custom Functions
+    if ($jsonConfig.CustomFunctions -ne $null) {
+        ForEach ($customFunction in $jsonConfig.CustomFunctions) {
+            $customFunctionDisplayName = "$toolboxIcon $($customFunction.displayName)"
+            $tmpObject = Create-ToolboxListItem -DisplayName $customFunctionDisplayName -Description $customFunction.description -Tab $customFunction.tab -RequireAdmin $customFunction.requireAdmin -ScriptBlock $customFunction.codeBlock
+            [void]$CustomTabArray.Add($tmpObject)
+        }
+    }
+
+    #Create the Custom Tab GUI
+    $CustomTab = Create-ToolboxTabPage -PageName "Custom" -ToolboxItemsArray $CustomTabArray
+    $CustomTab.Add_Click({
+            $runThis = [ScriptBlock]::Create($CustomTab.SelectedValue)
+            &$runThis
+        })
+}
 
 #TAB MENU
 
@@ -1572,6 +950,9 @@ $storageInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $ramInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $cpuInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $adminInfo = New-Object System.Windows.Forms.ToolStripMenuItem
+$securityInfo = New-Object System.Windows.Forms.ToolStripMenuItem
+$hostsInfo = New-Object System.Windows.Forms.ToolStripMenuItem
+$defenderInfo = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoPrint = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoClipboard = New-Object System.Windows.Forms.ToolStripMenuItem
 $deviceInfoTicket = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -1583,35 +964,10 @@ $menuBugReport = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuLicenses = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuGitHub = New-Object System.Windows.Forms.ToolStripMenuItem
 
-#FUNCTIONS TAB
-$menuFunctions = New-Object System.Windows.Forms.ToolStripMenuItem
-$launchDriverUpdater = New-Object System.Windows.Forms.ToolStripMenuItem
-$launchDriverUpdaterGUI = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuSFCScan = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuSuspendBitlocker = New-Object System.Windows.Forms.ToolStripMenuItem
-#$menuRenameComputer = New-Object System.Windows.Forms.ToolStripMenuItem - Commented out until I can figure out how to make it work
-$menuTestNet = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuWiFiDiag = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuBatteryDiagnostic = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuRebootQuick = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuBitlockerRetreive = New-Object System.Windows.Forms.ToolStripMenuItem
-
-#AD Tab
-$menuAD = New-Object System.Windows.Forms.ToolStripMenuItem
-
-#Windows Tools
-$menuWindowsTools = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuWindowsUpdateCheck = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuWindowsActivation = New-Object System.Windows.Forms.ToolStripMenuItem
-
-#SCCM Tools
-$sccmClientTools = New-Object System.Windows.Forms.ToolStripMenuItem
-
-#SECURITY TAB
-$menuSecurity = New-Object System.Windows.Forms.ToolStripMenuItem
-
 #One-Off Tabs
+$menuSettings = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuExit = New-Object System.Windows.Forms.ToolStripMenuItem
+
 
 #Keyboard Shortcuts
 
@@ -1623,34 +979,6 @@ $deviceInfoPrint.ShortcutKeyDisplayString = "CTRL + P"
 $deviceInfoClipboard.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::C
 $deviceInfoClipboard.ShortcutKeyDisplayString = "CTRL + C"
 
-#CTRL + D to run launchDriverUpdaterGUI
-$launchDriverUpdaterGUI.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::D
-$launchDriverUpdaterGUI.ShortcutKeyDisplayString = "CTRL + D"
-
-#CTRL + F to run launchDriverUpdater
-$launchDriverUpdater.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::F
-$launchDriverUpdater.ShortcutKeyDisplayString = "CTRL + F"
-
-#CTRL + S to run menuSFCScan
-$menuSFCScan.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::S
-$menuSFCScan.ShortcutKeyDisplayString = "CTRL + S"
-
-#CTRL + Shift +  B to run menuSuspendBitlocker
-$menuSuspendBitlocker.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::B
-$menuSuspendBitlocker.ShortcutKeyDisplayString = "CTRL + SHIFT + B"
-
-#CTRL + Shift + T to run menuTestNet
-$menuTestNet.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::T
-$menuTestNet.ShortcutKeyDisplayString = "CTRL + SHIFT + T"
-
-#CTRL + Shift + W to run menuWiFiDiag
-$menuWiFiDiag.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::W
-$menuWiFiDiag.ShortcutKeyDisplayString = "CTRL + SHIFT + W"
-
-#CTRL + Shift + Q to run menuRebootQuick
-$menuRebootQuick.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::Q
-$menuRebootQuick.ShortcutKeyDisplayString = "CTRL + SHIFT + Q"
-
 #CTRL + Shift + R to run menuRenameComputer
 #$menuRenameComputer.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::Shift + [System.Windows.Forms.Keys]::R
 #$menuRenameComputer.ShortcutKeyDisplayString = "CTRL + SHIFT + R"
@@ -1659,7 +987,7 @@ $menuRebootQuick.ShortcutKeyDisplayString = "CTRL + SHIFT + Q"
 
 #Info Tab
 $menuInfo.Text = "Info"
-$outputsuppressed = $menu.Items.Add($menuInfo)
+[void]$menu.Items.Add($menuInfo)
 #Set tab color to red if compliance is not met
 if ($compliance -eq "Compliant") {
     $menuInfo.BackColor = $BGcolor
@@ -1679,7 +1007,7 @@ $menuWhoami.Add_Click({
 $menuWhoami.ToolTipText = "Current username for session." + "`nClick to copy username to clipboard."
 $menuWhoami.BackColor = $BGcolor
 $menuWhoami.ForeColor = $TextColor
-$outputsuppressed = $menuInfo.DropDownItems.Add($menuWhoami)
+[void]$menuInfo.DropDownItems.Add($menuWhoami)
 
 #Hostname Display
 $menuHostname.Text = "Hostname: " + $hostname
@@ -1691,7 +1019,7 @@ $menuHostname.Add_Click({
 $menuHostname.ToolTipText = "Current device hostname." + "`nClick to copy hostname to clipboard."
 $menuHostname.BackColor = $BGcolor
 $menuHostname.ForeColor = $TextColor
-$outputsuppressed = $menuInfo.DropDownItems.Add($menuHostname)
+[void]$menuInfo.DropDownItems.Add($menuHostname)
 
 #Windows Version Display
 $windowsVersion.Text = "Windows Version: " + $winver
@@ -1709,7 +1037,7 @@ else {
     $windowsVersion.ForeColor = $TextColor
 }
 $windowsVersion.ToolTipText = "Current Windows version." + "`nClick to copy Windows version to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($windowsVersion)
+[void]$menuInfo.DropDownItems.Add($windowsVersion)
 
 #Manufacturer Info Display
 $manufacturerInfo.Text = "Manufacturer: " + $manufacturer
@@ -1721,7 +1049,7 @@ $manufacturerInfo.Add_Click({
 $manufacturerInfo.BackColor = $BGcolor
 $manufacturerInfo.ForeColor = $TextColor
 $manufacturerInfo.ToolTipText = "Current device manufacturer." + "`nClick to copy manufacturer to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($manufacturerInfo)
+[void]$menuInfo.DropDownItems.Add($manufacturerInfo)
 
 #Model Info Display
 $modelInfo.Text = "Model: " + $model
@@ -1733,7 +1061,7 @@ $modelInfo.Add_Click({
 $modelInfo.ToolTipText = "Current device model." + "`nClick to copy model to clipboard."
 $modelInfo.BackColor = $BGcolor
 $modelInfo.ForeColor = $TextColor
-$outputsuppressed = $menuInfo.DropDownItems.Add($modelInfo)
+[void]$menuInfo.DropDownItems.Add($modelInfo)
 
 #Device Type Info Display
 $devicetypeInfo.Text = "Device Type: " + $systemType
@@ -1745,7 +1073,7 @@ $devicetypeInfo.Add_Click({
 $devicetypeInfo.ToolTipText = "Current device type." + "`nClick to copy device type to clipboard."
 $devicetypeInfo.BackColor = $BGcolor
 $devicetypeInfo.ForeColor = $TextColor
-$outputsuppressed = $menuInfo.DropDownItems.Add($devicetypeInfo)
+[void]$menuInfo.DropDownItems.Add($devicetypeInfo)
 
 #Domain Info Display
 $domainInfo.Text = "Domain: " + $domain
@@ -1757,7 +1085,7 @@ $domainInfo.Add_Click({
 $domainInfo.ToolTipText = "Current device domain." + "`nClick to copy domain to clipboard."
 $domainInfo.BackColor = $BGcolor
 $domainInfo.ForeColor = $TextColor
-$outputsuppressed = $menuInfo.DropDownItems.Add($domainInfo)
+[void]$menuInfo.DropDownItems.Add($domainInfo)
 
 #Storage Info Display
 $storageInfo.Text = "Storage: " + $drivespace
@@ -1777,7 +1105,7 @@ else {
     $storageInfo.ForeColor = $TextColor
 }
 $storageInfo.ToolTipText = "Current device storage availability." + "`nClick to copy storage to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($storageInfo)
+[void]$menuInfo.DropDownItems.Add($storageInfo)
 
 #RAM Info Display
 $ramInfo.Text = "RAM: " + $ramCheck + "GB"
@@ -1797,7 +1125,7 @@ else {
 }
 
 $ramInfo.ToolTipText = "Current device RAM." + "`nClick to copy RAM to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($ramInfo)
+[void]$menuInfo.DropDownItems.Add($ramInfo)
 
 #CPU Info Display
 $cpuInfo.Text = "CPU: " + $cpuCheck
@@ -1809,7 +1137,7 @@ $cpuInfo.Add_Click({
 $cpuInfo.BackColor = $BGcolor
 $cpuInfo.ForeColor = $TextColor
 $cpuInfo.ToolTipText = "Current device CPU." + "`nClick to copy CPU to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($cpuInfo)
+[void]$menuInfo.DropDownItems.Add($cpuInfo)
 
 #Admin Mode Status Display
 $adminInfo.Text = "ETT Admin Mode: " + $adminmode
@@ -1821,19 +1149,62 @@ $adminInfo.Add_Click({
 $adminInfo.BackColor = $BGcolor
 $adminInfo.ForeColor = $TextColor
 $adminInfo.ToolTipText = "Current ETT Admin Mode." + "`nClick to copy ETT Admin Mode to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($adminInfo)
+[void]$menuInfo.DropDownItems.Add($adminInfo)
+
+#Security Info Top-Level Folder
+$securityInfo.Text = "Security Information"
+$securityInfo.BackColor = $BGcolor
+$securityInfo.ForeColor = $TextColor
+[void]$menuInfo.DropDownItems.Add($securityInfo)
+
+#Hosts File Info Display
+$hostsInfo.Text = $hostsText
+$hostsInfo.Add_Click({
+        Set-Clipboard -Value $hostsInfo.Text
+        $wshell = New-Object -ComObject Wscript.Shell
+        $wshell.Popup("Hosts File copied to clipboard", 0, "Hosts File Copied", 64)
+    })
+$hostsInfo.BackColor = $BGcolor
+$hostsInfo.ForeColor = $TextColor
+$hostsInfo.ToolTipText = "Current Hosts File Modification Status." + "`nClick to copy Hosts File to clipboard."
+[void]$securityInfo.DropDownItems.Add($hostsInfo)
+
+#Defender Info Display
+$defenderInfo.Text = "Defender ATP Enrollment Status: " + $defenderEnrollStatus
+$defenderInfo.Add_Click({
+        Set-Clipboard -Value $defenderEnrollStatus
+        $wshell = New-Object -ComObject Wscript.Shell
+        $wshell.Popup("Defender Status copied to clipboard", 0, "Defender Status Copied", 64)
+    })
+#Set color to red if Defender ATP is not enrolled and compliance check is enabled
+if ($defenderStatus -eq "Not Enrolled" -and $complianceFlag -eq $true) {
+    $defenderInfo.BackColor = 'Red'
+    $defenderInfo.ForeColor = 'White'
+}
+else {
+    $defenderInfo.BackColor = $BGcolor
+    $defenderInfo.ForeColor = $TextColor
+}
+$defenderInfo.ToolTipText = "Current Defender ATP Enrollment Status." + "`nClick to copy Defender ATP Enrollment Status to clipboard."
+[void]$SecurityInfo.DropDownItems.Add($defenderInfo)
 
 #Device Info Print to Text File in C Temp
 $deviceInfoPrint.Text = "Print Device Info to Text File"
 $deviceInfoPrint.Add_Click({
-        $deviceInfo | Out-File -FilePath C:\Temp\DeviceInfo.txt
-        $wshell = New-Object -ComObject Wscript.Shell
-        $wshell.Popup("Device Info printed to C:\Temp\DeviceInfo.txt", 0, "Device Info Printed", 64)
+        $saveDialog = New-Object System.Windows.Forms.SaveFileDialog
+        $saveDialog.Filter = "Text Files (*.txt)|*.txt"
+        $saveDialog.Title = "Save Device Info to Text File"
+        $saveDialog.InitialDirectory = "C:\Temp"
+        $saveDialog.FileName = "Device_Info.txt"
+
+        if ($saveDialog.ShowDialog() -eq "OK") {
+            $deviceInfo | Out-File -FilePath $saveDialog.FileName
+        }
     })
 $deviceInfoPrint.BackColor = $BGcolor
 $deviceInfoPrint.ForeColor = $TextColor
 $deviceInfoPrint.ToolTipText = "Prints device info to a text file in C:\Temp." + "`nClick to print device info to text file."
-$outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoPrint)
+[void]$menuInfo.DropDownItems.Add($deviceInfoPrint)
 
 $deviceInfoClipboard.Text = "Copy Device Info to Clipboard"
 $deviceInfoClipboard.Add_Click({
@@ -1844,7 +1215,7 @@ $deviceInfoClipboard.Add_Click({
 $deviceInfoClipboard.BackColor = $BGcolor
 $deviceInfoClipboard.ForeColor = $TextColor
 $deviceInfoClipboard.ToolTipText = "Copies device info to clipboard." + "`nClick to copy device info to clipboard."
-$outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoClipboard)
+[void]$menuInfo.DropDownItems.Add($deviceInfoClipboard)
 
 #Device Info Ticket
 if ($null -eq $ticketType) {
@@ -1853,8 +1224,8 @@ if ($null -eq $ticketType) {
     $deviceInfoTicket.BackColor = $BGcolor
     $deviceInfoTicket.ForeColor = $TextColor
     $deviceInfoTicket.Enabled = $false
-    $deviceInfoTicket.ToolTipText = "Sends device info to ticketing system. Not configured presently. Coming in 1.2.1"
-    $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoTicket)
+    $deviceInfoTicket.ToolTipText = "Sends device info to ticketing system. Not configured presently. Coming soon."
+    [void]$menuInfo.DropDownItems.Add($deviceInfoTicket)
 }
 else {
     #If ticket type is not null, run the ticketing function
@@ -1866,12 +1237,12 @@ else {
     $deviceInfoTicket.BackColor = $BGcolor
     $deviceInfoTicket.ForeColor = $TextColor
     $deviceInfoTicket.ToolTipText = "Sends device info to $ticketType." + "`nClick to send device info to $ticketType."
-    $outputsuppressed = $menuInfo.DropDownItems.Add($deviceInfoTicket)
+    [void]$menuInfo.DropDownItems.Add($deviceInfoTicket)
 }
 
 #Help Tab
 $menuHelp.Text = "Help"
-$outputsuppressed = $menu.Items.Add($menuHelp)
+[void]$menu.Items.Add($menuHelp)
 
 #About Button - Displays basic information about the script
 $menuAbout.Text = "About"
@@ -1881,21 +1252,20 @@ $menuAbout.Add_Click({
     })
 $menuAbout.BackColor = $BGcolor
 $menuAbout.ForeColor = $TextColor
-$outputsuppressed = $menuHelp.DropDownItems.Add($menuAbout)
+[void]$menuHelp.DropDownItems.Add($menuAbout)
 
 #Fun Button - It's fun (lol)
 $menuFun = New-Object System.Windows.Forms.ToolStripMenuItem
 $menuFun.Text = "Fun"
 $menuFun.Add_Click({
         #Open a web browser to a fun website
-        Start-Process https://www.youtube.com/watch?v=a3Z7zEc7AXQ
+        Start-Process https://youtu.be/dQw4w9WgXcQ?si=HjDcCh_FForoWMq6
     })
 $menuFun.BackColor = $BGcolor
 $menuFun.ForeColor = $TextColor
 #Set keyboard shortcut to Ctrl + R
 $menuFun.ShortcutKeys = [System.Windows.Forms.Keys]::Control + [System.Windows.Forms.Keys]::R
-
-$outputsuppressed = $menuHelp.DropDownItems.Add($menuFun)
+[void]$menuHelp.DropDownItems.Add($menuFun)
 
 #Licenses Button - Displays basic license information
 $menuLicenses.Text = "Licenses"
@@ -1905,7 +1275,7 @@ $menuLicenses.Add_Click({
     })
 $menuLicenses.BackColor = $BGcolor
 $menuLicenses.ForeColor = $TextColor
-$outputsuppressed = $menuHelp.DropDownItems.Add($menuLicenses)
+[void]$menuHelp.DropDownItems.Add($menuLicenses)
 
 #GitHub Button
 $menuGitHub.Text = "GitHub"
@@ -1915,7 +1285,7 @@ $menuGitHub.Add_Click({
     })
 $menuGitHub.BackColor = $BGcolor
 $menuGitHub.ForeColor = $TextColor
-$outputsuppressed = $menuHelp.DropDownItems.Add($menuGitHub)
+[void]$menuHelp.DropDownItems.Add($menuGitHub)
 
 #Bug Report Button
 $menuBugReport.Text = "Bug Report"
@@ -1925,185 +1295,7 @@ $menuBugReport.Add_Click({
     })
 $menuBugReport.BackColor = $BGcolor
 $menuBugReport.ForeColor = $TextColor
-$outputsuppressed = $menuHelp.DropDownItems.Add($menuBugReport)
-
-#Functions Tab
-$menuFunctions.Text = "Functions"
-$outputsuppressed = $menu.Items.Add($menuFunctions)
-
-#Launch Driver Updater Button - Launches driver update script and auto updates based on manufacturer - Currently only supports Dell and Lenovo
-$launchDriverUpdater.Text = "Launch Driver Updater (CLI)"
-$launchDriverUpdater.Add_Click({
-        #Launch Driver Updater
-        if (($manufacturer -eq "Dell Inc.") -and (Test-Path -Path "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe")) {
-            #Uses Dell Command Update CLI to update drivers
-            Start-Process -Filepath "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe" -ArgumentList "/applyUpdates -outputLog=C:\Temp\dellUpdateOutput.log" -WorkingDirectory "C:\Program Files (x86)\Dell\CommandUpdate" -PassThru -Verb RunAs
-        }
-        elseif (($manufacturer -eq "LENOVO") -and (Test-Path -Path "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe")) {
-            #Uses Lenovo System Update CLI trigger to update drivers
-            Start-Process "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe" -ArgumentList "/CM -search C -action INSTALL -includerebootpackages 1,3,4 -noreboot" -WorkingDirectory "C:\Program Files (x86)\Lenovo\System Update" -PassThru -Verb RunAs
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Lenovo Updates Completed!", 0, "Driver Updater", 64)
-        }
-        else {
-            #Open MS Settings - Windows Update deeplink
-            Start-Process ms-settings:windowsupdate-action
-            Start-Process ms-settings:windowsupdate-optionalupdates
-        }
-    })
-$launchDriverUpdater.BackColor = $BGcolor
-$launchDriverUpdater.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($launchDriverUpdater)
-
-#Launch Driver Updater GUI Button - Launches driver update GUI based on manufacturer - Currently only supports Dell and Lenovo
-$launchDriverUpdaterGUI.Text = "Launch Driver Updater (GUI)"
-$launchDriverUpdaterGUI.Add_Click({
-        #Launch Driver Updater
-        if (($manufacturer -eq "Dell Inc.") -and (Test-Path -Path "C:\Program Files\Dell\CommandUpdate\DellCommandUpdate.exe")) {
-            Start-Process "C:\Program Files\Dell\CommandUpdate\DellCommandUpdate.exe"
-        }
-        elseif (($manufacturer -eq "LENOVO") -and (Test-Path -Path "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe")) {
-            Start-Process "C:\Program Files (x86)\Lenovo\System Update\tvsu.exe"
-        }
-        else {
-            #Open MS Settings - Windows Update deeplink and 1 second popup to notify user
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Driver Updater not found. Opening Windows Update.", 0, "Driver Updater", 64)
-            Start-Process ms-settings:windowsupdate-action
-            Start-Process ms-settings:windowsupdate-optionalupdates
-        }
-    })
-$launchDriverUpdaterGUI.BackColor = $BGcolor
-$launchDriverUpdaterGUI.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($launchDriverUpdaterGUI)
-
-#SFC Scan Button - Runs SFC Scan on the computer
-$menuSFCScan.Text = "SFC Scan"
-$menuSFCScan.Add_Click({
-        #SFC Scan
-        Start-Process powershell.exe -ArgumentList "-command sfc /scannow" -PassThru -Verb RunAs
-    })
-$menuSFCScan.BackColor = $BGcolor
-$menuSFCScan.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuSFCScan)
-
-#Suspend BitLocker Button - Suspends BitLocker for one reboot
-$menuSuspendBitLocker.Text = "Suspend BitLocker"
-$menuSuspendBitLocker.Add_Click({
-        #Check if adminmode is enabled
-        if ($adminmode -eq "True") {
-            #Check if BitLocker is enabled
-            if ((Get-BitLockerVolume -MountPoint C:).ProtectionStatus -eq "On") {
-                #Suspend BitLocker
-                Suspend-BitLocker -MountPoint "C:" -RebootCount 1
-                $wshell = New-Object -ComObject Wscript.Shell
-                $wshell.Popup("BitLocker suspended for one reboot.", 0, "BitLocker", 64)
-            }
-            else {
-                #BitLocker is not enabled
-                $wshell = New-Object -ComObject Wscript.Shell
-                $wshell.Popup("BitLocker is not enabled on this computer.", 0, "BitLocker", 64)
-            }
-        }
-        else {
-            #Admin mode is not enabled
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Admin mode is not enabled. Please enable adminmode flag and reboot script. If compiled, this requires a version of the application with adminmode flag turned on.", 0, "BitLocker", 64)     
-        }
-    })
-$menuSuspendBitLocker.BackColor = $BGcolor
-$menuSuspendBitLocker.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuSuspendBitLocker)
-
-#Test Network Button - Tests network connectivity
-$menuTestNet.Text = "Test Network"
-$menuTestNet.Add_Click({
-        #Test Network
-        Start-Process powershell.exe -ArgumentList "-command Test-NetConnection -ComputerName google.com; pause" -PassThru -Wait
-    })
-$menuTestNet.BackColor = $BGcolor
-$menuTestNet.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuTestNet)
-
-#WiFi Diagnostics Button - Tests WiFi Connection
-$menuWiFiDiag.Text = "Launch Wi-Fi Diagnostics"
-$menuWiFiDiag.Add_Click({
-        #Test Wi-Fi
-        if ($adminmode -eq "True") {
-            Start-Process cmd.exe -ArgumentList "/K netsh wlan show wlanreport" -PassThru -Wait
-            Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
-        }
-        else {
-            #Admin mode is not enabled, run in a sub-process shell, but catch if UAC is not accepted and do nothing
-            try {
-                Start-Process powershell.exe -Verb runAs -ArgumentList "-command netsh wlan show wlanreport" -PassThru -Wait
-                Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
-            }
-            catch {
-                #Do nothing...
-            }
-        }
-    })
-$menuWiFiDiag.BackColor = $BGcolor
-$menuWiFiDiag.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuWiFiDiag)
-
-#Battery Diagnostic Button - Tests Battery Health
-$menuBatteryDiagnostic.Text = "Launch Battery Diagnostic"
-$menuBatteryDiagnostic.Add_Click({
-        #Test Battery, first check if device is a laptop
-        if ($systemType -eq "Mobile" -or $systemType -eq "Appliance PC" -or $systemType -eq "Slate") {
-            #Device is a laptop, now check if adminmode is enabled
-            if ($adminmode -eq "True") {
-                #Check to see if C:\Temp\ exists, if not, create it
-                if ((Test-Path -path "C:\Temp\") -eq $false) {
-                    New-Item -Path 'C:\Temp\' -ItemType Directory
-                }
-
-                #Adminmode is enabled, so run the battery report
-                Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru -Wait
-                Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
-            }
-            else {
-                #Adminmode is not enabled, so run the battery report in a sub-process shell, but catch if UAC is not accepted and do nothing
-                try {
-                    #Check to see if C:\Temp\ exists, if not, create it
-                    if ((Test-Path -path "C:\Temp\") -eq $false) {
-                        New-Item -Path 'C:\Temp\' -ItemType Directory
-                    }
-
-                    Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output C:\Temp\Battery.html" -PassThru -Verb RunAs -Wait
-                    Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
-                }
-                catch {
-                    #Do nothing...
-                }
-            }
-        }
-        else {
-            #Device is not a laptop, so display a popup
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("This device is not a laptop. No battery report available.", 0, "Battery Diagnostic", 64)
-        }
-    })
-$menuBatteryDiagnostic.BackColor = $BGcolor
-$menuBatteryDiagnostic.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuBatteryDiagnostic)
-
-#Quick Reboot Button - Reboots the computer
-$menuRebootQuick.Text = "Quick Reboot"
-$menuRebootQuick.Add_Click({
-        #First, confirm reboot
-        $wshell = New-Object -ComObject Wscript.Shell
-        if ($wshell.Popup("Are you sure you want to reboot? Make sure everything is saved before proceeding.", 0, "Reboot", 4 + 32) -eq 6) {
-            #Reboot
-            Start-Process shutdown -argumentlist "-r -t 0" -PassThru
-        }
-
-    })
-$menuRebootQuick.BackColor = $BGcolor
-$menuRebootQuick.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuRebootQuick)
+[void]$menuHelp.DropDownItems.Add($menuBugReport)
 
 <#
 #Rename Computer Button
@@ -2118,165 +1310,92 @@ $menuRenameComputer.Add_Click({
 $menuFunctions.DropDownItems.Add($menuRenameComputer)
 #>
 
-$menuBitlockerRetreive.Text = "Retrieve BitLocker Key"
-$menuBitlockerRetreive.Add_Click({
-        bitlockerTool
-    })
-$menuBitlockerRetreive.BackColor = $BGcolor
-$menuBitlockerRetreive.ForeColor = $TextColor
-$outputsuppressed = $menuFunctions.DropDownItems.Add($menuBitlockerRetreive)
+#Settings Button
+$menuSettings.Text = "Settings"
+$menuSettings.Add_Click({
+        #First, check to see if running in admin mode
+        if (($adminmode -eq $true) -or ($installType -eq "Portable")) {
+            #Next, check to see if ETTConfig.json exists in the same directory as the script
+            $configtest = Test-Path ".\ETTConfig.json" -ErrorAction SilentlyContinue
+            #First, check to see if the settings file is present
+            if ($configtest -eq $true) {
+                Open-SettingsMenu
+            }
+            else {
+                #Display a quick popup - "No settings file found, would you like to create one?" with a Yes/No option
+                $wshell = New-Object -ComObject Wscript.Shell
+                $request = $wshell.Popup("No settings file found. Would you like to create one?", 0, "Settings", 4)
+                if ($request -eq 6) {
+                    #If yes, create a new settings file with default settings and open the settings window script
+                    $newConfig = @"
+                {
+                    "ETTSettingsGUI" : true,
+                    "AutoUpdateCheckerEnabled" : true,
+                    "AdminMode" : false,
+                    "BrandColor" : "#023a24",
+                    "LogoLocation" : null,
+                    "BackgroundImagePath" : "",
+                    "ETTApplicationTitle" : "",
+                    "ETTHeaderText" : "",
+                    "ETTHeaderTextColor" : "White",
+                    "ApplicationTimeoutEnabled" : false,
+                    "ApplicationTimeoutLength" : 300,
+                    "EnableCustomTools" : true,
+                    "RAMCheckActive": false,
+                    "RAMCheckMinimum" : 8,
+                    "DriveSpaceCheckActive" : false,
+                    "DriveSpaceCheckMinimum" : 20,
+                    "WinVersionCheckActive" : false,
+                    "WinVersionTarget": "24H2",
+                    "AzureADTenantId" : "",
+                    "LAPSAppClientId" : "",
+                    "BitLockerAppClientId" : "",
+                    "AnimeMode" : false,
+                    "DefenderEnrollCheckActive" : false,
+                
+                    "CustomFunctions": [
+                        {
+                          "displayName": "Display Hello World",
+                          "description": "Returns a friendly 'Hello, World!' message.",
+                          "tab" : "",
+                          "requireAdmin" : true,
+                          "codeBlock": "$wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup('Hello, World!', 0, 'Hello, World!', 0x1)"
+                        },
+                        {
+                          "displayName": "Display Random Number",
+                          "description": "Generates a random number between 1 and 100.",
+                          "tab": "",
+                          "requireAdmin" : false,
+                          "codeBlock": "$rand =  (Get-Random -Minimum 1 -Maximum 100); $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup($rand, 0, $rand, 0x1)"
+                        }
+                        ]
+                    }
+"@
+                    #Create the new settings file in the same directory as the script using a here-string
+                    $newConfig | Out-File -FilePath ".\ETTConfig.json"
 
-#AD Tab
-$menuAD.Text = "AD Lookup"
-$menuAD.Add_Click({
-        #Test if RSAT is installed
-        try {
-            Get-ADUser -Identity $env:USERNAME -ErrorAction SilentlyContinue
-            #AD Lookup
-            ADLookup
-        }
-        catch {
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("RSAT AD Tools or your permissions level are not compliant. Please install RSAT AD tools or use an entitled account and try again.", 0, "RSAT", 64)
-        }
-    })
-$outputsuppressed = $menu.Items.Add($menuAD)
-
-#Windows Tools Tab
-$menuWindowsTools.Text = "Windows"
-$outputsuppressed = $menu.Items.Add($menuWindowsTools)
-
-#Windows Update Check Button - Checks for Windows Updates
-$menuWindowsUpdateCheck.Text = "Check for Windows Updates"
-$menuWindowsUpdateCheck.BackColor = $BGcolor
-$menuWindowsUpdateCheck.ForeColor = $TextColor
-
-#Add sub-menu items to Windows Update Check Button - Full Sweep
-$menuWindowsUpdateCheckFullSweep = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuWindowsUpdateCheckFullSweep.Text = "Full Sweep"
-$menuWindowsUpdateCheckFullSweep.Add_Click({
-
-        CheckForWindowsUpdates -windowTitle "All Windows Updates" -noUpdatesMessage "No updates available." -updateSearchQuery "IsHidden=0 and IsInstalled=0"
-        
-    })
-$menuWindowsUpdateCheckFullSweep.BackColor = $BGcolor
-$menuWindowsUpdateCheckFullSweep.ForeColor = $TextColor
-$outputsuppressed = $menuWindowsUpdateCheck.DropDownItems.Add($menuWindowsUpdateCheckFullSweep)
-
-#Add sub-menu items to Windows Update Check Button - Defender Definition Updates
-$menuWindowsUpdateCheckDefender = New-Object System.Windows.Forms.ToolStripMenuItem
-$menuWindowsUpdateCheckDefender.Text = "Defender Definition Updates"
-$menuWindowsUpdateCheckDefender.Add_Click({
-
-        CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'"
-  
-    })
-$menuWindowsUpdateCheckDefender.BackColor = $BGcolor
-$menuWindowsUpdateCheckDefender.ForeColor = $TextColor
-$outputsuppressed = $menuWindowsUpdateCheck.DropDownItems.Add($menuWindowsUpdateCheckDefender)
-
-$outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsUpdateCheck)
-
-#Windows Activation Button - Windows Activation Key
-$menuWindowsActivation.Text = "Get Windows Activation Key"
-$menuWindowsActivation.Add_Click({
-        $HardwareKey = (Get-WmiObject -query 'select * from SoftwareLicensingService' | Select-Object OA3xOriginalProductKey).OA3xOriginalProductKey
-        
-        #Verify that the key is not null
-        if ($HardwareKey -eq $null -or $HardwareKey -eq "") {
-            $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("No Windows Activation Key found in WMI." + "`n`nThis could be the result of running in a VM, or not stored in BIOS", 0, "Windows Activation", 64)
+                    #Display a message box to the user that the settings file has been created, and the path to it
+                    $wshell.Popup("Settings file created. `n`n Now opening settings menu.", 0, "Settings Created", 64)
+                    Open-SettingsMenu
+                }
+                else {
+                    #If no, do nothing
+                }
+           
+            }
         }
         else {
-            #Key is not null, so display it in a popup
+            #If we are not in admin mode, display a message box
             $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Windows Activation Key: " + $HardwareKey + "`n`nKey Copied to Clipboard.", 0, "Windows Activation Key", 64)
+            $wshell.Popup("You must be in Admin Mode to access settings.", 0, "Settings Error", 48)
         }
-        
     })
-$menuWindowsActivation.BackColor = $BGcolor
-$menuWindowsActivation.ForeColor = $TextColor
-$outputsuppressed = $menuWindowsTools.DropDownItems.Add($menuWindowsActivation)
-
-#SCCM Functions Button - Displays a list of SCCM Client functions if the client is present on the machine
-#Check to see if the SCCM client is installed and we have the required WMI class
-$sccmClass = Get-WmiObject -Class "SMS_Client" -List -Namespace "root\CCM" -ErrorAction SilentlyContinue
-$sccmClassExists = $sccmClass -ne $null
-
-#Create the SCCM Trigger Schedule Table
-$sccmTSTable = [ordered]@{}
-$sccmTSTable.Add("Application Deployment Evaluation Cycle", "{00000000-0000-0000-0000-000000000121}")
-$sccmTSTable.Add("Discovery Data Collection Cycle", "{00000000-0000-0000-0000-000000000103}")
-$sccmTSTable.Add("File Collection Cycle", "{00000000-0000-0000-0000-000000000104}")
-$sccmTSTable.Add("Hardware Inventory Cycle", "{00000000-0000-0000-0000-000000000001}")
-$sccmTSTable.Add("Machine Policy Retrieval", "{00000000-0000-0000-0000-000000000021}")
-$sccmTSTable.Add("Machine Policy Evaluation Cycle", "{00000000-0000-0000-0000-000000000022}")
-$sccmTSTable.Add("Software Inventory Cycle", "{00000000-0000-0000-0000-000000000002}" )
-$sccmTSTable.Add("Software Metering Usage Report Cycle", "{00000000-0000-0000-0000-000000000106}")
-$sccmTSTable.Add("Software Updates Deployment Evaluation Cycle", "{00000000-0000-0000-0000-000000000114}")
-$sccmTSTable.Add("User Policy Retrieval", "{00000000-0000-0000-0000-000000000026}")
-$sccmTSTable.Add("User Policy Evaluation Cycle", "{00000000-0000-0000-0000-000000000027}")
-$sccmTSTable.Add("Windows Installer Source List Update Cycle", "{00000000-0000-0000-0000-000000000107}")
-
-#SCCM Trigger helper function
-function TriggerSCCMClientFunction {
-    param (
-        $TriggerScheduleGUID,
-        $TriggerScheduleName
-    )
-    Invoke-CimMethod -Namespace 'root\CCM' -ClassName SMS_Client -MethodName TriggerSchedule -Arguments @{sScheduleID = $TriggerScheduleGUID }
-    $wshell = New-Object -ComObject Wscript.Shell
-    $wshell.Popup("SCCM Client Task $TriggerScheduleName Triggered. The selected task will run and might take several minutes to finish.", 0, "SCCM Client Task", 64)
-}
-
-#SCCM Tools Menu Construction
-#If the SCCM Client is not installed on the computer, the menu option will be unavailable.
-if ($sccmClassExists) {
-    $outputsuppressed = $menu.Items.Add($sccmClientTools)
-}
-$sccmClientTools.Text = "SCCM Tools"
-
-foreach ($key in $($sccmTSTable.Keys)) {
-    $tmpButton = New-Object System.Windows.Forms.ToolStripMenuItem
-    $tmpButton.Text = $key
-    $tmpButton.BackColor = $BGcolor
-    $tmpButton.ForeColor = $TextColor
-    $tmpButton.Add_Click({
-            TriggerSCCMClientFunction -TriggerScheduleGUID $sccmTSTable[$key] -TriggerScheduleName $key
-        })
-    $outputsuppressed = $sccmClientTools.DropDownItems.Add($tmpButton)
-}
-
-#Security TAB Construction
-$menuSecurity.Text = "Security"
-$outputsuppressed = $menu.Items.Add($menuSecurity)
-
-$hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
-$hostsCompliant = $true
-$hostsText = "Host File Integrity: Unmodified"
-if ($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085") {
-    $hostsCompliant = $false
-    $hostsText = "Host File Integrity: Modified"
-}
-
-$hostsChkButton = New-Object System.Windows.Forms.ToolStripMenuItem
-$hostsChkButton.Text = $hostsText
-$hostsChkButton.BackColor = $BGcolor
-$hostsChkButton.ForeColor = $TextColor
-$outputsuppressed = $menuSecurity.DropDownItems.Add($hostsChkButton)
+[void]$menu.Items.Add($menuSettings)
 
 #Exit Button
 $menuExit.Text = "Exit"
 $menuExit.Add_Click({ $ETT.Close() })
-$outputsuppressed = $menu.Items.Add($menuExit)
-
-#For non-admin mode, show the UAC shield on the buttons that require admin mode
-if ($adminmode -eq $false) {
-    $menuWiFiDiag.Image = $shieldIcon
-    $menuSFCScan.Image = $shieldIcon
-    $menuSuspendBitlocker.Image = $shieldIcon
-    $menuBatteryDiagnostic.Image = $shieldIcon
-}
+[void]$menu.Items.Add($menuExit)
 
 #Add all buttons and functions to the GUI menu
 $ETT.controls.AddRange(@($Logo, $Heading, $ClearLastLogin, $Lapspw, $appUpdate, $PolicyPatch, $menu))

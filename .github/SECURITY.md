@@ -4,11 +4,13 @@ This Security Policy provides guidelines and procedures for maintaining the conf
 
 ## Supported Versions
 
-Due to the nature of the application being effectively just a PowerShell script, releases are only supported in active development. Should a security issue arise on your current version, patches only roll on newer updates, and there is no backwards support cycle currently in place. Users are expected to use the most recent version of the application for the best security and feature set. However, there is as well NO built-in update path yet.
+Due to the nature of the application being effectively just a PowerShell script, releases are only supported in active development. Should a security issue arise on your current version, patches only roll on newer updates, and there is no backwards support cycle currently in place. Users are expected to use the most recent version of the application for the best security and feature set. As of version 1.2.1, a built-in update path is now officially supported using the Windows Package Manager.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.x     | :white_check_mark: |
+| 1.0/1.1 | :stop_sign: - End of Support|
+| 1.2.1   | :warning: - EOL with 1.3 rollout, autoupdate is supported    |
+| 1.3     | :white_check_mark: |
 
 ## ETT-Admin Version Support
 

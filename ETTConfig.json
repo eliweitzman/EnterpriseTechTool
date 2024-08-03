@@ -1,0 +1,43 @@
+{
+    "ETTSettingsGUI" : true,
+    "AutoUpdateCheckerEnabled" : true,
+    "AdminMode" : false,
+    "BrandColor" : "#023a24",
+    "LogoLocation" : null,
+    "BackgroundImagePath" : "",
+    "ETTApplicationTitle" : "",
+    "ETTHeaderText" : "",
+    "ETTHeaderTextColor" : "White",
+    "ApplicationTimeoutEnabled" : false,
+    "ApplicationTimeoutLength" : 300,
+    "EnableCustomTools" : true,
+    "RAMCheckActive": false,
+    "RAMCheckMinimum" : 8,
+    "DriveSpaceCheckActive" : false,
+    "DriveSpaceCheckMinimum" : 20,
+    "WinVersionCheckActive" : false,
+    "WinVersionTarget": "24H2",
+    "DefenderEnrollCheckActive" : false,
+    "AzureADTenantId" : "",
+    "LAPSAppClientId" : "",
+    "BitLockerAppClientId" : "",
+    "AnimeMode" : false,
+
+    "CustomFunctions": [
+        {
+          "displayName": "Display Hello World",
+          "description": "Returns a friendly 'Hello, World!' message.",
+          "tab" : "",
+          "requireAdmin" : true,
+          "codeBlock": "$wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup('Hello, World!', 0, 'Hello, World!', 0x1)"
+        },
+        {
+          "displayName": "Display Random Number",
+          "description": "Generates a random number between 1 and 100.",
+          "tab": "",
+          "requireAdmin" : false,
+          "codeBlock": "$rand =  (Get-Random -Minimum 1 -Maximum 100); $wshell = New-Object -ComObject Wscript.Shell; $wshell.Popup($rand, 0, $rand, 0x1)"
+        }
+      ]
+  }
+  
