@@ -69,7 +69,7 @@ Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 #Build Variables
-$ETTVersion = "1.3"
+$ETTVersion = "1.3.1"
 $AutoUpdateCheckerEnabled = (?: { $jsonConfig.AutoUpdateCheckerEnabled -ne $null -and $jsonConfig.AutoUpdateCheckerEnabled -ne "" } { $jsonConfig.AutoUpdateCheckerEnabled } { $true })
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
@@ -208,15 +208,17 @@ if ($AutoUpdateCheckerEnabled -eq $true) {
 
     #Update Checker
     if ($applicationVersion -lt $githubVersion) {
-        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
+        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now? This will close the current instance of ETT and may require an application restart.", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
         if ($updatePrompt -eq "Yes") {
             #This is for if an application was installed with Winget, or with the self-extracting installer, and is a regular ETT variant
             if (($installType -eq "Installed")) {
-                Start-Process powershell.exe -ArgumentList "-command winget upgrade --id EliWeitzman.ETT -e"
+                Start-Process powershell.exe -ArgumentList "-command winget upgrade --id EliWeitzman.ETT"
+                exit
             }
             #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
             elseif ($installType -eq "Portable") {
                 Start-Process "https://github.com/eliweitzman/EnterpriseTechTool"
+                exit
             }
         }
     }
