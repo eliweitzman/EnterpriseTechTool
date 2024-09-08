@@ -130,10 +130,10 @@ Naming must follow this format in order to work: "custom_FUNCTIONNAME"
 #>
 
 #Custom Test Functions
-function custom_ExampleFunction {
+<#function custom_ExampleFunction {
     $wshell = New-Object -ComObject Wscript.Shell
     $wshell.Popup("This example function was triggered from a Custom Function list click.", 0, "Example Function", 0x1)
-}
+}#>
 
 <#
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
