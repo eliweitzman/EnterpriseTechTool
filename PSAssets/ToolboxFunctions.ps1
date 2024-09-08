@@ -83,9 +83,7 @@ function CheckForWindowsUpdates {
 function ClearLastLogin {
     param(
         [Parameter(Position = 0, mandatory = $true)]
-        $adminmode, 
-        [Parameter(Position = 1, mandatory = $true)]
-        $ToastStack
+        $adminmode
     )
     #Check if admin mode is enabled. Depending on the result, run the appropriate command    
     if ($adminmode -eq $true) {
@@ -100,11 +98,7 @@ function ClearLastLogin {
     }
 
     #Display a notification that the last login has been cleared
-    $ToastStack.BalloonTipText = "Last Login Cleared!"
-    $ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
-    $ToastStack.BalloonTipTitle = "Login Status"
-    $ToastStack.ShowBalloonTip(5000)
-    $ToastStack.Visible = $true
+    Create-ToastNotification -Icon Info -Title "Login Status" -Message "Last Login Cleared!" -Duration 5000
 }
 
 function Get-WindowsActivationKey {

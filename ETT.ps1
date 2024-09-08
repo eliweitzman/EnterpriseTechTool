@@ -49,6 +49,8 @@
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #>
 
+# HELPER FUNCTIONS
+
 # Create the Ternary Operator since PowerShell 5 doesn't have it
 set-alias ?: Invoke-Ternary -Option AllScope -Description "PSCX filter alias"
 filter Invoke-Ternary ([scriptblock]$decider, [scriptblock]$ifTrue, [scriptblock]$ifFalse) {
@@ -58,6 +60,24 @@ filter Invoke-Ternary ([scriptblock]$decider, [scriptblock]$ifTrue, [scriptblock
     else { 
         &$ifFalse 
     }
+}
+
+function Create-ToastNotification{
+    param (
+        [System.Windows.Forms.ToolTipIcon]$Icon,
+        [string] $Title,
+        [string] $Message,
+        [int] $Duration
+    )
+    #Create Toast Notification Stack
+    $ToastStack = New-Object System.Windows.Forms.NotifyIcon
+    $Path = 'C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe'
+    $ToastStack.Icon =  [System.Drawing.Icon]::ExtractAssociatedIcon($path)
+    $ToastStack.BalloonTipIcon = $Icon
+    $ToastStack.BalloonTipTitle = $Title
+    $ToastStack.BalloonTipText = $Message
+    $ToastStack.Visible = $true
+    $ToastStack.ShowBalloonTip($Duration)
 }
 
 #Load ETTConfig.json File
@@ -763,27 +783,16 @@ if ($null -ne $ETT.BackgroundImage) {
     $Heading.ForeColor = $ettHeaderTextColor
 }
 
-#Create Toast Notification Stack
-$ToastStack = New-Object System.Windows.Forms.NotifyIcon
-$Path = 'C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe'
-$ToastStack.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($path)
-$ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
-$ToastStack.BalloonTipTitle = $ettApplicationTitle
-$ToastStack.BalloonTipText = "Welcome to $ettApplicationTitle!"
-$ToastStack.Visible = $true
-$ToastStack.ShowBalloonTip(5000)
+#Display Welcome Toast
+Create-ToastNotification -Icon "Info" -Title $ettApplicationTitle -Message "Welcome to $ettApplicationTitle!" -Duration 5000
 
 #IF Compliance Flag is true, add a flyout notification
 if ($complianceFlag -eq $true) {
-    $ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Error
-    $ToastStack.BalloonTipTitle = $ettApplicationTitle
-    $ToastStack.BalloonTipText = "This device is non-compliant!"
-    $ToastStack.Visible = $true
-    $ToastStack.ShowBalloonTip(5000)
+    Create-ToastNotification -Icon [System.Windows.Forms.ToolTipIcon]::Error -Title $ettApplicationTitle -Message "This device is non-compliant!" -Duration 5000
 }
 
 #Create App Buttons
-$ClearLastLogin = Create-ETTButton -ButtonText "Clear Last Login" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 117 -ScriptBlock { ClearLastLogin -adminmode $adminmode -ToastStack $ToastStack }
+$ClearLastLogin = Create-ETTButton -ButtonText "Clear Last Login" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 117 -ScriptBlock { ClearLastLogin -adminmode $adminmode}
 $Lapspw = Create-ETTButton -ButtonText "Get LAPS Password" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 267 -ButtonYPosition 117 -ScriptBlock { Open-LAPSToolWindow }
 $appUpdate = Create-ETTButton -ButtonText "Update Apps (Winget)" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 219 -ScriptBlock { Start-WingetAppUpdates }
 $PolicyPatch = Create-ETTButton -ButtonText "Windows Policy Update" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 266 -ButtonYPosition 219 -ScriptBlock { Start-PolicyPatch }
