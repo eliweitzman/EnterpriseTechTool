@@ -85,20 +85,28 @@ function ClearLastLogin {
         [Parameter(Position = 0, mandatory = $true)]
         $adminmode
     )
-    #Check if admin mode is enabled. Depending on the result, run the appropriate command    
-    if ($adminmode -eq $true) {
-        #With admin mode enabled, run the commands without UAC
-        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnSAMUser -Value "" -Force
-        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnUser -Value ""  -Force
-        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnUserSID -Value "" -Force
+    try{
+        #Check if admin mode is enabled. Depending on the result, run the appropriate command    
+        if ($adminmode -eq $true) {
+            #With admin mode enabled, run the commands without UAC
+            New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnSAMUser -Value "" -Force
+            New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnUser -Value ""  -Force
+            New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnUserSID -Value "" -Force
+        }
+        elseif ($adminmode -eq $false) {
+            #Without admin mode enabled, run the commands with UAC, in a sub-process shell
+            Start-Process powershell.exe -Verb runAs -ArgumentList '-Command', 'New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnSAMUser -Value "" -Force; New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnUser -Value ""  -Force; New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnUserSID -Value "" -Force' -Wait
+        }
+        #Display a notification that the last login has been cleared
+        Create-ToastNotification -Icon Info -Title "Login Status" -Message "Last Login Cleared!" -Duration 5000
     }
-    elseif ($adminmode -eq $false) {
-        #Without admin mode enabled, run the commands with UAC, in a sub-process shell
-        Start-Process powershell.exe -Verb runAs -ArgumentList '-Command', 'New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnSAMUser -Value "" -Force; New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnUser -Value ""  -Force; New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnUserSID -Value "" -Force' -Wait
+    catch
+    {
+        #Display a notification that the last login has not been cleared
+        Create-ToastNotification -Icon Error -Title "Login Status" -Message "Last Login didn't clear due to an error. Please make sure that you are allowing the function to run under administrative context and try again." -Duration 5000
     }
 
-    #Display a notification that the last login has been cleared
-    Create-ToastNotification -Icon Info -Title "Login Status" -Message "Last Login Cleared!" -Duration 5000
+    
 }
 
 function Get-WindowsActivationKey {
