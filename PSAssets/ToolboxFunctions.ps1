@@ -339,6 +339,28 @@ function Start-DISMScan {
     }
 }
 
+function Start-DefenderFullScan {
+    if ($wshell.Popup("Are you sure you want to run a Defender Full Scan?", 0, "Defender Full Scan", 4 + 32) -eq 6) {
+        try {
+            Start-MpScan -ScanType FullScan -ErrorAction Stop
+        }
+        catch [Microsoft.Management.Infrastructure.CimException] {
+            $wshell.Popup($_.Exception.Message, 0, "Defender Full Scan", 0 + 16)
+        }
+    }
+}
+
+function Start-DefenderQuickScan {
+    if ($wshell.Popup("Are you sure you want to run a Defender Quick Scan?", 0, "Defender Quick Scan", 4 + 32) -eq 6) {
+        try {
+            Start-MpScan -ScanType QuickScan -ErrorAction Stop
+        }
+        catch [Microsoft.Management.Infrastructure.CimException] {
+            $wshell.Popup($_.Exception.Message, 0, "Defender Quick Scan", 0 + 16)
+        }
+    }
+}
+
 function QuickReboot {
     #First, confirm reboot
     $wshell = New-Object -ComObject Wscript.Shell

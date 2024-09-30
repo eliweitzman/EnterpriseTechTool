@@ -841,8 +841,8 @@ $ActionsTab.Add_Click({
 $WindowsTabArray = New-Object System.Collections.ArrayList
 [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Full Sweep" -ScriptBlock { CheckForWindowsUpdates -windowTitle "All Windows Updates" -noUpdatesMessage "No updates available." -updateSearchQuery "IsHidden=0 and IsInstalled=0" }))
 [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Defender Only" -ScriptBlock { CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'" }))
-[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation" -ScriptBlock { Get-WindowsActivationKey }))
-[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation Type" -ScriptBlock { Get-WindowsActivationType }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Activation - Get Activation Key" -ScriptBlock { Get-WindowsActivationKey }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Activation - Get Activation Type" -ScriptBlock { Get-WindowsActivationType }))
 [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - SFC Scan" -RequireAdmin $true -ScriptBlock { Start-SFCScan }))
 [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - DISM Online Repair" -RequireAdmin $true -ScriptBlock { Start-DISMScan }))
 $WindowsTab = Create-ToolboxTabPage -PageName "Windows" -ToolboxItemsArray $WindowsTabArray
@@ -854,12 +854,14 @@ $WindowsTab.Add_Click({
 #Tab 3 - Security Tab Creation
 $SecurityTabArray = New-Object System.Collections.ArrayList
 [void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "$(Get-HostsFileIntegrity)" -ScriptBlock {}))
+[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Defender - Launch Full Scan" -ScriptBlock {Start-DefenderFullScan}))
+[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Defender - Launch Quick Scan" -ScriptBlock {Start-DefenderQuickScan}))
 $SecurityTab = Create-ToolboxTabPage -PageName "Security" -ToolboxItemsArray $SecurityTabArray
 $SecurityTab.Add_Click({
         $runThis = [ScriptBlock]::Create($SecurityTab.SelectedValue)
         &$runThis
     })
-
+    
 #Tab 4 - SCCM (if enabled) Tab Creation
 
 #Check to see if the SCCM client is installed and we have the required WMI class
