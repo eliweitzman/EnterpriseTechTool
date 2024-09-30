@@ -205,11 +205,6 @@ function Start-DriverUpdateGUI {
     }
 }
 
-function Start-SFCScan {
-    #SFC Scan
-    Start-Process powershell.exe -ArgumentList "-command sfc /scannow" -PassThru -Verb RunAs
-}
-
 function Start-SuspendBitlockerAction {
     param(
         [Parameter(Position = 0, mandatory = $true)]
@@ -324,6 +319,24 @@ function Start-SCCMClientFunction {
     Invoke-CimMethod -Namespace 'root\CCM' -ClassName SMS_Client -MethodName TriggerSchedule -Arguments @{sScheduleID = $TriggerScheduleGUID }
     $wshell = New-Object -ComObject Wscript.Shell
     $wshell.Popup("SCCM Client Task $TriggerScheduleName Triggered. The selected task will run and might take several minutes to finish.", 0, "SCCM Client Task", 64)
+}
+
+function Start-SFCScan {
+    if ($adminmode -eq "True") {
+        Start-Process powershell.exe -ArgumentList "-command sfc /scannow" -PassThru -Wait
+    }
+    else {
+        Start-Process powershell.exe -ArgumentList "-command sfc /scannow" -PassThru -Verb RunAs -Wait
+    }
+}
+
+function Start-DISMScan {
+    if ($adminmode -eq "True") {
+        Start-Process powershell.exe -ArgumentList "-command DISM.exe /Online /Cleanup-image /Restorehealth" -PassThru -Wait
+    }
+    else {
+        Start-Process powershell.exe -ArgumentList "-command DISM.exe /Online /Cleanup-image /Restorehealth" -PassThru -Verb RunAs -Wait
+    }
 }
 
 function QuickReboot {

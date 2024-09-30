@@ -843,6 +843,8 @@ $WindowsTabArray = New-Object System.Collections.ArrayList
 [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Defender Only" -ScriptBlock { CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'" }))
 [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation" -ScriptBlock { Get-WindowsActivationKey }))
 [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation Type" -ScriptBlock { Get-WindowsActivationType }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - SFC Scan" -RequireAdmin $true -ScriptBlock { Start-SFCScan }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - DISM Online Repair" -RequireAdmin $true -ScriptBlock { Start-DISMScan }))
 $WindowsTab = Create-ToolboxTabPage -PageName "Windows" -ToolboxItemsArray $WindowsTabArray
 $WindowsTab.Add_Click({
         $runThis = [ScriptBlock]::Create($WindowsTab.SelectedValue)
