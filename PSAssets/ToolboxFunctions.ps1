@@ -369,3 +369,37 @@ function QuickReboot {
         Start-Process shutdown -argumentlist "-r -t 0" -PassThru
     }
 }
+
+function Delete-GroupPolicyCache {
+    $wshell = New-Object -ComObject Wscript.Shell
+    if ($adminmode -eq "True") {
+        if ($wshell.Popup("Are you sure you want to clear the Group Policy Cache?", 0, "Group Policy Cache", 4 + 32) -eq 6) {
+            try{
+                # Stop the Group Policy Client service
+                Stop-Service -Name gpsvc -Force -ErrorAction Stop
+
+                # Delete the Group Policy cache folders
+                $gpCacheFolders = @(
+                    "C:\Windows\System32\GroupPolicy",
+                    "C:\Windows\System32\GroupPolicyUsers"
+                )
+
+                foreach ($folder in $gpCacheFolders) {
+                    if (Test-Path -Path $folder) {
+                        Remove-Item -Path $folder -Recurse -Force
+                    }
+                }
+
+                # Start the Group Policy Client service
+                Start-Service -Name gpsvc -ErrorAction Stop
+                $wshell.Popup("Group Policy Cache has been deleted.", 0, "Group Policy Cache", 0 + 64)
+            }
+            catch {
+                $wshell.Popup("There was an error deleting the GPO Cache. Please make sure this machine is joined to a domain and try again.", 0, "Group Policy Cache", 0 + 16)
+            }
+        }
+    }
+    else {
+        $wshell.Popup("Please run the Delete Group Policy Cache Function as an administrator by restarting ETT in Admin Mode!", 0, "Group Policy Cache", 0 + 16)
+    }
+}

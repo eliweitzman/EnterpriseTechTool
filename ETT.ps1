@@ -845,12 +845,13 @@ $WindowsTabArray = New-Object System.Collections.ArrayList
 [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Activation - Get Activation Type" -ScriptBlock { Get-WindowsActivationType }))
 [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - SFC Scan" -RequireAdmin $true -ScriptBlock { Start-SFCScan }))
 [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - DISM Online Repair" -RequireAdmin $true -ScriptBlock { Start-DISMScan }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Group Policy - Delete GPO Cache" -RequireAdmin $true -ScriptBlock { Delete-GroupPolicyCache}))
 $WindowsTab = Create-ToolboxTabPage -PageName "Windows" -ToolboxItemsArray $WindowsTabArray
 $WindowsTab.Add_Click({
         $runThis = [ScriptBlock]::Create($WindowsTab.SelectedValue)
         &$runThis
     })
-
+    
 #Tab 3 - Security Tab Creation
 $SecurityTabArray = New-Object System.Collections.ArrayList
 [void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "$(Get-HostsFileIntegrity)" -ScriptBlock {}))
