@@ -403,3 +403,20 @@ function Delete-GroupPolicyCache {
         $wshell.Popup("Please run the Delete Group Policy Cache Function as an administrator by restarting ETT in Admin Mode!", 0, "Group Policy Cache", 0 + 16)
     }
 }
+
+function Repair-OutlookPST {
+    $wshell = New-Object -ComObject Wscript.Shell
+    if ($adminmode -eq "True") {
+        if ($wshell.Popup("Are you sure you want to repair the Outlook PST file?", 0, "Outlook PST Repair", 4 + 32) -eq 6) {
+            try {
+                Start-Process -FilePath "C:\Program Files\Microsoft Office\root\Office16\SCANPST.EXE" -Verb RunAs
+            }
+            catch {
+                $wshell.Popup("There was an error repairing the Outlook PST file. Please make sure Outlook is closed and try again.", 0, "Outlook PST Repair", 0 + 16)
+            }
+        }
+    }
+    else {
+        $wshell.Popup("Please run the Repair Outlook PST Function as an administrator by restarting ETT in Admin Mode!", 0, "Outlook PST Repair", 0 + 16)
+    }
+}
