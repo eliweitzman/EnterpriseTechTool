@@ -832,6 +832,7 @@ $ActionsTabArray = New-Object System.Collections.ArrayList
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Battery Diagnostics" -RequireAdmin $true -ScriptBlock { Start-BatteryDiagnostics -adminmode $adminmode }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Quick Reboot" -ScriptBlock { QuickReboot }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Repair Outlook PST File" -ScriptBlock { Repair-OutlookPST -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -Displayname "Return to Old Outlook" -ScriptBlock {Rollback-Outlook -adminmode $adminmode }))
 $ActionsTab = Create-ToolboxTabPage -PageName "Actions" -ToolboxItemsArray $ActionsTabArray
 $ActionsTab.Add_Click({
         $runThis = [ScriptBlock]::Create($ActionsTab.SelectedValue)
