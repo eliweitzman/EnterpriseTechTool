@@ -124,6 +124,7 @@ function Get-WindowsActivationKey {
         $wshell.Popup("Windows Activation Key: " + $HardwareKey + "`n`nKey Copied to Clipboard.", 0, "Windows Activation Key", 64)
     }
 }
+<#
 function Get-HostsFileIntegrity {
     $hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
     $hostsCompliant = $true
@@ -135,6 +136,13 @@ function Get-HostsFileIntegrity {
     }
 }
 
+function Show-HostsFileIntegrityPopup {
+    $hostsText = Get-HostsFileIntegrity
+    $wshell = New-Object -ComObject Wscript.Shell
+    $wshell.Popup($hostsText, 0, "Hosts File Integrity", 64)  
+}
+
+#>
 function Get-WindowsActivationType {
     slmgr.vbs /dli
 }

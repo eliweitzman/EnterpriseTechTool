@@ -21,7 +21,7 @@
 .LICENSE
     BSD 3-Clause License
 
-    Copyright (c) 2024, Eli Weitzman
+    Copyright (c) 2024-2025, Eli Weitzman
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
@@ -856,7 +856,7 @@ $WindowsTab.Add_Click({
     
 #Tab 3 - Security Tab Creation
 $SecurityTabArray = New-Object System.Collections.ArrayList
-[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "$(Get-HostsFileIntegrity)" -ScriptBlock {}))
+#[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "$(Get-HostsFileIntegrity)" -ScriptBlock {Show-HostsFileIntegrityPopup}))
 [void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Defender - Launch Full Scan" -ScriptBlock {Start-DefenderFullScan}))
 [void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Defender - Launch Quick Scan" -ScriptBlock {Start-DefenderQuickScan}))
 $SecurityTab = Create-ToolboxTabPage -PageName "Security" -ToolboxItemsArray $SecurityTabArray
