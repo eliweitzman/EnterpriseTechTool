@@ -421,11 +421,12 @@ function Repair-OutlookPST {
     }
 }
 
-function Rollback-Outlook {
+function Restore-OldOutlook {
     #Using registry key to rollback Outlook
     $wshell = New-Object -ComObject Wscript.Shell
     if ($adminmode -eq $true) {
-        New-ItemProperty -Path 'HKCU:\Software\Microsoft\Office\16.0\Outlook\Preferences' -Name UseNewOutlook -Value "1" -Force
+        Write-Output "Ran with admin"
+        #New-ItemProperty -Path 'HKCU:\Software\Microsoft\Office\16.0\Outlook\Preferences' -Name UseNewOutlook -Value "1" -Force
     }
     else {
         $wshell.Popup("Please run the Rollback Outlook Function as an administrator by restarting ETT in Admin Mode!", 0, "Rollback Outlook", 0 + 16)
