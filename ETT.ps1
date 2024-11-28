@@ -825,7 +825,6 @@ $ETT.Controls.Add($ToolboxMenu) | Out-Null
 $ActionsTabArray = New-Object System.Collections.ArrayList
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (GUI)" -ScriptBlock { Start-DriverUpdateGUI -manufacturer $manufacturer }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (CLI)" -ScriptBlock { Start-DriverUpdateCLI  -manufacturer $manufacturer }))
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "SFC Scan" -RequireAdmin $true -ScriptBlock { Start-SFCScan }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Suspend Bitlocker" -RequireAdmin $true -ScriptBlock { Start-SuspendBitlockerAction -adminmode $adminmode }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Test Network" -ScriptBlock { Start-NetworkTest }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "WiFi Diagnostics" -RequireAdmin $true -ScriptBlock { Start-WiFiDiagnostics -adminmode $adminmode }))
