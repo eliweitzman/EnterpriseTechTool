@@ -425,7 +425,8 @@ function Repair-OutlookPST {
         }
     }
     else {
-        $wshell.Popup("Please run the Repair Outlook PST Function as an administrator by restarting ETT in Admin Mode!", 0, "Outlook PST Repair", 0 + 16)
+        #Pass admin request to user
+        Start-Process -FilePath "C:\Program Files\Microsoft Office\root\Office16\SCANPST.EXE" -Verb RunAs -PassThru
     }
 }
 
@@ -433,8 +434,7 @@ function Restore-OldOutlook {
     #Using registry key to rollback Outlook
     $wshell = New-Object -ComObject Wscript.Shell
     if ($adminmode -eq $true) {
-        Write-Output "Ran with admin"
-        #New-ItemProperty -Path 'HKCU:\Software\Microsoft\Office\16.0\Outlook\Preferences' -Name UseNewOutlook -Value "1" -Force
+        New-ItemProperty -Path 'HKCU:\Software\Microsoft\Office\16.0\Outlook\Preferences' -Name UseNewOutlook -Value "1" -Force
     }
     else {
         $wshell.Popup("Please run the Rollback Outlook Function as an administrator by restarting ETT in Admin Mode!", 0, "Rollback Outlook", 0 + 16)
