@@ -434,10 +434,16 @@ function Restore-OldOutlook {
     #Using registry key to rollback Outlook
     $wshell = New-Object -ComObject Wscript.Shell
     if ($adminmode -eq $true) {
-        New-ItemProperty -Path 'HKCU:\Software\Microsoft\Office\16.0\Outlook\Preferences' -Name UseNewOutlook -Value "0" -Force
-        $wshell.Popup("Outlook has been reverted back to Outlook (classic).", 0, "Rollback Outlook", 0 + 64)
+        try {
+            New-ItemProperty -Path 'HKCU:\Software\Microsoft\Office\16.0\Outlook\Preferences' -Name UseNewOutlook -Value "0" -Force
+            $wshell.Popup("Outlook has been reverted back to Outlook (classic).", 0, "Rollback Outlook", 0 + 64)
+        }
+        catch {
+            Create-ToastNotification -Icon Error -Title "Outlook Rollback" -Message "There was an error rolling back Outlook. Please make sure legacy Outlook is installed and try again." -Duration 5000
+        }
     }
     else {
-        $wshell.Popup("Please run the Rollback Outlook Function as an administrator by restarting ETT in Admin Mode!", 0, "Rollback Outlook", 0 + 16)
+        #Show a toast notification to run in admin mode
+        Create-ToastNotification -Icon Error -Title "Outlook Rollback" -Message "Please run the Restore Old Outlook function as an administrator by restarting ETT in Admin Mode!" -Duration 5000
     }
 }
