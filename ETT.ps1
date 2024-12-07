@@ -1414,6 +1414,14 @@ $menuExit.Text = "Exit"
 $menuExit.Add_Click({ $ETT.Close() })
 [void]$menu.Items.Add($menuExit)
 
+#Adding a keyboard shortcut to the Exit button - escape key
+$ETT.KeyPreview = $true
+$ETT.Add_KeyDown({
+        if ($_.KeyCode -eq "Escape") {
+            $ETT.Close()
+        }
+    })
+
 #Add all buttons and functions to the GUI menu
 $ETT.controls.AddRange(@($Logo, $Heading, $ClearLastLogin, $Lapspw, $appUpdate, $PolicyPatch, $menu))
 
