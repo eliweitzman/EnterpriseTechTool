@@ -15,13 +15,13 @@
 .AUTHOR
     Eli Weitzman
 .NOTES
-    Version:        1.3
+    Version:        1.3.1
     Creation Date:  12-26-22
 
 .LICENSE
     BSD 3-Clause License
 
-    Copyright (c) 2024, Eli Weitzman
+    Copyright (c) 2025, Eli Weitzman
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
@@ -49,6 +49,8 @@
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #>
 
+# HELPER FUNCTIONS
+
 # Create the Ternary Operator since PowerShell 5 doesn't have it
 set-alias ?: Invoke-Ternary -Option AllScope -Description "PSCX filter alias"
 filter Invoke-Ternary ([scriptblock]$decider, [scriptblock]$ifTrue, [scriptblock]$ifFalse) {
@@ -60,6 +62,24 @@ filter Invoke-Ternary ([scriptblock]$decider, [scriptblock]$ifTrue, [scriptblock
     }
 }
 
+function Create-ToastNotification{
+    param (
+        [System.Windows.Forms.ToolTipIcon]$Icon,
+        [string] $Title,
+        [string] $Message,
+        [int] $Duration
+    )
+    #Create Toast Notification Stack
+    $ToastStack = New-Object System.Windows.Forms.NotifyIcon
+    $Path = 'C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe'
+    $ToastStack.Icon =  [System.Drawing.Icon]::ExtractAssociatedIcon($path)
+    $ToastStack.BalloonTipIcon = $Icon
+    $ToastStack.BalloonTipTitle = $Title
+    $ToastStack.BalloonTipText = $Message
+    $ToastStack.Visible = $true
+    $ToastStack.ShowBalloonTip($Duration)
+}
+
 #Load ETTConfig.json File
 $jsonConfigString = Get-Content -Path ".\ETTConfig.json" -ErrorAction SilentlyContinue
 $jsonConfig = $jsonConfigString | ConvertFrom-Json
@@ -69,7 +89,7 @@ Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 #Build Variables
-$ETTVersion = "1.3"
+$ETTVersion = "1.3.1"
 $AutoUpdateCheckerEnabled = (?: { $jsonConfig.AutoUpdateCheckerEnabled -ne $null -and $jsonConfig.AutoUpdateCheckerEnabled -ne "" } { $jsonConfig.AutoUpdateCheckerEnabled } { $true })
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
@@ -133,10 +153,10 @@ Naming must follow this format in order to work: "custom_FUNCTIONNAME"
 #>
 
 #Custom Test Functions
-function custom_ExampleFunction {
+<#function custom_ExampleFunction {
     $wshell = New-Object -ComObject Wscript.Shell
     $wshell.Popup("This example function was triggered from a Custom Function list click.", 0, "Example Function", 0x1)
-}
+}#>
 
 <#
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -211,15 +231,17 @@ if ($AutoUpdateCheckerEnabled -eq $true) {
 
     #Update Checker
     if ($applicationVersion -lt $githubVersion) {
-        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
+        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now? This will close the current instance of ETT and may require an application restart.", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
         if ($updatePrompt -eq "Yes") {
             #This is for if an application was installed with Winget, or with the self-extracting installer, and is a regular ETT variant
             if (($installType -eq "Installed")) {
-                winget.exe upgrade --id=EliWeitzman.ETT
+                Start-Process powershell.exe -ArgumentList "-command winget upgrade --id EliWeitzman.ETT"
+                exit
             }
             #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
             elseif ($installType -eq "Portable") {
                 Start-Process "https://github.com/eliweitzman/EnterpriseTechTool"
+                exit
             }
         }
     }
@@ -735,9 +757,11 @@ function Create-WindowsTab {
     $WindowsTabArray = New-Object System.Collections.ArrayList
     [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Full Sweep" -ScriptBlock { CheckForWindowsUpdates -windowTitle "All Windows Updates" -noUpdatesMessage "No updates available." -updateSearchQuery "IsHidden=0 and IsInstalled=0" }))
     [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Defender Only" -ScriptBlock { CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'" }))
+    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Activation - Get Activation Key" -ScriptBlock { Get-WindowsActivationKey }))
+    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Activation - Get Activation Type" -ScriptBlock { Get-WindowsActivationType }))
     [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - SFC Scan" -RequireAdmin $true -ScriptBlock { Start-SFCScan }))
-    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation" -ScriptBlock { Get-WindowsActivationKey }))
-    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation Type" -ScriptBlock { Get-WindowsActivationType }))
+    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - DISM Online Repair" -RequireAdmin $true -ScriptBlock { Start-DISMScan }))
+    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Group Policy - Delete GPO Cache" -RequireAdmin $true -ScriptBlock { Delete-GroupPolicyCache}))
     $WindowsTab = Create-ToolboxTabPage -PageName "Windows" -ToolboxItemsArray $WindowsTabArray
     $WindowsTab.Add_Click({
         $runThis = [ScriptBlock]::Create($WindowsTab.SelectedValue)
@@ -747,7 +771,9 @@ function Create-WindowsTab {
 
 function Create-SecurityTab {
     $SecurityTabArray = New-Object System.Collections.ArrayList
-    [void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "$(Get-HostsFileIntegrity)" -ScriptBlock {}))
+    #[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "$(Get-HostsFileIntegrity)" -ScriptBlock {Show-HostsFileIntegrityPopup}))
+    [void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Defender - Launch Full Scan" -ScriptBlock {Start-DefenderFullScan}))
+    [void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Defender - Launch Quick Scan" -ScriptBlock {Start-DefenderQuickScan}))
     $SecurityTab = Create-ToolboxTabPage -PageName "Security" -ToolboxItemsArray $SecurityTabArray
     $SecurityTab.Add_Click({
         $runThis = [ScriptBlock]::Create($SecurityTab.SelectedValue)
@@ -878,27 +904,16 @@ if ($null -ne $ETT.BackgroundImage) {
     $Heading.ForeColor = $ettHeaderTextColor
 }
 
-#Create Toast Notification Stack
-$ToastStack = New-Object System.Windows.Forms.NotifyIcon
-$Path = 'C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe'
-$ToastStack.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($path)
-$ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
-$ToastStack.BalloonTipTitle = $ettApplicationTitle
-$ToastStack.BalloonTipText = "Welcome to $ettApplicationTitle!"
-$ToastStack.Visible = $true
-$ToastStack.ShowBalloonTip(5000)
+#Display Welcome Toast
+Create-ToastNotification -Icon "Info" -Title $ettApplicationTitle -Message "Welcome to $ettApplicationTitle!" -Duration 5000
 
 #IF Compliance Flag is true, add a flyout notification
 if ($complianceFlag -eq $true) {
-    $ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Error
-    $ToastStack.BalloonTipTitle = $ettApplicationTitle
-    $ToastStack.BalloonTipText = "This device is non-compliant!"
-    $ToastStack.Visible = $true
-    $ToastStack.ShowBalloonTip(5000)
+    Create-ToastNotification -Icon [System.Windows.Forms.ToolTipIcon]::Error -Title $ettApplicationTitle -Message "This device is non-compliant!" -Duration 5000
 }
 
 #Create App Buttons
-$ClearLastLogin = Create-ETTButton -ButtonText "Clear Last Login" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 117 -ScriptBlock { ClearLastLogin -adminmode $adminmode -ToastStack $ToastStack }
+$ClearLastLogin = Create-ETTButton -ButtonText "Clear Last Login" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 117 -ScriptBlock { ClearLastLogin -adminmode $adminmode}
 $Lapspw = Create-ETTButton -ButtonText "Get LAPS Password" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 267 -ButtonYPosition 117 -ScriptBlock { Open-LAPSToolWindow }
 $appUpdate = Create-ETTButton -ButtonText "Update Apps (Winget)" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 219 -ScriptBlock { Start-WingetAppUpdates }
 $PolicyPatch = Create-ETTButton -ButtonText "Windows Policy Update" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 266 -ButtonYPosition 219 -ScriptBlock { Start-PolicyPatch }
@@ -937,6 +952,7 @@ ForEach ($tabName in $tabOrder) {
         "AD" { Create-ADTab }
         "Custom" { Create-CustomTab }
     }
+}
 }
 
 #TAB MENU
@@ -1420,6 +1436,14 @@ $menuSettings.Add_Click({
 $menuExit.Text = "Exit"
 $menuExit.Add_Click({ $ETT.Close() })
 [void]$menu.Items.Add($menuExit)
+
+#Adding a keyboard shortcut to the Exit button - escape key
+$ETT.KeyPreview = $true
+$ETT.Add_KeyDown({
+        if ($_.KeyCode -eq "Escape") {
+            $ETT.Close()
+        }
+    })
 
 #Add all buttons and functions to the GUI menu
 $ETT.controls.AddRange(@($Logo, $Heading, $ClearLastLogin, $Lapspw, $appUpdate, $PolicyPatch, $menu))
