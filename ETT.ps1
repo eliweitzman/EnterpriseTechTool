@@ -716,12 +716,14 @@ function Create-ActionsTab {
     $ActionsTabArray = New-Object System.Collections.ArrayList
     [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (GUI)" -ScriptBlock { Start-DriverUpdateGUI -manufacturer $manufacturer }))
     [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (CLI)" -ScriptBlock { Start-DriverUpdateCLI  -manufacturer $manufacturer }))
-    [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "SFC Scan" -RequireAdmin $true -ScriptBlock { Start-SFCScan }))
     [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Suspend Bitlocker" -RequireAdmin $true -ScriptBlock { Start-SuspendBitlockerAction -adminmode $adminmode }))
     [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Test Network" -ScriptBlock { Start-NetworkTest }))
     [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "WiFi Diagnostics" -RequireAdmin $true -ScriptBlock { Start-WiFiDiagnostics -adminmode $adminmode }))
     [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Battery Diagnostics" -RequireAdmin $true -ScriptBlock { Start-BatteryDiagnostics -adminmode $adminmode }))
     [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Quick Reboot" -ScriptBlock { QuickReboot }))
+    [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Repair Outlook PST File" -RequireAdmin $true -ScriptBlock { Repair-OutlookPST -adminmode $adminmode }))
+    [void]$ActionsTabArray.Add((Create-ToolboxListItem -Displayname "Restore to Outlook (classic)" -RequireAdmin $true -ScriptBlock {Restore-OldOutlook -adminmode $adminmode }))
+    [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Block Automatic New Outlook Migration" -RequireAdmin $true -ScriptBlock { Disable-AutomaticNewOutlookMigration -adminmode $adminmode }))
     $ActionsTab = Create-ToolboxTabPage -PageName "Actions" -ToolboxItemsArray $ActionsTabArray
     $ActionsTab.Add_Click({
         $runThis = [ScriptBlock]::Create($ActionsTab.SelectedValue)
@@ -733,6 +735,7 @@ function Create-WindowsTab {
     $WindowsTabArray = New-Object System.Collections.ArrayList
     [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Full Sweep" -ScriptBlock { CheckForWindowsUpdates -windowTitle "All Windows Updates" -noUpdatesMessage "No updates available." -updateSearchQuery "IsHidden=0 and IsInstalled=0" }))
     [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Defender Only" -ScriptBlock { CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'" }))
+    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - SFC Scan" -RequireAdmin $true -ScriptBlock { Start-SFCScan }))
     [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation" -ScriptBlock { Get-WindowsActivationKey }))
     [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation Type" -ScriptBlock { Get-WindowsActivationType }))
     $WindowsTab = Create-ToolboxTabPage -PageName "Windows" -ToolboxItemsArray $WindowsTabArray
