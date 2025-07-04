@@ -22,7 +22,7 @@
     "LAPSAppClientId" : "",
     "BitLockerAppClientId" : "",
     "AnimeMode" : false,
-    "TabOrder": ["Custom", "Actions", "Windows", "Security", "SCCM", "AD"],
+    "TabOrder": ["Actions", "Windows", "Security", "SCCM", "AD", "Custom"],
 
     "CustomFunctions": [
         {
