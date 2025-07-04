@@ -953,7 +953,6 @@ ForEach ($tabName in $tabOrder) {
         "Custom" { Create-CustomTab }
     }
 }
-}
 
 #TAB MENU
 
