@@ -458,7 +458,7 @@ function Disable-AutomaticNewOutlookMigration {
         catch {
             Create-ToastNotification -Icon Error -Title "Issue with Outlook Rollback Blocker" -Message "There was an error modifying the registry keys. Please make sure legacy Outlook is installed and try again." -Duration 5000
         }
-    }else{
+    } else {
         Create-ToastNotification -Icon Error -Title "Administrator Required" -Message "Please run the Disable Automatic New Outlook Migration function as an administrator by restarting ETT in Admin Mode!" -Duration 5000
     }
 }
