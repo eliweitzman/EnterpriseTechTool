@@ -110,7 +110,7 @@ function ClearLastLogin {
 }
 
 function Get-WindowsActivationKey {
-    $HardwareKey = (Get-WmiObject -query 'select * from SoftwareLicensingService' | Select-Object OA3xOriginalProductKey).OA3xOriginalProductKey
+    $HardwareKey = (Get-CimInstance -Query 'select * from SoftwareLicensingService' | Select-Object OA3xOriginalProductKey).OA3xOriginalProductKey
         
     #Verify that the key is not null
     if ($HardwareKey -eq $null -or $HardwareKey -eq "") {

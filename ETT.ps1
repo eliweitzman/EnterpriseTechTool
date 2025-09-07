@@ -348,11 +348,11 @@ $defenderEnrollmentStatus = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows 
 $LoadingProgressBar.Value = 35
 
 $LoadingLabel.Text = "Getting Manufacturer..."
-$manufacturer = Get-WmiObject -Class Win32_ComputerSystemProduct | Select-Object -ExpandProperty Vendor
+$manufacturer = Get-CimInstance -ClassName Win32_ComputerSystemProduct | Select-Object -ExpandProperty Vendor
 $LoadingProgressBar.Value = 40
 
 $LoadingLabel.Text = "Getting Model..."
-$model = Get-WmiObject -Class Win32_ComputerSystem -Property Model | Select-Object -ExpandProperty Model
+$model = Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty Model
 $LoadingProgressBar.Value = 50
 
 $LoadingLabel.Text = "Checking Hosts File..."
@@ -370,8 +370,8 @@ $domain = (Get-CIMInstance -ClassName Win32_ComputerSystem).Domain
 $LoadingProgressBar.Value = 60
 
 $LoadingLabel.Text = "Getting Drive Info..."
-$drivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
-$freedrivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output $('{0:N2}' -f ($_.FreeSpace / 1gb)) }
+$drivespace = Get-CimInstance -ClassName win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
+$freedrivespace = Get-CimInstance -ClassName win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output $('{0:N2}' -f ($_.FreeSpace / 1gb)) }
 $LoadingProgressBar.Value = 70
 
 $LoadingLabel.Text = "Getting RAM Info..."
@@ -399,11 +399,11 @@ else {
 $LoadingProgressBar.Value = 85
 
 $LoadingLabel.Text = "Getting CPU Info..."
-$cpuCheck = Get-WmiObject -Class Win32_Processor | Select-Object -ExpandProperty Name
+$cpuCheck = Get-CimInstance -ClassName Win32_Processor | Select-Object -ExpandProperty Name
 $LoadingProgressBar.Value = 90
 
 $LoadingLabel.Text = "Getting Device Type..."
-$devicetype = (Get-WmiObject -Class Win32_ComputerSystem -Property PCSystemType).PCSystemType
+$devicetype = (Get-CimInstance -ClassName Win32_ComputerSystem -Property PCSystemType).PCSystemType
 $LoadingProgressBar.Value = 95
 
 $LoadingLabel.Text = "Getting Drive Type..."
@@ -868,7 +868,7 @@ $SecurityTab.Add_Click({
 #Tab 4 - SCCM (if enabled) Tab Creation
 
 #Check to see if the SCCM client is installed and we have the required WMI class
-$sccmClass = Get-WmiObject -Class "SMS_Client" -List -Namespace "root\CCM" -ErrorAction SilentlyContinue
+$sccmClass = Get-CimInstance -ClassName "SMS_Client" -Namespace "root\CCM" -ErrorAction SilentlyContinue
 $sccmClassExists = $sccmClass -ne $null
 
 if ($sccmClassExists) {
@@ -1332,6 +1332,7 @@ $menuFunctions.DropDownItems.Add($menuRenameComputer)
 $menuSettings.Text = "Settings"
 $menuSettings.Add_Click({
         #First, check to see if running in admin mode
+
         if (($adminmode -eq $true) -or ($installType -eq "Portable")) {
             #Next, check to see if ETTConfig.json exists in the same directory as the script
             $configtest = Test-Path ".\ETTConfig.json" -ErrorAction SilentlyContinue
