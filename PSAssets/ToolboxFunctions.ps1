@@ -219,7 +219,7 @@ function Start-SuspendBitlockerAction {
         $adminmode
     )
     #Check if adminmode is enabled
-    if ($adminmode -eq "True") {
+    if ($adminmode -eq $true) {
         #Check if BitLocker is enabled
         if ((Get-BitLockerVolume -MountPoint C:).ProtectionStatus -eq "On") {
             #Suspend BitLocker
@@ -251,7 +251,7 @@ function Start-WiFiDiagnostics {
         $adminmode
     )
     #Test Wi-Fi
-    if ($adminmode -eq "True") {
+    if ($adminmode -eq $true) {
         Start-Process cmd.exe -ArgumentList "/K netsh wlan show wlanreport" -PassThru -Wait
         Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
     }
@@ -275,7 +275,7 @@ function Start-BatteryDiagnostics {
     #Test Battery, first check if device is a laptop
     if ($systemType -eq "Mobile" -or $systemType -eq "Appliance PC" -or $systemType -eq "Slate") {
         #Device is a laptop, now check if adminmode is enabled
-        if ($adminmode -eq "True") {
+        if ($adminmode -eq $true) {
             #Open a save dialog to save the battery report
             $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
             $saveFileDialog.Filter = "HTML files (*.html)|*.html"
@@ -330,7 +330,7 @@ function Start-SCCMClientFunction {
 }
 
 function Start-SFCScan {
-    if ($adminmode -eq "True") {
+    if ($adminmode -eq $true) {
         Start-Process powershell.exe -ArgumentList "-command sfc /scannow" -PassThru -Wait
     }
     else {
@@ -339,7 +339,7 @@ function Start-SFCScan {
 }
 
 function Start-DISMScan {
-    if ($adminmode -eq "True") {
+    if ($adminmode -eq $true) {
         Start-Process powershell.exe -ArgumentList "-command DISM.exe /Online /Cleanup-image /Restorehealth" -PassThru -Wait
     }
     else {
@@ -380,7 +380,7 @@ function QuickReboot {
 
 function Delete-GroupPolicyCache {
     $wshell = New-Object -ComObject Wscript.Shell
-    if ($adminmode -eq "True") {
+    if ($adminmode -eq $true) {
         if ($wshell.Popup("Are you sure you want to clear the Group Policy Cache?", 0, "Group Policy Cache", 4 + 32) -eq 6) {
             try{
                 # Stop the Group Policy Client service
