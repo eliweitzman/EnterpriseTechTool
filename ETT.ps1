@@ -21,7 +21,7 @@
 .LICENSE
     BSD 3-Clause License
 
-    Copyright (c) 2024-2025, Eli Weitzman
+    Copyright (c) 2025, Eli Weitzman
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
@@ -111,9 +111,6 @@ $timeoutLength = (?: { $jsonConfig.ApplicationTimeoutLength -ne $null -and $json
 
 #Custom Toolbox - CHANGE THIS TO MATCH YOUR PREFERENCE
 $customTools = (?: { $jsonConfig.EnableCustomTools -ne $null -and $jsonConfig.EnableCustomTools -ne "" } { $jsonConfig.EnableCustomTools } { $true }) #Set this to $true to enable custom functions. Otherwise, set to $false
-
-#Tab Order - CHANGE THIS TO MATCH YOUR PREFERENCE
-$tabOrder = (?: { $jsonConfig.TabOrder -ne $null -and $jsonConfig.TabOrder.Count -gt 0 } { $jsonConfig.TabOrder } { @("Actions", "Windows", "Security", "SCCM", "AD", "Custom") }) #Set the order of tabs in the toolbox
 
 <#Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -351,11 +348,11 @@ $defenderEnrollmentStatus = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows 
 $LoadingProgressBar.Value = 35
 
 $LoadingLabel.Text = "Getting Manufacturer..."
-$manufacturer = Get-CimInstance -ClassName Win32_ComputerSystemProduct | Select-Object -ExpandProperty Vendor
+$manufacturer = Get-WmiObject -Class Win32_ComputerSystemProduct | Select-Object -ExpandProperty Vendor
 $LoadingProgressBar.Value = 40
 
 $LoadingLabel.Text = "Getting Model..."
-$model = Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty Model
+$model = Get-WmiObject -Class Win32_ComputerSystem -Property Model | Select-Object -ExpandProperty Model
 $LoadingProgressBar.Value = 50
 
 $LoadingLabel.Text = "Checking Hosts File..."
@@ -373,12 +370,12 @@ $domain = (Get-CIMInstance -ClassName Win32_ComputerSystem).Domain
 $LoadingProgressBar.Value = 60
 
 $LoadingLabel.Text = "Getting Drive Info..."
-$drivespace = Get-CimInstance -ClassName Win32_LogicalDisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
-$freedrivespace = Get-CimInstance -ClassName Win32_LogicalDisk | Where-Object caption -eq "C:" | foreach-object { Write-Output $('{0:N2}' -f ($_.FreeSpace / 1gb)) }
+$drivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
+$freedrivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output $('{0:N2}' -f ($_.FreeSpace / 1gb)) }
 $LoadingProgressBar.Value = 70
 
 $LoadingLabel.Text = "Getting RAM Info..."
-$ramCheck = (Get-CimInstance -ClassName Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
+$ramCheck = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
 $LoadingProgressBar.Value = 80
 
 $LoadingLabel.Text = "Getting Defender Enrollment Status..."
@@ -402,11 +399,11 @@ else {
 $LoadingProgressBar.Value = 85
 
 $LoadingLabel.Text = "Getting CPU Info..."
-$cpuCheck = Get-CimInstance -ClassName Win32_Processor | Select-Object -ExpandProperty Name
+$cpuCheck = Get-WmiObject -Class Win32_Processor | Select-Object -ExpandProperty Name
 $LoadingProgressBar.Value = 90
 
 $LoadingLabel.Text = "Getting Device Type..."
-$devicetype = (Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty PCSystemType)
+$devicetype = (Get-WmiObject -Class Win32_ComputerSystem -Property PCSystemType).PCSystemType
 $LoadingProgressBar.Value = 95
 
 $LoadingLabel.Text = "Getting Drive Type..."
@@ -733,124 +730,6 @@ function Create-ToolboxTabPage {
     return $tmpList
 }
 
-#Individual tab creation functions for configurable ordering
-function Create-ActionsTab {
-    $ActionsTabArray = New-Object System.Collections.ArrayList
-    [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (GUI)" -ScriptBlock { Start-DriverUpdateGUI -manufacturer $manufacturer }))
-    [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (CLI)" -ScriptBlock { Start-DriverUpdateCLI  -manufacturer $manufacturer }))
-    [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Suspend Bitlocker" -RequireAdmin $true -ScriptBlock { Start-SuspendBitlockerAction -adminmode $adminmode }))
-    [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Test Network" -ScriptBlock { Start-NetworkTest }))
-    [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "WiFi Diagnostics" -RequireAdmin $true -ScriptBlock { Start-WiFiDiagnostics -adminmode $adminmode }))
-    [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Battery Diagnostics" -RequireAdmin $true -ScriptBlock { Start-BatteryDiagnostics -adminmode $adminmode }))
-    [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Quick Reboot" -ScriptBlock { QuickReboot }))
-    [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Repair Outlook PST File" -RequireAdmin $true -ScriptBlock { Repair-OutlookPST -adminmode $adminmode }))
-    [void]$ActionsTabArray.Add((Create-ToolboxListItem -Displayname "Restore to Outlook (classic)" -RequireAdmin $true -ScriptBlock {Restore-OldOutlook -adminmode $adminmode }))
-    [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Block Automatic New Outlook Migration" -RequireAdmin $true -ScriptBlock { Disable-AutomaticNewOutlookMigration -adminmode $adminmode }))
-    $ActionsTab = Create-ToolboxTabPage -PageName "Actions" -ToolboxItemsArray $ActionsTabArray
-    $ActionsTab.Add_Click({
-        $runThis = [ScriptBlock]::Create($ActionsTab.SelectedValue)
-        &$runThis
-    })
-}
-
-function Create-WindowsTab {
-    $WindowsTabArray = New-Object System.Collections.ArrayList
-    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Full Sweep" -ScriptBlock { CheckForWindowsUpdates -windowTitle "All Windows Updates" -noUpdatesMessage "No updates available." -updateSearchQuery "IsHidden=0 and IsInstalled=0" }))
-    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Defender Only" -ScriptBlock { CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'" }))
-    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Activation - Get Activation Key" -ScriptBlock { Get-WindowsActivationKey }))
-    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Activation - Get Activation Type" -ScriptBlock { Get-WindowsActivationType }))
-    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - SFC Scan" -RequireAdmin $true -ScriptBlock { Start-SFCScan }))
-    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - DISM Online Repair" -RequireAdmin $true -ScriptBlock { Start-DISMScan }))
-    [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Group Policy - Delete GPO Cache" -RequireAdmin $true -ScriptBlock { Delete-GroupPolicyCache}))
-    $WindowsTab = Create-ToolboxTabPage -PageName "Windows" -ToolboxItemsArray $WindowsTabArray
-    $WindowsTab.Add_Click({
-        $runThis = [ScriptBlock]::Create($WindowsTab.SelectedValue)
-        &$runThis
-    })
-}
-
-function Create-SecurityTab {
-    $SecurityTabArray = New-Object System.Collections.ArrayList
-    #[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "$(Get-HostsFileIntegrity)" -ScriptBlock {Show-HostsFileIntegrityPopup}))
-    [void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Defender - Launch Full Scan" -ScriptBlock {Start-DefenderFullScan}))
-    [void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Defender - Launch Quick Scan" -ScriptBlock {Start-DefenderQuickScan}))
-    $SecurityTab = Create-ToolboxTabPage -PageName "Security" -ToolboxItemsArray $SecurityTabArray
-    $SecurityTab.Add_Click({
-        $runThis = [ScriptBlock]::Create($SecurityTab.SelectedValue)
-        &$runThis
-    })
-}
-
-function Create-SCCMTab {
-    #Check to see if the SCCM client is installed and we have the required WMI class
-    $sccmClass = Get-CimInstance -ClassName "SMS_Client" -Namespace "root\CCM" -ErrorAction SilentlyContinue
-    $sccmClassExists = $sccmClass -ne $null
-    
-    if ($sccmClassExists) {
-        $SCCMTabArray = New-Object System.Collections.ArrayList
-        [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Application Deployment Evaluation Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Application Deployment Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000121}" }))
-        [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Discovery Data Collection Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Discovery Data Collection Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000103}" }))
-        [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "File Collection Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "File Collection Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000104}" }))
-        [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Hardware Inventory Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Hardware Inventory Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000001}" }))
-        [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Machine Policy Retrieval" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Machine Policy Retrieval" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000021}" }))
-        [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Machine Policy Evaluation Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Machine Policy Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000022}" }))
-        [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Software Inventory Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Software Inventory Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000002}" }))
-        [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Software Metering Usage Report Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Software Metering Usage Report Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000106}" }))
-        [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "User Policy Retrieval" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "User Policy Retrieval" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000026}" }))
-        [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "User Policy Evaluation Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "User Policy Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000027}" }))
-        [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Installer Source List Update Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Windows Installer Source List Update Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000107}" }))
-        $SCCMTab = Create-ToolboxTabPage -PageName "SCCM" -ToolboxItemsArray $SCCMTabArray
-        $SCCMTab.Add_Click({
-            $runThis = [ScriptBlock]::Create($SCCMTab.SelectedValue)
-            &$runThis
-        })
-    }
-}
-
-function Create-ADTab {
-    #Check to see if RSAT is installed
-    if ($rsatInfo -eq "Installed") {
-        $ADTabArray = New-Object System.Collections.ArrayList
-        [void]$ADTabArray.Add((Create-ToolboxListItem -DisplayName "Launch AD Explorer" -ScriptBlock { ADLookup -BackgroundColor $BGcolor -WindowTextColor $TextColor -BrandColor $BrandColor -ButtonTextColor $ButtonTextColor }))
-        [void]$ADTabArray.Add((Create-ToolboxListItem -DisplayName "Get Bitlocker Recovery Key" -ScriptBlock { Open-BitLockerRecoveryWindow }))
-        $ADTab = Create-ToolboxTabPage -PageName "AD" -ToolboxItemsArray $ADTabArray
-        $ADTab.Add_Click({
-            $runThis = [ScriptBlock]::Create($ADTab.SelectedValue)
-            &$runThis
-        })
-    }
-}
-
-function Create-CustomTab {
-    if ($customTools -eq $true) {
-        $CustomTabArray = New-Object System.Collections.ArrayList
-        $toolboxIcon = [char]::ConvertFromUtf32(0x1F9F0)
-
-        #Process hardcoded Custom Functions
-        $userFunctions = Get-Command | Where-Object { $_.CommandType -eq 'Function' -and $_.Name -like 'custom_*' }
-        ForEach ($func in $userFunctions) {
-            $tmpObject = Create-ToolboxListItem -DisplayName $($toolboxIcon + " " + $func.Name) -ScriptBlock $func.Name
-            [void]$CustomTabArray.Add($tmpObject)
-        }
-
-        #Process Config File Custom Functions
-        if ($jsonConfig.CustomFunctions -ne $null) {
-            ForEach ($customFunction in $jsonConfig.CustomFunctions) {
-                $customFunctionDisplayName = "$toolboxIcon $($customFunction.displayName)"
-                $tmpObject = Create-ToolboxListItem -DisplayName $customFunctionDisplayName -Description $customFunction.description -Tab $customFunction.tab -RequireAdmin $customFunction.requireAdmin -ScriptBlock $customFunction.codeBlock
-                [void]$CustomTabArray.Add($tmpObject)
-            }
-        }
-
-        #Create the Custom Tab GUI
-        $CustomTab = Create-ToolboxTabPage -PageName "Custom" -ToolboxItemsArray $CustomTabArray
-        $CustomTab.Add_Click({
-            $runThis = [ScriptBlock]::Create($CustomTab.SelectedValue)
-            &$runThis
-        })
-    }
-}
-
 #Create main frame (REMEMBER TO ITERATE VERSION NUMBER ON BUILD CHANGES)
 $ETT = New-Object System.Windows.Forms.Form
 $ETT.ClientSize = New-Object System.Drawing.Point(850, 330)
@@ -942,16 +821,117 @@ $ToolboxMenu.ForeColor = $TextColor
 $ToolboxMenu.BackColor = $BGcolor
 $ETT.Controls.Add($ToolboxMenu) | Out-Null
 
-#Create toolbox tabs in the configured order
-ForEach ($tabName in $tabOrder) {
-    switch ($tabName) {
-        "Actions" { Create-ActionsTab }
-        "Windows" { Create-WindowsTab }
-        "Security" { Create-SecurityTab }
-        "SCCM" { Create-SCCMTab }
-        "AD" { Create-ADTab }
-        "Custom" { Create-CustomTab }
+#Tab 1 - Actions Tab Creation
+$ActionsTabArray = New-Object System.Collections.ArrayList
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (GUI)" -ScriptBlock { Start-DriverUpdateGUI -manufacturer $manufacturer }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (CLI)" -ScriptBlock { Start-DriverUpdateCLI  -manufacturer $manufacturer }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Suspend Bitlocker" -RequireAdmin $true -ScriptBlock { Start-SuspendBitlockerAction -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Test Network" -ScriptBlock { Start-NetworkTest }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "WiFi Diagnostics" -RequireAdmin $true -ScriptBlock { Start-WiFiDiagnostics -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Battery Diagnostics" -RequireAdmin $true -ScriptBlock { Start-BatteryDiagnostics -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Quick Reboot" -ScriptBlock { QuickReboot }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Repair Outlook PST File" -RequireAdmin $true -ScriptBlock { Repair-OutlookPST -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -Displayname "Restore to Outlook (classic)" -RequireAdmin $true -ScriptBlock {Restore-OldOutlook -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Block Automatic New Outlook Migration" -RequireAdmin $true -ScriptBlock { Disable-AutomaticNewOutlookMigration -adminmode $adminmode }))
+$ActionsTab = Create-ToolboxTabPage -PageName "Actions" -ToolboxItemsArray $ActionsTabArray
+$ActionsTab.Add_Click({
+        $runThis = [ScriptBlock]::Create($ActionsTab.SelectedValue)
+        &$runThis
+    })
+
+#Tab 2 - Windows Tab Creation
+$WindowsTabArray = New-Object System.Collections.ArrayList
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Full Sweep" -ScriptBlock { CheckForWindowsUpdates -windowTitle "All Windows Updates" -noUpdatesMessage "No updates available." -updateSearchQuery "IsHidden=0 and IsInstalled=0" }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Defender Only" -ScriptBlock { CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'" }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Activation - Get Activation Key" -ScriptBlock { Get-WindowsActivationKey }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Activation - Get Activation Type" -ScriptBlock { Get-WindowsActivationType }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - SFC Scan" -RequireAdmin $true -ScriptBlock { Start-SFCScan }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - DISM Online Repair" -RequireAdmin $true -ScriptBlock { Start-DISMScan }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Group Policy - Delete GPO Cache" -RequireAdmin $true -ScriptBlock { Delete-GroupPolicyCache}))
+$WindowsTab = Create-ToolboxTabPage -PageName "Windows" -ToolboxItemsArray $WindowsTabArray
+$WindowsTab.Add_Click({
+        $runThis = [ScriptBlock]::Create($WindowsTab.SelectedValue)
+        &$runThis
+    })
+    
+#Tab 3 - Security Tab Creation
+$SecurityTabArray = New-Object System.Collections.ArrayList
+#[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "$(Get-HostsFileIntegrity)" -ScriptBlock {Show-HostsFileIntegrityPopup}))
+[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Defender - Launch Full Scan" -ScriptBlock {Start-DefenderFullScan}))
+[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Defender - Launch Quick Scan" -ScriptBlock {Start-DefenderQuickScan}))
+$SecurityTab = Create-ToolboxTabPage -PageName "Security" -ToolboxItemsArray $SecurityTabArray
+$SecurityTab.Add_Click({
+        $runThis = [ScriptBlock]::Create($SecurityTab.SelectedValue)
+        &$runThis
+    })
+    
+#Tab 4 - SCCM (if enabled) Tab Creation
+
+#Check to see if the SCCM client is installed and we have the required WMI class
+$sccmClass = Get-WmiObject -Class "SMS_Client" -List -Namespace "root\CCM" -ErrorAction SilentlyContinue
+$sccmClassExists = $sccmClass -ne $null
+
+if ($sccmClassExists) {
+    $SCCMTabArray = New-Object System.Collections.ArrayList
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Application Deployment Evaluation Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Application Deployment Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000121}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Discovery Data Collection Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Discovery Data Collection Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000103}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "File Collection Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "File Collection Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000104}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Hardware Inventory Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Hardware Inventory Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000001}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Machine Policy Retrieval" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Machine Policy Retrieval" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000021}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Machine Policy Evaluation Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Machine Policy Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000022}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Software Inventory Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Software Inventory Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000002}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Software Metering Usage Report Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Software Metering Usage Report Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000106}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "User Policy Retrieval" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "User Policy Retrieval" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000026}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "User Policy Evaluation Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "User Policy Evaluation Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000027}" }))
+    [void]$SCCMTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Installer Source List Update Cycle" -ScriptBlock { Start-SCCMClientFunction -TriggerScheduleName "Windows Installer Source List Update Cycle" -TriggerScheduleGUID "{00000000-0000-0000-0000-000000000107}" }))
+    $SCCMTab = Create-ToolboxTabPage -PageName "SCCM" -ToolboxItemsArray $SCCMTabArray
+    $SCCMTab.Add_Click({
+            $runThis = [ScriptBlock]::Create($SCCMTab.SelectedValue)
+            &$runThis
+        })
+}
+
+#Tab 5 - AD Tab Creation (Centered Text for title) - if RSAT is installed
+
+#Check to see if RSAT is installed
+if ($rsatInfo -eq "Installed") {
+    $ADTabArray = New-Object System.Collections.ArrayList
+    [void]$ADTabArray.Add((Create-ToolboxListItem -DisplayName "Launch AD Explorer" -ScriptBlock { ADLookup -BackgroundColor $BGcolor -WindowTextColor $TextColor -BrandColor $BrandColor -ButtonTextColor $ButtonTextColor }))
+    [void]$ADTabArray.Add((Create-ToolboxListItem -DisplayName "Get Bitlocker Recovery Key" -ScriptBlock { Open-BitLockerRecoveryWindow }))
+    $ADTab = Create-ToolboxTabPage -PageName "AD" -ToolboxItemsArray $ADTabArray
+    $ADTab.Add_Click({
+            $runThis = [ScriptBlock]::Create($ADTab.SelectedValue)
+            &$runThis
+        })
+}
+
+#Tab 6 - Custom Tools Tab Creation
+if ($customTools -eq $true) {
+    $CustomTabArray = New-Object System.Collections.ArrayList
+    $toolboxIcon = [char]::ConvertFromUtf32(0x1F9F0)
+
+    #Process hardcoded Custom Functions
+    $userFunctions = Get-Command | Where-Object { $_.CommandType -eq 'Function' -and $_.Name -like 'custom_*' }
+    ForEach ($func in $userFunctions) {
+        $tmpObject = Create-ToolboxListItem -DisplayName $($toolboxIcon + " " + $func.Name) -ScriptBlock $func.Name
+        [void]$CustomTabArray.Add($tmpObject)
     }
+
+    #Process Config File Custom Functions
+    if ($jsonConfig.CustomFunctions -ne $null) {
+        ForEach ($customFunction in $jsonConfig.CustomFunctions) {
+            $customFunctionDisplayName = "$toolboxIcon $($customFunction.displayName)"
+            $tmpObject = Create-ToolboxListItem -DisplayName $customFunctionDisplayName -Description $customFunction.description -Tab $customFunction.tab -RequireAdmin $customFunction.requireAdmin -ScriptBlock $customFunction.codeBlock
+            [void]$CustomTabArray.Add($tmpObject)
+        }
+    }
+
+    #Create the Custom Tab GUI
+    $CustomTab = Create-ToolboxTabPage -PageName "Custom" -ToolboxItemsArray $CustomTabArray
+    $CustomTab.Add_Click({
+            $runThis = [ScriptBlock]::Create($CustomTab.SelectedValue)
+            &$runThis
+        })
 }
 
 #TAB MENU
@@ -1389,7 +1369,6 @@ $menuSettings.Add_Click({
                     "LAPSAppClientId" : "",
                     "BitLockerAppClientId" : "",
                     "AnimeMode" : false,
-                    "TabOrder": ["Actions", "Windows", "Security", "SCCM", "AD", "Custom"],
                     "DefenderEnrollCheckActive" : false,
                 
                     "CustomFunctions": [
