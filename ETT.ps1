@@ -21,7 +21,7 @@
 .LICENSE
     BSD 3-Clause License
 
-    Copyright (c) 2025, Eli Weitzman
+    Copyright (c) 2026, Eli Weitzman
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
@@ -725,8 +725,9 @@ function Create-ToolboxTabPage {
     $tmpTab.Controls.Add($tmpList)
     $tmpList.DataSource = $ToolboxItemsArray
     $tmpList.DisplayMember = "displayName"
-    $tmpList.ValueMember = "codeBlock"
-    
+    if ($ToolboxItemsArray -and $ToolboxItemsArray[0].PSObject.Properties.Match("codeBlock")) {
+        $tmpList.ValueMember = "codeBlock"
+    }
     return $tmpList
 }
 
@@ -1408,7 +1409,7 @@ $menuSettings.Add_Click({
             $wshell = New-Object -ComObject Wscript.Shell
             $wshell.Popup("You must be in Admin Mode to access settings.", 0, "Settings Error", 48)
         }
-    })
+})
 [void]$menu.Items.Add($menuSettings)
 
 #Exit Button
