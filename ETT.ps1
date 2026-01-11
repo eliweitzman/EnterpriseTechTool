@@ -1366,7 +1366,7 @@ $menuSettings.Add_Click({
                     "DriveSpaceCheckActive" : false,
                     "DriveSpaceCheckMinimum" : 20,
                     "WinVersionCheckActive" : false,
-                    "WinVersionTarget": "24H2",
+                    "WinVersionTarget": "25H2",
                     "AzureADTenantId" : "",
                     "LAPSAppClientId" : "",
                     "BitLockerAppClientId" : "",

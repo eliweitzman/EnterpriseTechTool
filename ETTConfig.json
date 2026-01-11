@@ -16,7 +16,7 @@
     "DriveSpaceCheckActive" : false,
     "DriveSpaceCheckMinimum" : 20,
     "WinVersionCheckActive" : false,
-    "WinVersionTarget": "24H2",
+    "WinVersionTarget": "25H2",
     "DefenderEnrollCheckActive" : false,
     "AzureADTenantId" : "",
     "LAPSAppClientId" : "",
