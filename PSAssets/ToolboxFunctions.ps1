@@ -378,7 +378,7 @@ function QuickReboot {
     }
 }
 
-function Delete-GroupPolicyCache {
+function Clear-GroupPolicyCache {
     $wshell = New-Object -ComObject Wscript.Shell
     if ($adminmode -eq $true) {
         if ($wshell.Popup("Are you sure you want to clear the Group Policy Cache?", 0, "Group Policy Cache", 4 + 32) -eq 6) {
