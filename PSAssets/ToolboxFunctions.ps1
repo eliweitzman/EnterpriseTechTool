@@ -113,7 +113,7 @@ function Get-WindowsActivationKey {
     $HardwareKey = (Get-CimInstance -Query 'select * from SoftwareLicensingService' | Select-Object OA3xOriginalProductKey).OA3xOriginalProductKey
         
     #Verify that the key is not null
-    if ($HardwareKey -eq $null -or $HardwareKey -eq "") {
+    if ($null -eq $HardwareKey -or $HardwareKey -eq "") {
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("No Windows Activation Key found in WMI." + "`n`nThis could be the result of running in a VM, or not stored in BIOS", 0, "Windows Activation", 64)
     }
