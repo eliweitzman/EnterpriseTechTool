@@ -691,10 +691,16 @@ function Open-SettingsMenu {
         #Show the form
         $settingsForm.ShowDialog()
     }
-    else {
+    elseif ($SettingsMenuEnabled -eq $false) {
        #ELSE - show popup that this has been by configuration file.
         [System.Windows.Forms.MessageBox]::Show("Settings have been disabled by config.", "Settings Disabled", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    }else{
+        #ELSE - show popup that settings menu is not referenced in config, and recommend updating the config file with the latest from the ETT repository.
+        [System.Windows.Forms.MessageBox]::Show("Settings menu is not referenced in config. Please update the configuration file with the latest from the ETT repository.", "Settings Not Referenced", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+        $openRepo = [System.Windows.Forms.MessageBox]::Show("Would you like to open the ETT GitHub repository to download the latest configuration file?", "Open Repository", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
+        if ($openRepo -eq [System.Windows.Forms.DialogResult]::Yes) {
+            #Open the ETT GitHub repository
+            Start-Process "https://github.com/eliweitzman/EnterpriseTechTool/blob/main/ETTConfig.json"
+        }
     }
-
-    
 }

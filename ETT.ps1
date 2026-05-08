@@ -15,13 +15,13 @@
 .AUTHOR
     Eli Weitzman
 .NOTES
-    Version:        1.3
+    Version:        1.3.1
     Creation Date:  12-26-22
 
 .LICENSE
     BSD 3-Clause License
 
-    Copyright (c) 2024, Eli Weitzman
+    Copyright (c) 2026, Eli Weitzman
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
@@ -49,6 +49,8 @@
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #>
 
+# HELPER FUNCTIONS
+
 # Create the Ternary Operator since PowerShell 5 doesn't have it
 set-alias ?: Invoke-Ternary -Option AllScope -Description "PSCX filter alias"
 filter Invoke-Ternary ([scriptblock]$decider, [scriptblock]$ifTrue, [scriptblock]$ifFalse) {
@@ -60,6 +62,24 @@ filter Invoke-Ternary ([scriptblock]$decider, [scriptblock]$ifTrue, [scriptblock
     }
 }
 
+function Create-ToastNotification{
+    param (
+        [System.Windows.Forms.ToolTipIcon]$Icon,
+        [string] $Title,
+        [string] $Message,
+        [int] $Duration
+    )
+    #Create Toast Notification Stack
+    $ToastStack = New-Object System.Windows.Forms.NotifyIcon
+    $Path = 'C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe'
+    $ToastStack.Icon =  [System.Drawing.Icon]::ExtractAssociatedIcon($path)
+    $ToastStack.BalloonTipIcon = $Icon
+    $ToastStack.BalloonTipTitle = $Title
+    $ToastStack.BalloonTipText = $Message
+    $ToastStack.Visible = $true
+    $ToastStack.ShowBalloonTip($Duration)
+}
+
 #Load ETTConfig.json File
 $jsonConfigString = Get-Content -Path ".\ETTConfig.json" -ErrorAction SilentlyContinue
 $jsonConfig = $jsonConfigString | ConvertFrom-Json
@@ -69,7 +89,7 @@ Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 #Build Variables
-$ETTVersion = "1.3"
+$ETTVersion = "1.3.1"
 $AutoUpdateCheckerEnabled = (?: { $jsonConfig.AutoUpdateCheckerEnabled -ne $null -and $jsonConfig.AutoUpdateCheckerEnabled -ne "" } { $jsonConfig.AutoUpdateCheckerEnabled } { $true })
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
@@ -130,10 +150,10 @@ Naming must follow this format in order to work: "custom_FUNCTIONNAME"
 #>
 
 #Custom Test Functions
-function custom_ExampleFunction {
+<#function custom_ExampleFunction {
     $wshell = New-Object -ComObject Wscript.Shell
     $wshell.Popup("This example function was triggered from a Custom Function list click.", 0, "Example Function", 0x1)
-}
+}#>
 
 <#
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -208,15 +228,17 @@ if ($AutoUpdateCheckerEnabled -eq $true) {
 
     #Update Checker
     if ($applicationVersion -lt $githubVersion) {
-        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now?", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
+        $updatePrompt = [System.Windows.Forms.MessageBox]::Show("An update to ETT is available! Would you like to update now? This will close the current instance of ETT and may require an application restart.", "Update Available", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
         if ($updatePrompt -eq "Yes") {
             #This is for if an application was installed with Winget, or with the self-extracting installer, and is a regular ETT variant
             if (($installType -eq "Installed")) {
-                winget.exe upgrade --id=EliWeitzman.ETT
+                Start-Process powershell.exe -ArgumentList "-command winget upgrade --id EliWeitzman.ETT"
+                exit
             }
             #If portable or PS1, refer that an update is available, and if yes, redirect to the repository to download the latest version
             elseif ($installType -eq "Portable") {
                 Start-Process "https://github.com/eliweitzman/EnterpriseTechTool"
+                exit
             }
         }
     }
@@ -326,11 +348,11 @@ $defenderEnrollmentStatus = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows 
 $LoadingProgressBar.Value = 35
 
 $LoadingLabel.Text = "Getting Manufacturer..."
-$manufacturer = Get-WmiObject -Class Win32_ComputerSystemProduct | Select-Object -ExpandProperty Vendor
+$manufacturer = Get-CimInstance -ClassName Win32_ComputerSystemProduct | Select-Object -ExpandProperty Vendor
 $LoadingProgressBar.Value = 40
 
 $LoadingLabel.Text = "Getting Model..."
-$model = Get-WmiObject -Class Win32_ComputerSystem -Property Model | Select-Object -ExpandProperty Model
+$model = Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty Model
 $LoadingProgressBar.Value = 50
 
 $LoadingLabel.Text = "Checking Hosts File..."
@@ -348,8 +370,8 @@ $domain = (Get-CIMInstance -ClassName Win32_ComputerSystem).Domain
 $LoadingProgressBar.Value = 60
 
 $LoadingLabel.Text = "Getting Drive Info..."
-$drivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
-$freedrivespace = Get-WmiObject -ComputerName localhost -Class win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output $('{0:N2}' -f ($_.FreeSpace / 1gb)) }
+$drivespace = Get-CimInstance -ClassName win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
+$freedrivespace = Get-CimInstance -ClassName win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output $('{0:N2}' -f ($_.FreeSpace / 1gb)) }
 $LoadingProgressBar.Value = 70
 
 $LoadingLabel.Text = "Getting RAM Info..."
@@ -377,11 +399,11 @@ else {
 $LoadingProgressBar.Value = 85
 
 $LoadingLabel.Text = "Getting CPU Info..."
-$cpuCheck = Get-WmiObject -Class Win32_Processor | Select-Object -ExpandProperty Name
+$cpuCheck = Get-CimInstance -ClassName Win32_Processor | Select-Object -ExpandProperty Name
 $LoadingProgressBar.Value = 90
 
 $LoadingLabel.Text = "Getting Device Type..."
-$devicetype = (Get-WmiObject -Class Win32_ComputerSystem -Property PCSystemType).PCSystemType
+$devicetype = (Get-CimInstance -ClassName Win32_ComputerSystem -Property PCSystemType).PCSystemType
 $LoadingProgressBar.Value = 95
 
 $LoadingLabel.Text = "Getting Drive Type..."
@@ -703,8 +725,9 @@ function Create-ToolboxTabPage {
     $tmpTab.Controls.Add($tmpList)
     $tmpList.DataSource = $ToolboxItemsArray
     $tmpList.DisplayMember = "displayName"
-    $tmpList.ValueMember = "codeBlock"
-    
+    if ($ToolboxItemsArray -and $ToolboxItemsArray[0].PSObject.Properties.Match("codeBlock")) {
+        $tmpList.ValueMember = "codeBlock"
+    }
     return $tmpList
 }
 
@@ -761,27 +784,16 @@ if ($null -ne $ETT.BackgroundImage) {
     $Heading.ForeColor = $ettHeaderTextColor
 }
 
-#Create Toast Notification Stack
-$ToastStack = New-Object System.Windows.Forms.NotifyIcon
-$Path = 'C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe'
-$ToastStack.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($path)
-$ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
-$ToastStack.BalloonTipTitle = $ettApplicationTitle
-$ToastStack.BalloonTipText = "Welcome to $ettApplicationTitle!"
-$ToastStack.Visible = $true
-$ToastStack.ShowBalloonTip(5000)
+#Display Welcome Toast
+Create-ToastNotification -Icon "Info" -Title $ettApplicationTitle -Message "Welcome to $ettApplicationTitle!" -Duration 5000
 
 #IF Compliance Flag is true, add a flyout notification
 if ($complianceFlag -eq $true) {
-    $ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Error
-    $ToastStack.BalloonTipTitle = $ettApplicationTitle
-    $ToastStack.BalloonTipText = "This device is non-compliant!"
-    $ToastStack.Visible = $true
-    $ToastStack.ShowBalloonTip(5000)
+    Create-ToastNotification -Icon [System.Windows.Forms.ToolTipIcon]::Error -Title $ettApplicationTitle -Message "This device is non-compliant!" -Duration 5000
 }
 
 #Create App Buttons
-$ClearLastLogin = Create-ETTButton -ButtonText "Clear Last Login" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 117 -ScriptBlock { ClearLastLogin -adminmode $adminmode -ToastStack $ToastStack }
+$ClearLastLogin = Create-ETTButton -ButtonText "Clear Last Login" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 117 -ScriptBlock { ClearLastLogin -adminmode $adminmode}
 $Lapspw = Create-ETTButton -ButtonText "Get LAPS Password" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 267 -ButtonYPosition 117 -ScriptBlock { Open-LAPSToolWindow }
 $appUpdate = Create-ETTButton -ButtonText "Update Apps (Winget)" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 13 -ButtonYPosition 219 -ScriptBlock { Start-WingetAppUpdates }
 $PolicyPatch = Create-ETTButton -ButtonText "Windows Policy Update" -ButtonWidth 237 -ButtonHeight 89 -ButtonXPosition 266 -ButtonYPosition 219 -ScriptBlock { Start-PolicyPatch }
@@ -814,12 +826,14 @@ $ETT.Controls.Add($ToolboxMenu) | Out-Null
 $ActionsTabArray = New-Object System.Collections.ArrayList
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (GUI)" -ScriptBlock { Start-DriverUpdateGUI -manufacturer $manufacturer }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Driver Updater (CLI)" -ScriptBlock { Start-DriverUpdateCLI  -manufacturer $manufacturer }))
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "SFC Scan" -RequireAdmin $true -ScriptBlock { Start-SFCScan }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Suspend Bitlocker" -RequireAdmin $true -ScriptBlock { Start-SuspendBitlockerAction -adminmode $adminmode }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Test Network" -ScriptBlock { Start-NetworkTest }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "WiFi Diagnostics" -RequireAdmin $true -ScriptBlock { Start-WiFiDiagnostics -adminmode $adminmode }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Battery Diagnostics" -RequireAdmin $true -ScriptBlock { Start-BatteryDiagnostics -adminmode $adminmode }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Quick Reboot" -ScriptBlock { QuickReboot }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Repair Outlook PST File" -RequireAdmin $true -ScriptBlock { Repair-OutlookPST -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -Displayname "Restore to Outlook (classic)" -RequireAdmin $true -ScriptBlock {Restore-OldOutlook -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Block Automatic New Outlook Migration" -RequireAdmin $true -ScriptBlock { Disable-AutomaticNewOutlookMigration -adminmode $adminmode }))
 $ActionsTab = Create-ToolboxTabPage -PageName "Actions" -ToolboxItemsArray $ActionsTabArray
 $ActionsTab.Add_Click({
         $runThis = [ScriptBlock]::Create($ActionsTab.SelectedValue)
@@ -830,27 +844,32 @@ $ActionsTab.Add_Click({
 $WindowsTabArray = New-Object System.Collections.ArrayList
 [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Full Sweep" -ScriptBlock { CheckForWindowsUpdates -windowTitle "All Windows Updates" -noUpdatesMessage "No updates available." -updateSearchQuery "IsHidden=0 and IsInstalled=0" }))
 [void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Update - Defender Only" -ScriptBlock { CheckForWindowsUpdates -windowTitle "Windows Defender Definition Updates" -noUpdatesMessage "No Windows Defender Definition updates found." -updateSearchQuery "IsInstalled=0 and Type='Software' and IsHidden=0 and BrowseOnly=0 and AutoSelectOnWebSites=1 and CategoryIDs contains '8c3fcc84-7410-4a95-8b89-a166a0190486'" }))
-[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation" -ScriptBlock { Get-WindowsActivationKey }))
-[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Get Windows Activation Type" -ScriptBlock { Get-WindowsActivationType }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Activation - Get Activation Key" -ScriptBlock { Get-WindowsActivationKey }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Activation - Get Activation Type" -ScriptBlock { Get-WindowsActivationType }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - SFC Scan" -RequireAdmin $true -ScriptBlock { Start-SFCScan }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Repair - DISM Online Repair" -RequireAdmin $true -ScriptBlock { Start-DISMScan }))
+[void]$WindowsTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Group Policy - Delete GPO Cache" -RequireAdmin $true -ScriptBlock { Clear-GroupPolicyCache}))
 $WindowsTab = Create-ToolboxTabPage -PageName "Windows" -ToolboxItemsArray $WindowsTabArray
 $WindowsTab.Add_Click({
         $runThis = [ScriptBlock]::Create($WindowsTab.SelectedValue)
         &$runThis
     })
-
+    
 #Tab 3 - Security Tab Creation
 $SecurityTabArray = New-Object System.Collections.ArrayList
-[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "$(Get-HostsFileIntegrity)" -ScriptBlock {}))
+#[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "$(Get-HostsFileIntegrity)" -ScriptBlock {Show-HostsFileIntegrityPopup}))
+[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Defender - Launch Full Scan" -ScriptBlock {Start-DefenderFullScan}))
+[void]$SecurityTabArray.Add((Create-ToolboxListItem -DisplayName "Windows Defender - Launch Quick Scan" -ScriptBlock {Start-DefenderQuickScan}))
 $SecurityTab = Create-ToolboxTabPage -PageName "Security" -ToolboxItemsArray $SecurityTabArray
 $SecurityTab.Add_Click({
         $runThis = [ScriptBlock]::Create($SecurityTab.SelectedValue)
         &$runThis
     })
-
+    
 #Tab 4 - SCCM (if enabled) Tab Creation
 
 #Check to see if the SCCM client is installed and we have the required WMI class
-$sccmClass = Get-WmiObject -Class "SMS_Client" -List -Namespace "root\CCM" -ErrorAction SilentlyContinue
+$sccmClass = Get-CimInstance -ClassName "SMS_Client" -Namespace "root\CCM" -ErrorAction SilentlyContinue
 $sccmClassExists = $sccmClass -ne $null
 
 if ($sccmClassExists) {
@@ -1314,6 +1333,7 @@ $menuFunctions.DropDownItems.Add($menuRenameComputer)
 $menuSettings.Text = "Settings"
 $menuSettings.Add_Click({
         #First, check to see if running in admin mode
+
         if (($adminmode -eq $true) -or ($installType -eq "Portable")) {
             #Next, check to see if ETTConfig.json exists in the same directory as the script
             $configtest = Test-Path ".\ETTConfig.json" -ErrorAction SilentlyContinue
@@ -1346,7 +1366,7 @@ $menuSettings.Add_Click({
                     "DriveSpaceCheckActive" : false,
                     "DriveSpaceCheckMinimum" : 20,
                     "WinVersionCheckActive" : false,
-                    "WinVersionTarget": "24H2",
+                    "WinVersionTarget": "25H2",
                     "AzureADTenantId" : "",
                     "LAPSAppClientId" : "",
                     "BitLockerAppClientId" : "",
@@ -1389,13 +1409,21 @@ $menuSettings.Add_Click({
             $wshell = New-Object -ComObject Wscript.Shell
             $wshell.Popup("You must be in Admin Mode to access settings.", 0, "Settings Error", 48)
         }
-    })
+})
 [void]$menu.Items.Add($menuSettings)
 
 #Exit Button
 $menuExit.Text = "Exit"
 $menuExit.Add_Click({ $ETT.Close() })
 [void]$menu.Items.Add($menuExit)
+
+#Adding a keyboard shortcut to the Exit button - escape key
+$ETT.KeyPreview = $true
+$ETT.Add_KeyDown({
+        if ($_.KeyCode -eq "Escape") {
+            $ETT.Close()
+        }
+    })
 
 #Add all buttons and functions to the GUI menu
 $ETT.controls.AddRange(@($Logo, $Heading, $ClearLastLogin, $Lapspw, $appUpdate, $PolicyPatch, $menu))

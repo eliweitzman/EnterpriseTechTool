@@ -83,35 +83,37 @@ function CheckForWindowsUpdates {
 function ClearLastLogin {
     param(
         [Parameter(Position = 0, mandatory = $true)]
-        $adminmode, 
-        [Parameter(Position = 1, mandatory = $true)]
-        $ToastStack
+        $adminmode
     )
-    #Check if admin mode is enabled. Depending on the result, run the appropriate command    
-    if ($adminmode -eq $true) {
-        #With admin mode enabled, run the commands without UAC
-        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnSAMUser -Value "" -Force
-        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnUser -Value ""  -Force
-        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnUserSID -Value "" -Force
+    try{
+        #Check if admin mode is enabled. Depending on the result, run the appropriate command    
+        if ($adminmode -eq $true) {
+            #With admin mode enabled, run the commands without UAC
+            New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnSAMUser -Value "" -Force
+            New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnUser -Value ""  -Force
+            New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI' -Name LastLoggedOnUserSID -Value "" -Force
+        }
+        elseif ($adminmode -eq $false) {
+            #Without admin mode enabled, run the commands with UAC, in a sub-process shell
+            Start-Process powershell.exe -Verb runAs -ArgumentList '-Command', 'New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnSAMUser -Value "" -Force; New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnUser -Value ""  -Force; New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnUserSID -Value "" -Force' -Wait
+        }
+        #Display a notification that the last login has been cleared
+        Create-ToastNotification -Icon Info -Title "Login Status" -Message "Last Login Cleared!" -Duration 5000
     }
-    elseif ($adminmode -eq $false) {
-        #Without admin mode enabled, run the commands with UAC, in a sub-process shell
-        Start-Process powershell.exe -Verb runAs -ArgumentList '-Command', 'New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnSAMUser -Value "" -Force; New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnUser -Value ""  -Force; New-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI'' -Name LastLoggedOnUserSID -Value "" -Force' -Wait
+    catch
+    {
+        #Display a notification that the last login has not been cleared
+        Create-ToastNotification -Icon Error -Title "Login Status" -Message "Last Login didn't clear due to an error. Please make sure that you are allowing the function to run under administrative context and try again." -Duration 5000
     }
 
-    #Display a notification that the last login has been cleared
-    $ToastStack.BalloonTipText = "Last Login Cleared!"
-    $ToastStack.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
-    $ToastStack.BalloonTipTitle = "Login Status"
-    $ToastStack.ShowBalloonTip(5000)
-    $ToastStack.Visible = $true
+    
 }
 
 function Get-WindowsActivationKey {
-    $HardwareKey = (Get-WmiObject -query 'select * from SoftwareLicensingService' | Select-Object OA3xOriginalProductKey).OA3xOriginalProductKey
+    $HardwareKey = (Get-CimInstance -Query 'select * from SoftwareLicensingService' | Select-Object OA3xOriginalProductKey).OA3xOriginalProductKey
         
     #Verify that the key is not null
-    if ($HardwareKey -eq $null -or $HardwareKey -eq "") {
+    if ($null -eq $HardwareKey -or $HardwareKey -eq "") {
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("No Windows Activation Key found in WMI." + "`n`nThis could be the result of running in a VM, or not stored in BIOS", 0, "Windows Activation", 64)
     }
@@ -122,6 +124,7 @@ function Get-WindowsActivationKey {
         $wshell.Popup("Windows Activation Key: " + $HardwareKey + "`n`nKey Copied to Clipboard.", 0, "Windows Activation Key", 64)
     }
 }
+<#
 function Get-HostsFileIntegrity {
     $hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
     $hostsCompliant = $true
@@ -133,6 +136,13 @@ function Get-HostsFileIntegrity {
     }
 }
 
+function Show-HostsFileIntegrityPopup {
+    $hostsText = Get-HostsFileIntegrity
+    $wshell = New-Object -ComObject Wscript.Shell
+    $wshell.Popup($hostsText, 0, "Hosts File Integrity", 64)  
+}
+
+#>
 function Get-WindowsActivationType {
     slmgr.vbs /dli
 }
@@ -203,18 +213,13 @@ function Start-DriverUpdateGUI {
     }
 }
 
-function Start-SFCScan {
-    #SFC Scan
-    Start-Process powershell.exe -ArgumentList "-command sfc /scannow" -PassThru -Verb RunAs
-}
-
 function Start-SuspendBitlockerAction {
     param(
         [Parameter(Position = 0, mandatory = $true)]
         $adminmode
     )
     #Check if adminmode is enabled
-    if ($adminmode -eq "True") {
+    if ($adminmode -eq $true) {
         #Check if BitLocker is enabled
         if ((Get-BitLockerVolume -MountPoint C:).ProtectionStatus -eq "On") {
             #Suspend BitLocker
@@ -246,7 +251,7 @@ function Start-WiFiDiagnostics {
         $adminmode
     )
     #Test Wi-Fi
-    if ($adminmode -eq "True") {
+    if ($adminmode -eq $true) {
         Start-Process cmd.exe -ArgumentList "/K netsh wlan show wlanreport" -PassThru -Wait
         Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html" -WindowStyle maximized
     }
@@ -270,7 +275,7 @@ function Start-BatteryDiagnostics {
     #Test Battery, first check if device is a laptop
     if ($systemType -eq "Mobile" -or $systemType -eq "Appliance PC" -or $systemType -eq "Slate") {
         #Device is a laptop, now check if adminmode is enabled
-        if ($adminmode -eq "True") {
+        if ($adminmode -eq $true) {
             #Open a save dialog to save the battery report
             $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
             $saveFileDialog.Filter = "HTML files (*.html)|*.html"
@@ -324,11 +329,136 @@ function Start-SCCMClientFunction {
     $wshell.Popup("SCCM Client Task $TriggerScheduleName Triggered. The selected task will run and might take several minutes to finish.", 0, "SCCM Client Task", 64)
 }
 
+function Start-SFCScan {
+    if ($adminmode -eq $true) {
+        Start-Process powershell.exe -ArgumentList "-command sfc /scannow" -PassThru -Wait
+    }
+    else {
+        Start-Process powershell.exe -ArgumentList "-command sfc /scannow" -PassThru -Verb RunAs -Wait
+    }
+}
+
+function Start-DISMScan {
+    if ($adminmode -eq $true) {
+        Start-Process powershell.exe -ArgumentList "-command DISM.exe /Online /Cleanup-image /Restorehealth" -PassThru -Wait
+    }
+    else {
+        Start-Process powershell.exe -ArgumentList "-command DISM.exe /Online /Cleanup-image /Restorehealth" -PassThru -Verb RunAs -Wait
+    }
+}
+
+function Start-DefenderFullScan {
+    if ($wshell.Popup("Are you sure you want to run a Defender Full Scan?", 0, "Defender Full Scan", 4 + 32) -eq 6) {
+        try {
+            Start-MpScan -ScanType FullScan -ErrorAction Stop
+        }
+        catch [Microsoft.Management.Infrastructure.CimException] {
+            $wshell.Popup($_.Exception.Message, 0, "Defender Full Scan", 0 + 16)
+        }
+    }
+}
+
+function Start-DefenderQuickScan {
+    if ($wshell.Popup("Are you sure you want to run a Defender Quick Scan?", 0, "Defender Quick Scan", 4 + 32) -eq 6) {
+        try {
+            Start-MpScan -ScanType QuickScan -ErrorAction Stop
+        }
+        catch [Microsoft.Management.Infrastructure.CimException] {
+            $wshell.Popup($_.Exception.Message, 0, "Defender Quick Scan", 0 + 16)
+        }
+    }
+}
+
 function QuickReboot {
     #First, confirm reboot
     $wshell = New-Object -ComObject Wscript.Shell
     if ($wshell.Popup("Are you sure you want to reboot? Make sure everything is saved before proceeding.", 0, "Reboot", 4 + 32) -eq 6) {
         #Reboot
         Start-Process shutdown -argumentlist "-r -t 0" -PassThru
+    }
+}
+
+function Clear-GroupPolicyCache {
+    $wshell = New-Object -ComObject Wscript.Shell
+    if ($adminmode -eq $true) {
+        if ($wshell.Popup("Are you sure you want to clear the Group Policy Cache?", 0, "Group Policy Cache", 4 + 32) -eq 6) {
+            try{
+                # Stop the Group Policy Client service
+                Stop-Service -Name gpsvc -Force -ErrorAction Stop
+
+                # Delete the Group Policy cache folders
+                $gpCacheFolders = @(
+                    "C:\Windows\System32\GroupPolicy",
+                    "C:\Windows\System32\GroupPolicyUsers"
+                )
+
+                foreach ($folder in $gpCacheFolders) {
+                    if (Test-Path -Path $folder) {
+                        Remove-Item -Path $folder -Recurse -Force
+                    }
+                }
+
+                # Start the Group Policy Client service
+                Start-Service -Name gpsvc -ErrorAction Stop
+                $wshell.Popup("Group Policy Cache has been deleted.", 0, "Group Policy Cache", 0 + 64)
+            }
+            catch {
+                $wshell.Popup("There was an error deleting the GPO Cache. Please make sure this machine is joined to a domain and try again.", 0, "Group Policy Cache", 0 + 16)
+            }
+        }
+    }
+    else {
+        $wshell.Popup("Please run the Delete Group Policy Cache Function as an administrator by restarting ETT in Admin Mode!", 0, "Group Policy Cache", 0 + 16)
+    }
+}
+
+function Repair-OutlookPST {
+    $wshell = New-Object -ComObject Wscript.Shell
+    if ($adminmode -eq $true) {
+        if ($wshell.Popup("Are you sure you want to repair the Outlook PST file?", 0, "Outlook PST Repair", 4 + 32) -eq 6) {
+            try {
+                Start-Process -FilePath "C:\Program Files\Microsoft Office\root\Office16\SCANPST.EXE" -Verb RunAs
+            }
+            catch {
+                $wshell.Popup("There was an error repairing the Outlook PST file. Please make sure Outlook is closed and try again.", 0, "Outlook PST Repair", 0 + 16)
+            }
+        }
+    }
+    else {
+        #Pass admin request to user
+        Start-Process -FilePath "C:\Program Files\Microsoft Office\root\Office16\SCANPST.EXE" -Verb RunAs -PassThru
+    }
+}
+
+function Restore-OldOutlook {
+    #Using registry key to rollback Outlook
+    $wshell = New-Object -ComObject Wscript.Shell
+    if ($adminmode -eq $true) {
+        try {
+            New-ItemProperty -Path 'HKCU:\Software\Microsoft\Office\16.0\Outlook\Preferences' -Name UseNewOutlook -Value "0" -Force
+            $wshell.Popup("Outlook has been reverted back to Outlook (classic).", 0, "Rollback Outlook", 0 + 64)
+        }
+        catch {
+            Create-ToastNotification -Icon Error -Title "Outlook Rollback" -Message "There was an error rolling back Outlook. Please make sure legacy Outlook is installed and try again." -Duration 5000
+        }
+    }
+    else {
+        #Show a toast notification to run in admin mode
+        Create-ToastNotification -Icon Error -Title "Administrator Required" -Message "Please run the Restore Old Outlook function as an administrator by restarting ETT in Admin Mode!" -Duration 5000
+    }
+}
+
+function Disable-AutomaticNewOutlookMigration {
+    $wshell = New-Object -ComObject Wscript.Shell
+    if ($adminmode -eq $true) {
+        try {
+            New-ItemProperty -Path 'HKCU:\Software\Policies\Microsoft\office\16.0\outlook\preferences' -Name NewOutlookMigrationUserSetting -Value "0" -Force
+            $wshell.Popup("Automatic Outlook Migration has been disabled.", 0, "Outlook Migration", 0 + 64)
+        }
+        catch {
+            Create-ToastNotification -Icon Error -Title "Issue with Outlook Rollback Blocker" -Message "There was an error modifying the registry keys. Please make sure legacy Outlook is installed and try again." -Duration 5000
+        }
+    } else {
+        Create-ToastNotification -Icon Error -Title "Administrator Required" -Message "Please run the Disable Automatic New Outlook Migration function as an administrator by restarting ETT in Admin Mode!" -Duration 5000
     }
 }
