@@ -15,7 +15,7 @@
 .AUTHOR
     Eli Weitzman
 .NOTES
-    Version:        1.3.1
+    Version:        1.3.2
     Creation Date:  12-26-22
 
 .LICENSE
