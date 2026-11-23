@@ -48,7 +48,7 @@ This repository is a single Windows PowerShell application with a small set of s
 - Dot-sourcing vs compiled EXE: dot-sourcing helper scripts (`. $psFile`) works for development but compiled EXE builds will often hit the `catch` and skip dot-sourced loads — verify behavior after compilation.
 - Platform: Windows-only. Tests or automation must run on Windows with PowerShell and required modules installed.
 - Admin flows: when an action must run in the current shell, guard it with `if (-not $adminmode) { throw 'Admin elevation required.' }`. Do not add a separate `Start-Process -Verb RunAs` path in the same function.
-- Winget and GitHub API calls can fail on offline devices, due to network issues, or from rate limits. When changing update logic, wrap these calls in `try/catch`, log a warning, and return `$null` or `$false` without halting the app.
+- Winget and GitHub API calls can fail on offline devices, due to network issues, or from rate limits. When changing update logic, wrap these calls in `try/catch`, log a warning, and return `$null` from functions that normally return data (e.g. a tag string or version object) and `$false` from functions that normally return a boolean status; never throw.
 
 ### Files and locations you will reference most
 - `ETT.ps1` — main app orchestration (load order, flags, `$Dependencies`).
@@ -62,10 +62,10 @@ This repository is a single Windows PowerShell application with a small set of s
 
 Summary: this project is typically distributed as a compiled EXE (PS2EXE). Development is easiest by dot-sourcing `ETT.ps1`. Use PS2EXE to build an EXE for portable or installer-based distribution.
 
-1) Install PS2EXE (optional if you already have `Compiler/ps2exe.ps1`):
+1) Verify PS2EXE is installed. If it is not available, report the command below and stop; do not install it automatically.
 
 ```powershell
-# Install the community PS2EXE module (if needed)
+# User action required if PS2EXE is unavailable
 Install-Module -Name ps2exe -Scope CurrentUser -Force
 ```
 
@@ -73,11 +73,11 @@ Install-Module -Name ps2exe -Scope CurrentUser -Force
 
 ```powershell
 # From the repository root
-# Uses the community ps2exe wrapper if installed; otherwise run the repo's Compiler/ps2exe.ps1 script similarly
+# Requires the PS2EXE module to be available
 Invoke-ps2exe -inputFile .\ETT.ps1 -outputFile .\dist\ETT.exe -iconFile .\ImageAssets\EnterpriseTechTool.ico -noConsole -x64
 ```
 
-If you prefer to call the included script directly (it may wrap options differently):
+After confirming PS2EXE is available, you may call the included script directly (it may wrap options differently):
 
 ```powershell
 & '.\Compiler\ps2exe.ps1' -InputFile '.\ETT.ps1' -OutputFile '.\dist\ETT.exe' -x64
