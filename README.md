@@ -92,7 +92,13 @@ Starting with ETT 1.3, ETT now supports the implementation of custom config file
 
 ## Custom Scripts!
 
-Included in versions 1.3 and newer, ETT now has baked-in support for custom function imports! For more information, check out the [wiki](https://github.com/eliweitzman/EnterpriseTechTool/wiki) for detailed steps.
+Included in versions 1.3 and newer, ETT supports custom function imports through the `CustomFunctions` array in `ETTConfig.json`.
+
+Administrators can enable **Allow Custom Script Uploads** in the Settings Runtime section. This setting is disabled by default, and the upload controls remain disabled when ETT is not running with administrator privileges. Once enabled, select **Upload Custom Script**, choose one `.ps1` file, review or edit its display name, description, and administrator requirement, and select **Import**. Uploaded scripts are always added to the **Custom** tab.
+
+ETT validates the PowerShell syntax without executing the file during import, rejects duplicate display names, and appends the complete script as a `codeBlock`. Only import scripts you trust. Scripts marked as requiring administrator privileges are blocked from running unless ETT is elevated. Restart ETT after a successful import to refresh the Custom tab.
+
+For additional configuration details, check out the [wiki](https://github.com/eliweitzman/EnterpriseTechTool/wiki).
 
 ## Contributing
 

@@ -89,7 +89,7 @@ Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 #Build Variables
-$ETTVersion = "1.3.1"
+$ETTVersion = "1.3.2"
 $AutoUpdateCheckerEnabled = (?: { $jsonConfig.AutoUpdateCheckerEnabled -ne $null -and $jsonConfig.AutoUpdateCheckerEnabled -ne "" } { $jsonConfig.AutoUpdateCheckerEnabled } { $true })
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
@@ -356,7 +356,17 @@ $model = Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -Expand
 $LoadingProgressBar.Value = 50
 
 $LoadingLabel.Text = "Checking Hosts File..."
-$hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
+$hostsPath = "C:\Windows\System32\Drivers\etc\hosts"
+$hostsStream = [System.IO.File]::OpenRead($hostsPath)
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+try {
+    $hostsHashBytes = $sha256.ComputeHash($hostsStream)
+    $hostsHash = ([System.BitConverter]::ToString($hostsHashBytes)).Replace("-", "")
+}
+finally {
+    $hostsStream.Dispose()
+    $sha256.Dispose()
+}
 $hostsCompliant = $true
 $hostsText = "Host File Integrity: Unmodified"
 if ($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085") {
@@ -725,6 +735,7 @@ function Create-ToolboxTabPage {
     $tmpTab.Controls.Add($tmpList)
     $tmpList.DataSource = $ToolboxItemsArray
     $tmpList.DisplayMember = "displayName"
+    $tmpList.FormattingEnabled = $true
     if ($ToolboxItemsArray -and $ToolboxItemsArray[0].PSObject.Properties.Match("codeBlock")) {
         $tmpList.ValueMember = "codeBlock"
     }
@@ -922,7 +933,7 @@ if ($customTools -eq $true) {
     if ($jsonConfig.CustomFunctions -ne $null) {
         ForEach ($customFunction in $jsonConfig.CustomFunctions) {
             $customFunctionDisplayName = "$toolboxIcon $($customFunction.displayName)"
-            $tmpObject = Create-ToolboxListItem -DisplayName $customFunctionDisplayName -Description $customFunction.description -Tab $customFunction.tab -RequireAdmin $customFunction.requireAdmin -ScriptBlock $customFunction.codeBlock
+            $tmpObject = Create-ToolboxListItem -DisplayName $customFunctionDisplayName -Description $customFunction.description -Tab "Custom" -RequireAdmin $customFunction.requireAdmin -ScriptBlock $customFunction.codeBlock
             [void]$CustomTabArray.Add($tmpObject)
         }
     }
@@ -930,7 +941,14 @@ if ($customTools -eq $true) {
     #Create the Custom Tab GUI
     $CustomTab = Create-ToolboxTabPage -PageName "Custom" -ToolboxItemsArray $CustomTabArray
     $CustomTab.Add_Click({
-            $runThis = [ScriptBlock]::Create($CustomTab.SelectedValue)
+            if ($null -eq $CustomTab.SelectedItem) {
+                return
+            }
+            if ([bool]$CustomTab.SelectedItem.requireAdmin -and -not $adminmode) {
+                [System.Windows.Forms.MessageBox]::Show("This custom tool requires administrator privileges.", "Admin Required", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+                return
+            }
+            $runThis = [ScriptBlock]::Create([string]$CustomTab.SelectedItem.codeBlock)
             &$runThis
         })
 }
@@ -1361,6 +1379,7 @@ $menuSettings.Add_Click({
                     "ApplicationTimeoutEnabled" : false,
                     "ApplicationTimeoutLength" : 300,
                     "EnableCustomTools" : true,
+                    "EnableCustomScriptUpload" : false,
                     "RAMCheckActive": false,
                     "RAMCheckMinimum" : 8,
                     "DriveSpaceCheckActive" : false,
