@@ -144,7 +144,24 @@ function Show-HostsFileIntegrityPopup {
 
 #>
 function Get-WindowsActivationType {
-    slmgr.vbs /dli
+    $wshell = New-Object -ComObject Wscript.Shell
+    try {
+        $statusNames = @{ 0 = 'Unlicensed'; 1 = 'Licensed'; 2 = 'Out-of-Box Grace'; 3 = 'Out-of-Tolerance Grace'; 4 = 'Non-Genuine Grace'; 5 = 'Notification'; 6 = 'Extended Grace' }
+        $products = @(Get-CimInstance -ClassName SoftwareLicensingProduct -ErrorAction Stop |
+            Where-Object { $_.ApplicationId -eq '55c92734-d682-4d71-983e-d6ec3f16059f' -and $_.PartialProductKey })
+        if ($products.Count -eq 0) {
+            $message = 'No activated Windows license found.'
+        }
+        else {
+            $message = ($products | ForEach-Object {
+                "Name: $($_.Name)`nDescription: $($_.Description)`nPartial Product Key: $($_.PartialProductKey)`nLicense Status: $($statusNames[[int]$_.LicenseStatus])"
+            }) -join "`n`n"
+        }
+        $wshell.Popup($message, 0, "Windows Activation Type", 64) | Out-Null
+    }
+    catch {
+        $wshell.Popup("Error retrieving activation info: $($_.Exception.Message)", 0, "Windows Activation Type", 16) | Out-Null
+    }
 }
 
 function Start-WingetAppUpdates {
