@@ -1,0 +1,159 @@
+name: Draft ETT Release
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require main branch
+        shell: powershell
+        run: |
+          if ($env:GITHUB_REF -ne 'refs/heads/main') {
+            throw 'The release workflow only runs from main.'
+          }
+
+      - name: Read release version and previous tag
+        id: metadata
+        shell: powershell
+        run: |
+          $entryPoint = [System.IO.File]::ReadAllText((Resolve-Path '.\ETT.ps1').ProviderPath)
+          $versionMatch = [regex]::Match(
+            $entryPoint,
+            '(?m)^\$ETTVersion\s*=\s*["'']([^"'']+)["'']'
+          )
+          if (-not $versionMatch.Success) {
+            throw 'Could not find $ETTVersion in ETT.ps1.'
+          }
+
+          $version = $versionMatch.Groups[1].Value
+          $parsedVersion = $null
+          if (-not [System.Version]::TryParse($version, [ref]$parsedVersion)) {
+            throw "ETTVersion '$version' is not a valid release version."
+          }
+
+          $previousTag = @(
+            git tag --list --sort=-version:refname |
+              Where-Object { $_ -match '^\d+(?:\.\d+){0,3}$' -and $_ -ne $version }
+          ) | Select-Object -First 1
+
+          [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, "version=$version`n")
+          [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, "previous_tag=$previousTag`n")
+
+      - name: Require a new release version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ETT_VERSION: ${{ steps.metadata.outputs.version }}
+        shell: powershell
+        run: |
+          git show-ref --verify --quiet "refs/tags/$env:ETT_VERSION"
+          if ($LASTEXITCODE -eq 0) {
+            throw "Release tag '$env:ETT_VERSION' already exists. Bump ETTVersion before merging."
+          }
+
+          gh release view $env:ETT_VERSION --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            throw "Release '$env:ETT_VERSION' already exists. Bump ETTVersion before merging."
+          }
+
+      - name: Run focused PowerShell tests
+        shell: powershell
+        run: |
+          & '.\Tests\Test-CustomScriptImport.ps1'
+          & '.\Tests\Test-ReleaseBugFixes.ps1'
+
+      - name: Compile ETT.exe
+        env:
+          ETT_VERSION: ${{ steps.metadata.outputs.version }}
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Path '.\dist' -Force | Out-Null
+
+          $compileCommand = @"
+          & '.\Compiler\ps2exe.ps1' -inputFile '.\ETT.ps1' -outputFile '.\dist\ETT.exe' -iconFile '.\ImageAssets\ETTLogo.ico' -version '$env:ETT_VERSION' -resources '.\PSAssets\GenericToolWindow.ps1','.\PSAssets\ToolboxFunctions.ps1','.\MiniClients\ADLookup.ps1','.\MiniClients\BitLockerToolV2.ps1','.\MiniClients\LAPSToolV2.ps1','.\MiniClients\SettingsMenu.ps1'
+          "@
+
+          & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" `
+            -NoProfile `
+            -ExecutionPolicy Bypass `
+            -Command $compileCommand
+
+          if ($LASTEXITCODE -ne 0) {
+            throw 'PS2EXE failed to compile ETT.exe.'
+          }
+
+          if (-not (Test-Path -LiteralPath '.\dist\ETT.exe' -PathType Leaf)) {
+            throw 'PS2EXE did not produce dist\ETT.exe.'
+          }
+
+      - name: Create release notes
+        id: notes
+        env:
+          ETT_VERSION: ${{ steps.metadata.outputs.version }}
+          PREVIOUS_TAG: ${{ steps.metadata.outputs.previous_tag }}
+        shell: powershell
+        run: |
+          $fullChangelog = if ([string]::IsNullOrWhiteSpace($env:PREVIOUS_TAG)) {
+            "https://github.com/$env:GITHUB_REPOSITORY/commits/$env:ETT_VERSION"
+          } else {
+            "https://github.com/$env:GITHUB_REPOSITORY/compare/$env:PREVIOUS_TAG...$env:ETT_VERSION"
+          }
+
+          $notes = @(
+            '## Release Summary',
+            '',
+            '_Summarize this release before publishing._',
+            '',
+            'New Features:',
+            '',
+            '- _Add new features before publishing._',
+            '',
+            'Bugs Fixed:',
+            '',
+            '- _Add resolved bugs before publishing._',
+            '',
+            '## Install using Winget!',
+            '',
+            'Standard Install:',
+            '```',
+            'winget install --id=EliWeitzman.ETT',
+            '```',
+            '',
+            '_Note: ETT installs using Winget will be in Machine-Wide context and saved to Program Files. For installs in a User-based context, use the portable executable attached in the release._',
+            '',
+            "![GitHub Downloads (all assets, specific tag)](https://img.shields.io/github/downloads/$env:GITHUB_REPOSITORY/$env:ETT_VERSION/total)",
+            '',
+            "**Full Changelog**: $fullChangelog"
+          ) -join "`n"
+
+          $notesPath = Join-Path $env:RUNNER_TEMP 'ETT-release-notes.md'
+          [System.IO.File]::WriteAllText($notesPath, $notes)
+          [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, "path=$notesPath`n")
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ETT_VERSION: ${{ steps.metadata.outputs.version }}
+          RELEASE_NOTES: ${{ steps.notes.outputs.path }}
+        shell: powershell
+        run: |
+          gh release create $env:ETT_VERSION '.\dist\ETT.exe' `
+            --repo $env:GITHUB_REPOSITORY `
+            --draft `
+            --target $env:GITHUB_SHA `
+            --title "ETT $env:ETT_VERSION" `
+            --notes-file $env:RELEASE_NOTES

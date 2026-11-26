@@ -75,6 +75,10 @@ Simply run the latest release's ETT.Installer.exe
 
 A single, standalone EXE application, portable enough to fit on a flash drive! 
 
+### Automated Release Builds
+
+Merges to `main` compile a portable `ETT.exe` and attach it to a draft GitHub Release. Before merging a release change, update `$ETTVersion` in `ETT.ps1` to an unused version number. The workflow uses that value for the tag, creates release notes in the existing ETT format, and leaves the draft for review before publication. An existing tag or release causes the workflow to stop rather than replace a published asset.
+
 ## Automatic Updates
 
 Beginning with release 1.2.1, ETT will now be able to automatically check for, and run software updates. However, there are a few key prerequisites necessary. 
