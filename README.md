@@ -88,7 +88,7 @@ The application is designed to run as a PowerShell Script, but as well is compil
 
 ## Customizing for your Deployment
 
-Starting with ETT 1.3, ETT now supports the implementation of custom config files! The ETTConfig.json file contains all settings that support the various business needs surrounding customization and enhancement. Additionally, ETT now features a graphical settings UI, which will allow for simpler configuration management. Settings GUI can as well be disabled through manual modification of the ETTConfig file. 
+Starting with ETT 1.3, ETT now supports the implementation of custom config files! The ETTConfig.json file contains all settings that support the various business needs surrounding customization and enhancement. Additionally, ETT now features a graphical settings UI, which will allow for simpler configuration management. Set `"ETTSettingsGUI": false` in `ETTConfig.json` to disable the Settings GUI.
 
 ## Custom Scripts!
 

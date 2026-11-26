@@ -164,6 +164,32 @@ Write-Output $message
     Assert-Equal -Expected '#654321' -Actual $minimalConfig.BrandColor -Message 'A config value was lost while initializing CustomFunctions.'
     Assert-Equal -Expected $true -Actual $minimalConfig.EnableCustomScriptUpload -Message 'A missing upload setting was not initialized.'
 
+    $atomicConfig = Get-Content -LiteralPath $minimalConfigPath -Raw | ConvertFrom-Json
+    $atomicConfig | Add-Member -MemberType NoteProperty -Name 'ExtraSetting' -Value @{
+        lines = @('one', 'two')
+    }
+    Save-ETTConfigAtomically -ConfigPath $minimalConfigPath -Config $atomicConfig
+    $savedAtomicConfig = Get-Content -LiteralPath $minimalConfigPath -Raw | ConvertFrom-Json
+    Assert-Equal -Expected 2 -Actual @($savedAtomicConfig.ExtraSetting.lines).Count -Message 'Atomic settings save lost nested data.'
+
+    $beforeLockedSave = Get-ConfigSnapshot -Path $minimalConfigPath
+    $lockedStream = [System.IO.File]::Open(
+        $minimalConfigPath,
+        [System.IO.FileMode]::Open,
+        [System.IO.FileAccess]::ReadWrite,
+        [System.IO.FileShare]::None
+    )
+    try {
+        Assert-Throws -Action {
+            Save-ETTConfigAtomically -ConfigPath $minimalConfigPath -Config $savedAtomicConfig
+        } -ExpectedMessage 'Unable to save ETT configuration'
+    }
+    finally {
+        $lockedStream.Dispose()
+    }
+    Assert-Equal -Expected $beforeLockedSave -Actual (Get-ConfigSnapshot -Path $minimalConfigPath) -Message 'A failed atomic replacement changed the original config.'
+    Assert-True -Condition (@(Get-ChildItem -LiteralPath $testDirectory -Force -Filter '.ETTConfig.*').Count -eq 0) -Message 'A failed atomic replacement left temporary or backup files.'
+
     $metadataDefaults = New-ETTCustomFunctionMetadata -ScriptPath $scriptPath
     Assert-Equal -Expected 'Imported Tool' -Actual $metadataDefaults.displayName -Message 'The display-name default was incorrect.'
     Assert-Equal -Expected 'Imported from Imported Tool.ps1' -Actual $metadataDefaults.description -Message 'The description default was incorrect.'

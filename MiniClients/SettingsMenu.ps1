@@ -158,6 +158,51 @@ function Show-ETTCustomScriptMetadataDialog {
     return $result
 }
 
+function Save-ETTConfigAtomically {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath,
+
+        [Parameter(Mandatory = $true)]
+        $Config
+    )
+
+    try {
+        $resolvedConfigPath = (Resolve-Path -LiteralPath $ConfigPath -ErrorAction Stop).ProviderPath
+    }
+    catch {
+        throw "Unable to load ETT configuration: $($_.Exception.Message)"
+    }
+
+    $configDirectory = Split-Path -Parent -Path $resolvedConfigPath
+    $temporaryPath = Join-Path -Path $configDirectory -ChildPath ('.ETTConfig.' + [guid]::NewGuid().ToString() + '.tmp')
+    $backupPath = Join-Path -Path $configDirectory -ChildPath ('.ETTConfig.' + [guid]::NewGuid().ToString() + '.bak')
+    $replacementSucceeded = $false
+
+    try {
+        $serializedConfig = $Config | ConvertTo-Json -Depth 10 -ErrorAction Stop
+        [System.IO.File]::WriteAllText($temporaryPath, $serializedConfig, (New-Object System.Text.UTF8Encoding($false)))
+        [System.IO.File]::Replace($temporaryPath, $resolvedConfigPath, $backupPath)
+        $replacementSucceeded = $true
+    }
+    catch {
+        throw "Unable to save ETT configuration: $($_.Exception.Message)"
+    }
+    finally {
+        if (Test-Path -LiteralPath $temporaryPath) {
+            Remove-Item -LiteralPath $temporaryPath -Force
+        }
+        if ($replacementSucceeded -and (Test-Path -LiteralPath $backupPath)) {
+            try {
+                Remove-Item -LiteralPath $backupPath -Force -ErrorAction Stop
+            }
+            catch {
+                Write-Warning "ETT configuration was saved, but the replacement backup could not be deleted: $($_.Exception.Message)"
+            }
+        }
+    }
+}
+
 function Add-ETTCustomFunction {
     param(
         [Parameter(Mandatory = $true)]
@@ -236,33 +281,7 @@ function Add-ETTCustomFunction {
         $config | Add-Member -MemberType NoteProperty -Name 'EnableCustomScriptUpload' -Value $true
     }
 
-    $configDirectory = Split-Path -Parent -Path $resolvedConfigPath
-    $temporaryPath = Join-Path -Path $configDirectory -ChildPath ('.ETTConfig.' + [guid]::NewGuid().ToString() + '.tmp')
-    $backupPath = Join-Path -Path $configDirectory -ChildPath ('.ETTConfig.' + [guid]::NewGuid().ToString() + '.bak')
-    $replacementSucceeded = $false
-
-    try {
-        $serializedConfig = $config | ConvertTo-Json -Depth 10 -ErrorAction Stop
-        [System.IO.File]::WriteAllText($temporaryPath, $serializedConfig, (New-Object System.Text.UTF8Encoding($false)))
-        [System.IO.File]::Replace($temporaryPath, $resolvedConfigPath, $backupPath)
-        $replacementSucceeded = $true
-    }
-    catch {
-        throw "Unable to save ETT configuration: $($_.Exception.Message)"
-    }
-    finally {
-        if (Test-Path -LiteralPath $temporaryPath) {
-            Remove-Item -LiteralPath $temporaryPath -Force
-        }
-        if ($replacementSucceeded -and (Test-Path -LiteralPath $backupPath)) {
-            try {
-                Remove-Item -LiteralPath $backupPath -Force -ErrorAction Stop
-            }
-            catch {
-                Write-Warning "ETT configuration was saved, but the replacement backup could not be deleted: $($_.Exception.Message)"
-            }
-        }
-    }
+    Save-ETTConfigAtomically -ConfigPath $resolvedConfigPath -Config $config
 }
 
 function Open-SettingsMenu {
@@ -895,7 +914,7 @@ function Open-SettingsMenu {
         $defenderEnrollCheckActiveCheckBox = New-Object System.Windows.Forms.CheckBox
         $defenderEnrollCheckActiveCheckBox.Location = New-Object System.Drawing.Size(225, 198)
         $defenderEnrollCheckActiveCheckBox.Size = New-Object System.Drawing.Size(20, 20)
-        $defenderEnrollCheckActiveCheckBox.Checked = $DefenderEnrollCheckActive
+        $defenderEnrollCheckActiveCheckBox.Checked = $DefenderEnrollCheck
         $complianceFrame.Controls.Add($defenderEnrollCheckActiveCheckBox)
 
         #QUERY SETTINGS
@@ -970,41 +989,46 @@ function Open-SettingsMenu {
                 }else{
                     $logolocationresult = $logoLocationTextBox.Text
                 }
-                #Load the settings file
-                $settings = Get-Content -Path ".\ETTConfig.json" | ConvertFrom-Json
-                #Update the settings file with the new values - if blank, set to null
-                $settings.AutoUpdateCheckerEnabled = $autoUpdateCheckerEnabledCheckBox.Checked
-                $settings.AdminMode = $adminModeCheckBox.Checked
-                $settings.BrandColor = $brandColorTextBox.Text
-                $settings.LogoLocation = $logolocationresult
-                $settings.BackgroundImagePath = $backgroundImagePathTextBox.Text
-                $settings.ETTApplicationTitle = $ETTApplicationTitleTextBox.Text
-                $settings.ETTHeaderText = $ETTHeaderTextTextBox.Text
-                $settings.ETTHeaderTextColor = $ETTHeaderTextColorTextBox.Text
-                $settings.ApplicationTimeoutEnabled = $applicationTimeoutEnabledCheckBox.Checked
-                $settings.ApplicationTimeoutLength = [int]$applicationTimeoutLengthTextBox.Text
-                $settings.EnableCustomTools = $enableCustomToolsCheckBox.Checked
-                if ($adminmode -eq $true) {
-                    if ($settings.PSObject.Properties.Name -contains 'EnableCustomScriptUpload') {
-                        $settings.EnableCustomScriptUpload = $enableCustomScriptUploadCheckBox.Checked
+                try {
+                    #Load the latest settings so fields outside this form are preserved.
+                    $settings = Get-Content -LiteralPath ".\ETTConfig.json" -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+                    #Update the settings file with the new values - if blank, set to null
+                    $settings.AutoUpdateCheckerEnabled = $autoUpdateCheckerEnabledCheckBox.Checked
+                    $settings.AdminMode = $adminModeCheckBox.Checked
+                    $settings.BrandColor = $brandColorTextBox.Text
+                    $settings.LogoLocation = $logolocationresult
+                    $settings.BackgroundImagePath = $backgroundImagePathTextBox.Text
+                    $settings.ETTApplicationTitle = $ETTApplicationTitleTextBox.Text
+                    $settings.ETTHeaderText = $ETTHeaderTextTextBox.Text
+                    $settings.ETTHeaderTextColor = $ETTHeaderTextColorTextBox.Text
+                    $settings.ApplicationTimeoutEnabled = $applicationTimeoutEnabledCheckBox.Checked
+                    $settings.ApplicationTimeoutLength = [int]$applicationTimeoutLengthTextBox.Text
+                    $settings.EnableCustomTools = $enableCustomToolsCheckBox.Checked
+                    if ($adminmode -eq $true) {
+                        if ($settings.PSObject.Properties.Name -contains 'EnableCustomScriptUpload') {
+                            $settings.EnableCustomScriptUpload = $enableCustomScriptUploadCheckBox.Checked
+                        }
+                        else {
+                            $settings | Add-Member -MemberType NoteProperty -Name 'EnableCustomScriptUpload' -Value $enableCustomScriptUploadCheckBox.Checked
+                        }
                     }
-                    else {
-                        $settings | Add-Member -MemberType NoteProperty -Name 'EnableCustomScriptUpload' -Value $enableCustomScriptUploadCheckBox.Checked
-                    }
+                    $settings.RAMCheckActive = $RAMCheckActiveCheckBox.Checked
+                    $settings.RAMCheckMinimum = [int]$RAMCheckMinimumTextBox.Text
+                    $settings.DriveSpaceCheckActive = $DriveSpaceCheckActiveCheckBox.Checked
+                    $settings.DriveSpaceCheckMinimum = [double]$DriveSpaceCheckMinimumTextBox.Text
+                    $settings.WinVersionCheckActive = $WinVersionCheckActiveCheckBox.Checked
+                    $settings.WinVersionTarget = $WinVersionTargetTextBox.Text
+                    $settings.AzureADTenantId = $AzureADTenantIdTextBox.Text
+                    $settings.LAPSAppClientId = $LAPSAppClientIdTextBox.Text
+                    $settings.BitLockerAppClientId = $BitLockerAppClientIdTextBox.Text
+                    $settings.AnimeMode = $animeModeCheckBox.Checked
+                    $settings.DefenderEnrollCheckActive = $defenderEnrollCheckActiveCheckBox.Checked
+                    Save-ETTConfigAtomically -ConfigPath ".\ETTConfig.json" -Config $settings
                 }
-                $settings.RAMCheckActive = $RAMCheckActiveCheckBox.Checked
-                $settings.RAMCheckMinimum = [int]$RAMCheckMinimumTextBox.Text
-                $settings.DriveSpaceCheckActive = $DriveSpaceCheckActiveCheckBox.Checked
-                $settings.DriveSpaceCheckMinimum = [double]$DriveSpaceCheckMinimumTextBox.Text
-                $settings.WinVersionCheckActive = $WinVersionCheckActiveCheckBox.Checked
-                $settings.WinVersionTarget = $WinVersionTargetTextBox.Text
-                $settings.AzureADTenantId = $AzureADTenantIdTextBox.Text
-                $settings.LAPSAppClientId = $LAPSAppClientIdTextBox.Text
-                $settings.BitLockerAppClientId = $BitLockerAppClientIdTextBox.Text
-                $settings.AnimeMode = $animeModeCheckBox.Checked
-                $settings.DefenderEnrollCheckActive = $defenderEnrollCheckActiveCheckBox.Checked
-                #Save the settings file
-                $settings | ConvertTo-Json | Set-Content -Path ".\ETTConfig.json"
+                catch {
+                    [System.Windows.Forms.MessageBox]::Show("Settings could not be saved: $($_.Exception.Message)", "Settings Save Failed", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+                    return
+                }
                 #Show popup that settings have been saved
                 [System.Windows.Forms.MessageBox]::Show("Settings have been saved! Restart ETT for updates to reflect.", "Settings Saved", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
                 #Close form
@@ -1043,7 +1067,7 @@ function Open-SettingsMenu {
         #Show the form
         $settingsForm.ShowDialog()
     }
-    elseif ($SettingsMenuEnabled -eq $false) {
+    elseif ($settings.ETTSettingsGUI -eq $false) {
        #ELSE - show popup that this has been by configuration file.
         [System.Windows.Forms.MessageBox]::Show("Settings have been disabled by config.", "Settings Disabled", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
     }else{

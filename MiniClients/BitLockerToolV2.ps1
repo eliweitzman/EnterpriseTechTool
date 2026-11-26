@@ -6,9 +6,9 @@ function Open-BitLockerRecoveryWindow
             try{
                 if($UseProxyAppCheckBox.Checked)
                 {
-                    if(($bitLockerAppClientId -ne "" -and $tenantID -ne ""))
+                    if(-not [string]::IsNullOrWhiteSpace($bitLockerAppClientId) -and -not [string]::IsNullOrWhiteSpace($azureADTenantId))
                     {
-                        Connect-MgGraph -TenantId $tenantID -ClientId $bitLockerAppClientId -Scopes Device.Read.All, DeviceLocalCredential.Read.All
+                        Connect-MgGraph -TenantId $azureADTenantId -ClientId $bitLockerAppClientId -Scopes Device.Read.All, BitlockerKey.Read.All
                     }
                     else {
                         $wshell = New-Object -ComObject wscript.shell

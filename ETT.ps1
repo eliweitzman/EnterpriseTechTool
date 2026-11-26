@@ -380,8 +380,15 @@ $domain = (Get-CIMInstance -ClassName Win32_ComputerSystem).Domain
 $LoadingProgressBar.Value = 60
 
 $LoadingLabel.Text = "Getting Drive Info..."
-$drivespace = Get-CimInstance -ClassName win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
-$freedrivespace = Get-CimInstance -ClassName win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output $('{0:N2}' -f ($_.FreeSpace / 1gb)) }
+$systemDrive = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID = 'C:'"
+if ($null -ne $systemDrive) {
+    $freeDriveSpaceGB = [double]($systemDrive.FreeSpace / 1gb)
+    $drivespace = " $($systemDrive.caption) $('{0:N2}' -f ($systemDrive.Size / 1gb)) GB total, $('{0:N2}' -f $freeDriveSpaceGB) GB free "
+}
+else {
+    $freeDriveSpaceGB = $null
+    $drivespace = " C: drive information unavailable "
+}
 $LoadingProgressBar.Value = 70
 
 $LoadingLabel.Text = "Getting RAM Info..."
@@ -458,69 +465,17 @@ $Dependencies | ForEach-Object {
 }
 
 #Device Compliance Checks
-#RAM Check
-if ($ramCheckActive -eq $true) {
-    if ($ramCheck -ge $ramMinimum) {
-        $complianceStatus = 'Compliant'
-        $ramCompliant = $true
-    }
-    else {
-        $complianceStatus = 'Non-Compliant'
-        $ramCompliant = $false
-        $complianceFlag = $true
-    }
-}
-else {
-    $ramCompliant = $true
-}
-
-#Drivespace Check
-if ($drivespaceCheckActive -eq $true) {
-    if ($freedrivespace -ge $drivespaceMinimum) {
-        $complianceStatus = 'Compliant'
-        $drivespaceCompliant = $true
-    }
-    else {
-        $complianceStatus = 'Non-Compliant'
-        $drivespaceCompliant = $false
-        $complianceFlag = $true
-    }
-}
-else {
-    $drivespaceCompliant = $true
-}
-
-#Windows Version Check
-if ($winverCheckActive -eq $true) {
-    if ($winver -eq $winverTarget) {
-        $complianceStatus = 'Compliant'
-        $winverCompliant = $true
-    }
-    else {
-        $complianceStatus = 'Non-Compliant'
-        $winverCompliant = $false
-        $complianceFlag = $true
-    }
-}
-else {
-    $winverCompliant = $true
-}
-
-#Defender Enrollment Check
-if ($defenderEnrollCheckActive -eq $true) {
-    if ($defenderEnrollStatus -eq $true) {
-        $complianceStatus = 'Compliant'
-        $defenderEnrollCompliant = $true
-    }
-    else {
-        $complianceStatus = 'Non-Compliant'
-        $defenderEnrollCompliant = $false
-        $complianceFlag = $true
-    }
-}
-else {
-    $defenderEnrollCompliant = $true
-}
+$complianceResult = Get-ETTComplianceState `
+    -RAMCheckActive $ramCheckActive -RAMCheck $ramCheck -RAMMinimum $ramMinimum `
+    -DriveSpaceCheckActive $drivespaceCheckActive -FreeDriveSpaceGB $freeDriveSpaceGB -DriveSpaceMinimum $drivespaceMinimum `
+    -WinVersionCheckActive $winverCheckActive -WinVersion $winver -WinVersionTarget $winverTarget `
+    -DefenderEnrollCheckActive $defenderEnrollCheckActive -DefenderEnrollStatus $defenderEnrollStatus
+$complianceStatus = $complianceResult.Status
+$complianceFlag = $complianceResult.Flag
+$ramCompliant = $complianceResult.RAMCompliant
+$drivespaceCompliant = $complianceResult.DriveSpaceCompliant
+$winverCompliant = $complianceResult.WinVersionCompliant
+$defenderEnrollCompliant = $complianceResult.DefenderEnrollCompliant
 
 #Device Type conversion
 #A switch statement to convert the devicetype variable to a human readable format in a new systemType variable
@@ -800,7 +755,7 @@ Create-ToastNotification -Icon "Info" -Title $ettApplicationTitle -Message "Welc
 
 #IF Compliance Flag is true, add a flyout notification
 if ($complianceFlag -eq $true) {
-    Create-ToastNotification -Icon [System.Windows.Forms.ToolTipIcon]::Error -Title $ettApplicationTitle -Message "This device is non-compliant!" -Duration 5000
+    Create-ToastNotification -Icon "Error" -Title $ettApplicationTitle -Message "This device is non-compliant!" -Duration 5000
 }
 
 #Create App Buttons
@@ -1026,10 +981,10 @@ $deviceInfoClipboard.ShortcutKeyDisplayString = "CTRL + C"
 $menuInfo.Text = "Info"
 [void]$menu.Items.Add($menuInfo)
 #Set tab color to red if compliance is not met
-if ($compliance -eq "Compliant") {
+if ($complianceStatus -eq "Compliant") {
     $menuInfo.BackColor = $BGcolor
 }
-elseif ($compliance -eq "Non-Compliant") {
+elseif ($complianceStatus -eq "Non-Compliant") {
     $menuInfo.BackColor = 'Red'
 }
 
@@ -1214,7 +1169,7 @@ $defenderInfo.Add_Click({
         $wshell.Popup("Defender Status copied to clipboard", 0, "Defender Status Copied", 64)
     })
 #Set color to red if Defender ATP is not enrolled and compliance check is enabled
-if ($defenderStatus -eq "Not Enrolled" -and $complianceFlag -eq $true) {
+if ($defenderEnrollCompliant -eq $false) {
     $defenderInfo.BackColor = 'Red'
     $defenderInfo.ForeColor = 'White'
 }
