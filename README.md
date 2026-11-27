@@ -58,6 +58,8 @@ ETT can run in a few different ways, depending on preference, and on your own pe
 | Modified PS Script | Downloading the PS1 file, and adjusting the feature flags (indicated below). |
 | Modified EXE | Modifying the flags, and compiling it as an EXE for use. Able to bypass execution policy.|
 
+The script loads its six runtime helpers relative to `ETT.ps1`, regardless of the working directory. The portable EXE uses only its embedded copies of those helpers. This does not change where ETT looks for `ETTConfig.json`.
+
 ## Install Methods
 
 1. Using the Windows Package Manager (Machine-wide only... [info](https://github.com/eliweitzman/EnterpriseTechTool/wiki/Compiling-and-Runtime-How%E2%80%90To))
@@ -75,6 +77,10 @@ Simply run the latest release's ETT.Installer.exe
 
 A single, standalone EXE application, portable enough to fit on a flash drive! 
 
+### Automated Release Builds
+
+Merges to `main` compile a portable `ETT.exe` and attach it to a draft GitHub Release. Before merging a release change, update `$ETTVersion` in `ETT.ps1` to an unused version number. The workflow uses that value for the tag, creates release notes in the existing ETT format, and leaves the draft for review before publication. An existing tag or release causes the workflow to stop rather than replace a published asset.
+
 ## Automatic Updates
 
 Beginning with release 1.2.1, ETT will now be able to automatically check for, and run software updates. However, there are a few key prerequisites necessary. 
@@ -86,13 +92,21 @@ Beginning with release 1.2.1, ETT will now be able to automatically check for, a
 
 The application is designed to run as a PowerShell Script, but as well is compiled into an executable, using the awesome module [PS2EXE](https://github.com/MScholtes/PS2EXE), made by MScholtes, based on code by [Ingo Karstein](https://github.com/ikarstein/ps2exe). This is currently designed to run in an Enterprise environment, however it is tweakable to be run as a personal tool as well (although LAPS, policy updates, and a few other tools certainly aren't necessary).
 
+Run ETT without elevation where possible. With Windows Administrator Protection, elevated processes use a separate user profile, so user settings, files, and sign-ins may differ. The Outlook user-settings actions warn before changing the elevated profile; run them unelevated to target the normal user's profile. Administrator Protection compatibility has not yet been verified.
+
 ## Customizing for your Deployment
 
-Starting with ETT 1.3, ETT now supports the implementation of custom config files! The ETTConfig.json file contains all settings that support the various business needs surrounding customization and enhancement. Additionally, ETT now features a graphical settings UI, which will allow for simpler configuration management. Settings GUI can as well be disabled through manual modification of the ETTConfig file. 
+Starting with ETT 1.3, ETT now supports the implementation of custom config files! The ETTConfig.json file contains all settings that support the various business needs surrounding customization and enhancement. Additionally, ETT now features a graphical settings UI, which will allow for simpler configuration management. Set `"ETTSettingsGUI": false` in `ETTConfig.json` to disable the Settings GUI.
 
 ## Custom Scripts!
 
-Included in versions 1.3 and newer, ETT now has baked-in support for custom function imports! For more information, check out the [wiki](https://github.com/eliweitzman/EnterpriseTechTool/wiki) for detailed steps.
+Included in versions 1.3 and newer, ETT supports custom function imports through the `CustomFunctions` array in `ETTConfig.json`.
+
+Administrators can enable **Allow Custom Script Uploads** in the Settings Runtime section. This setting is disabled by default, and the upload controls remain disabled when ETT is not running with administrator privileges. Once enabled, select **Upload Custom Script**, choose one `.ps1` file, review or edit its display name, description, and administrator requirement, and select **Import**. Uploaded scripts are always added to the **Custom** tab.
+
+ETT validates the PowerShell syntax without executing the file during import, rejects duplicate display names, and appends the complete script as a `codeBlock`. Only import scripts you trust. Scripts marked as requiring administrator privileges are blocked from running unless ETT is elevated. Restart ETT after a successful import to refresh the Custom tab.
+
+For additional configuration details, check out the [wiki](https://github.com/eliweitzman/EnterpriseTechTool/wiki).
 
 ## Contributing
 

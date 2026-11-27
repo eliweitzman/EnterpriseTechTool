@@ -9,24 +9,27 @@ This repository is a single Windows PowerShell application with a small set of s
 
 ### Developer / runtime workflows (explicit)
 - Dev run (recommended for iterative edits): open PowerShell and dot-source `.\ETT.ps1` (or run it). Note: dot-sourcing in a compiled build behaves differently; many UI helpers and dot-sourced modules are intended for script execution.
-- Build / compile: `Compiler/ps2exe.ps1` (project uses PS2EXE). Ensure PS2EXE is available in the environment. The README also documents winget packaging and the `EliWeitzman.ETT` package id.
+- Build / compile: `Compiler/ps2exe.ps1` (project uses PS2EXE). Ensure PS2EXE is available in the environment. If it is not installed, write an error message that includes the `Install-Module -Name ps2exe -Scope CurrentUser -Force` command and stop; do not attempt to install it automatically. The README also documents winget packaging and the `EliWeitzman.ETT` package id.
 - Auto-update and releases: `ETT.ps1` checks GitHub tags (API) for release tags; offline devices will skip update checks.
 
 ### Project-specific conventions and patterns
 - Custom functions intended for the GUI toolbox must be named with the `custom_` prefix to be auto-discovered (ETT loads functions and `Get-Command` filters for `custom_*`).
-- Custom tools can also come from `ETTConfig.json` under `CustomFunctions`; each entry expects: `displayName`, `description`, `tab`, `requireAdmin`, and `codeBlock` (string containing the code to run).
+- Custom tools can also come from `ETTConfig.json` under `CustomFunctions`; each entry expects: `displayName`, `description`, `tab`, `requireAdmin`, and `codeBlock` (string containing the code to run). For config-driven custom functions, `requireAdmin` is handled by the framework/UI before `codeBlock` runs; do not duplicate the admin check in `codeBlock` unless the action intentionally executes in the current shell and must guard itself with `$adminmode`. For multiline scripts in `codeBlock`, replace newlines with semicolons and escape embedded double quotes as needed so the JSON string remains valid.
+- The Settings script-upload workflow always persists uploaded entries with `tab: "Custom"`. Do not add another tab selector for uploads unless the runtime gains real per-item tab routing.
+- Imported script bytes are syntax-parsed with the PowerShell AST parser before saving and are never executed during import. Preserve the complete script text in `codeBlock`; do not convert multiline scripts to semicolons in code-generated JSON. Use `ConvertTo-Json` and `ConvertFrom-Json` to handle escaping.
 - GUI construction uses a small set of composable helpers. Common helpers to reuse/patch:
   - `Create-ETTButton` (ETT.ps1) — returns a WinForms Button wired to a ScriptBlock.
   - `Create-ToolboxListItem` — returns PSCustomObject used in toolbox lists.
   - `Create-ToolboxTabPage` — builds tabs and listboxes for toolbox items.
   - `Create-GenericToolWindow` (PSAssets/GenericToolWindow.ps1) — standard pattern for AD/BitLocker windows.
-- Admin-aware flow: many actions check `$adminmode` and either run logic inline or call `Start-Process -Verb RunAs` to elevate. Assume privileged actions must be guarded and tested on Windows with UAC prompts.
+- Admin-aware flow: many actions check `$adminmode`. When adding a new admin action, choose exactly one pattern: (1) if the action can run in a separate elevated child process, use `Start-Process -Verb RunAs` and return; or (2) if the action must execute in the current shell, verify `$adminmode` as a boolean and fail fast with `if (-not $adminmode) { throw 'Admin elevation required.' }`. Do not combine both behaviors in one action. Assume privileged actions must be guarded and tested on Windows with UAC prompts.
+- PowerShell variable names are case-insensitive. Never assign configuration `AdminMode` to `$AdminMode` inside a scope that also uses the live `$adminmode` elevation value; doing so silently overwrites the process elevation state. Name config values `ConfiguredAdminMode` or similar.
 
 ### Integration points / external dependencies to be aware of
-- RSAT / ActiveDirectory PowerShell module: many AD functions check `Get-Command -Name Get-ADComputer` and will disable GUI features if absent. Tests or CI must run on Windows with RSAT to exercise AD flows.
-- Microsoft Graph (Get-MGContext / Connect-MgGraph) — used by Entra ID / BitLocker key retrieval in `MiniClients`.
+- RSAT / ActiveDirectory PowerShell module: many AD functions check `Get-Command -Name Get-ADComputer` and will disable GUI features if absent. When adding new AD or vendor features, wrap execution in a `Get-Command` or `Test-Path` check. If the feature is triggered by a GUI button, disable that UI action; if the feature runs in the background or during update logic, log a warning instead of assuming the dependency exists. Tests or CI must run on Windows with RSAT to exercise AD flows.
+- Microsoft Graph (Get-MGContext / Connect-MgGraph) — used by Entra ID / BitLocker key retrieval in `MiniClients`. Guard Graph calls with `if ($null -eq (Get-MgContext)) { return }`, and if the session is not available, tell the user to run `Connect-MgGraph` instead of attempting automatic interactive sign-in.
 - winget (Windows Package Manager) — used for app updates and referenced in README for install flow.
-- Vendor CLIs (Dell/Lenovo command-line updaters) — code contains explicit checks for vendor-specific paths when invoking driver update logic.
+- Vendor CLIs (Dell/Lenovo command-line updaters) — code contains explicit checks for vendor-specific paths when invoking driver update logic. If the required vendor CLI is missing or its path does not exist, log a warning and disable the corresponding UI action instead of failing silently.
 
 ### Concrete editing examples (copy / paste friendly)
 - Add a new toolbox action (place near other toolbox arrays in `ETT.ps1`):
@@ -40,13 +43,20 @@ This repository is a single Windows PowerShell application with a small set of s
 
 - Add a config-driven custom function to `ETTConfig.json` (example entry):
 
-  `{ "displayName": "Show Random", "description": "Show random number", "tab":"Custom", "requireAdmin": false, "codeBlock": "$rand=(Get-Random -Minimum 1 -Maximum 100); $wshell=New-Object -ComObject Wscript.Shell; $wshell.Popup($rand,0,'Random',64)" }
+  `{ "displayName": "Show Random", "description": "Show random number", "tab":"Custom", "requireAdmin": false, "codeBlock": "$rand=(Get-Random -Minimum 1 -Maximum 100); $wshell=New-Object -ComObject Wscript.Shell; $wshell.Popup($rand,0,'Random',64)" }`
+
+  For multiline `codeBlock` scripts, replace newlines with semicolons and escape embedded double quotes so the JSON string stays valid.
 
 ### Observed gotchas / edge cases (experimentally verified)
 - Dot-sourcing vs compiled EXE: dot-sourcing helper scripts (`. $psFile`) works for development but compiled EXE builds will often hit the `catch` and skip dot-sourced loads — verify behavior after compilation.
+- A compiled preview must be built with all six runtime helper scripts in one comma-separated `-resources` argument. Omitting this argument produces an incomplete EXE whose Settings and MiniClient behavior differs from the source run.
+- `ETT.ps1` reads `.\ETTConfig.json` relative to the process working directory. Launch a compiled preview from the repository root (or place the intended config beside it) so testing uses the expected configuration.
+- When normalizing paths returned by `Resolve-Path`, use `.ProviderPath` before passing them to .NET file APIs. `.Path` can contain the `Microsoft.PowerShell.Core\FileSystem::` provider prefix, which `File.ReadAllText` and similar APIs reject on UNC paths.
+- Do not live-rebind an existing WinForms `ListBox.DataSource` after upload. Rebinding can strip `DisplayMember` behavior and render raw PSCustomObjects. Configure `DataSource`, `DisplayMember`, and `ValueMember` once when constructing the list; restart ETT to reflect persisted custom tools.
+- Prefer direct .NET APIs for startup operations that must work in a PS2EXE host when cmdlet/module autoload is unreliable. The hosts-file hash is computed with `System.Security.Cryptography.SHA256` rather than `Get-FileHash`.
 - Platform: Windows-only. Tests or automation must run on Windows with PowerShell and required modules installed.
-- Admin flows: UI shows a shield emoji for tools that require admin; ensure scripts that perform registry or BitLocker changes always verify `$adminmode`.
-- Winget and GitHub API calls can fail on offline devices — code already catches and degrades, but changes to update logic should keep that in mind.
+- Admin flows: when an action must run in the current shell, guard it with `if (-not $adminmode) { throw 'Admin elevation required.' }`. Do not add a separate `Start-Process -Verb RunAs` path in the same function.
+- Winget and GitHub API calls can fail on offline devices, due to network issues, or from rate limits. When changing update logic, wrap these calls in `try/catch`, log a warning, and return `$null` from functions that normally return data (e.g. a tag string or version object) and `$false` from functions that normally return a boolean status; never throw.
 
 ### Files and locations you will reference most
 - `ETT.ps1` — main app orchestration (load order, flags, `$Dependencies`).
@@ -60,48 +70,61 @@ This repository is a single Windows PowerShell application with a small set of s
 
 Summary: this project is typically distributed as a compiled EXE (PS2EXE). Development is easiest by dot-sourcing `ETT.ps1`. Use PS2EXE to build an EXE for portable or installer-based distribution.
 
-1) Install PS2EXE (optional if you already have `Compiler/ps2exe.ps1`):
+1) Verify PS2EXE is installed. If it is not available, report the command below and stop; do not install it automatically.
 
 ```powershell
-# Install the community PS2EXE module (if needed)
+# User action required if PS2EXE is unavailable
 Install-Module -Name ps2exe -Scope CurrentUser -Force
 ```
 
-2) Basic compile (recommended starting command):
+2) Compile from the repository root with all runtime helpers embedded:
 
 ```powershell
-# From the repository root
-# Uses the community ps2exe wrapper if installed; otherwise run the repo's Compiler/ps2exe.ps1 script similarly
-Invoke-ps2exe -inputFile .\ETT.ps1 -outputFile .\dist\ETT.exe -iconFile .\ImageAssets\EnterpriseTechTool.ico -noConsole -x64
+.\Compiler\ps2exe.ps1 `
+    -inputFile '.\ETT.ps1' `
+    -outputFile '.\dist\ETT.exe' `
+    -iconFile '.\ImageAssets\ETTLogo.ico' `
+    -version '1.3.2' `
+    -resources '.\PSAssets\GenericToolWindow.ps1','.\PSAssets\ToolboxFunctions.ps1','.\MiniClients\ADLookup.ps1','.\MiniClients\BitLockerToolV2.ps1','.\MiniClients\LAPSToolV2.ps1','.\MiniClients\SettingsMenu.ps1'
 ```
 
-If you prefer to call the included script directly (it may wrap options differently):
+The compiler wrapper should be run unchanged unless the user explicitly requests a compiler change. When the agent process is PowerShell 7, invoke this repository command through Windows PowerShell 5.1 because the wrapper's nested compilation path is designed for Windows PowerShell.
 
 ```powershell
-& '.\Compiler\ps2exe.ps1' -InputFile '.\ETT.ps1' -OutputFile '.\dist\ETT.exe' -x64
+& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command `
+    "& '.\Compiler\ps2exe.ps1' -inputFile '.\ETT.ps1' -outputFile '.\dist\ETT.exe' -iconFile '.\ImageAssets\ETTLogo.ico' -version '1.3.2' -resources '.\PSAssets\GenericToolWindow.ps1','.\PSAssets\ToolboxFunctions.ps1','.\MiniClients\ADLookup.ps1','.\MiniClients\BitLockerToolV2.ps1','.\MiniClients\LAPSToolV2.ps1','.\MiniClients\SettingsMenu.ps1'"
 ```
 
 Notes and recommended options
 - Use `-x64` for 64-bit builds (recommended). The GUI and some MiniClients note "MUST COMPILE WITH x64".
-- `-noConsole` removes the console window and produces a GUI-only EXE.
-- Provide an `-iconFile` to brand the EXE; put an .ico in `ImageAssets/` and reference it.
+- The repository wrapper already selects `-x64` and `-noConsole`.
+- The current icon is `ImageAssets\ETTLogo.ico`.
 
 Dot-sourcing and embedding caveat
-- `ETT.ps1` dot-sources `MiniClients/*.ps1` and `PSAssets/*.ps1` at runtime via `$Dependencies`. During compilation these dot-sources are wrapped in a try/catch (the code intentionally swallows errors for compiled mode). After compiling:
+- `ETT.ps1` dot-sources `MiniClients/*.ps1` and `PSAssets/*.ps1` at runtime via `$Dependencies`. During compilation these dot-sources are wrapped in a try/catch, and the compiled EXE intentionally swallows those load errors so the GUI remains usable. After compiling:
   - Verify that the compiled EXE behaves as expected and that all UI modules are available.
-  - If a helper script is not embedding or running, either: embed its contents into `ETT.ps1` before compiling, or adjust the compile wrapper to include additional files (some ps2exe versions support an `-include` parameter).
+  - Do not inline helper scripts into `ETT.ps1` unless the user explicitly asks for that structural change.
+  - If dependencies fail to load in the compiled EXE, temporarily add logging to the existing `catch` block for diagnosis only, such as `catch { $_.Exception.Message | Out-File .\compile-debug.log -Append; return }`, and keep the fix limited to diagnostics without re-throwing the error.
 
 Quick verification checklist after building
-- Run the compiled EXE on a Windows test machine.
-- Confirm the app window appears and basic buttons (Clear Last Login, Get LAPS Password) open their windows.
-- Test one admin and one non-admin flow (e.g., Start-WingetAppUpdates and Get-WindowsActivationKey) to confirm elevation behavior and UAC prompts.
-- Check BitLocker and AD windows on a machine with RSAT / Microsoft Graph available to ensure those paths work.
+- Run `.\Tests\Test-CustomScriptImport.ps1` before compiling.
+- Launch one preview as standard user and one with `Start-Process -Verb RunAs`; confirm the title reports `Admin Mode: False` and `Admin Mode: True`.
+- Launch from the repository root so the preview reads the intended `ETTConfig.json`.
+- Confirm the Custom tab renders display names (not raw `@{displayName=...}` objects) for built-in and imported entries in a standard-user run.
+- Test a valid `.ps1` upload only while the upload setting is enabled in an elevated session; test invalid syntax, duplicate name, cancellation, and a disabled/non-admin save. Upload itself must never execute the script.
+- Confirm basic buttons and MiniClients open, then test one admin and one non-admin flow.
+- Confirm BitLocker and AD windows on a machine with Microsoft Graph/RSAT available.
+
+### Sensitive-data and preview cleanup
+- Never commit generated `dist\ETT.exe`, local config records created by manual upload testing, or one-off upload fixture scripts.
+- After GUI testing, restore `EnableCustomScriptUpload` to `false` unless the user explicitly requests otherwise.
+- Remove uploaded test-only `CustomFunctions` while preserving the repository's original sample entries.
+- Before committing, search both tracked and untracked text changes for workstation names, usernames, home directories, UNC/share paths, session-state paths, temp paths, process IDs, and uploaded test names.
+- Validate JSON with `ConvertFrom-Json`, run the focused import test, and inspect `git diff --check` and `git status --short` after cleanup.
 
 If anything fails, the two fastest remedies are:
 - Re-run as a script (`.\ETT.ps1`) to get full error output (dot-sourcing provides easier debugging).
 - Temporarily add verbose/logging output around the `$Dependencies` dot-source loop to confirm whether each helper file is loaded inside the EXE.
 
-If any of these sections are unclear or you'd like the file to be extended with examples for a specific task (e.g., add a new toolbox item, wire a new CustomFunction from JSON, or create a test harness), tell me which area to expand and I will iterate.
+Use these notes as the default operational guidance. When the user prompt specifically asks for examples, output only the requested examples (for example, a new toolbox item, a `CustomFunction` entry, or a smoke-test script) and keep the implementation focused on that task.
 
----
-Please review these notes and tell me if you want additional examples (unit/test harness, or a short script to run local smoke-tests for common flows like: load UI, call a non-admin action, and call an admin action with elevation). 

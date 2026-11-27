@@ -1,3 +1,289 @@
+function Read-ETTCustomScript {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    try {
+        $resolvedPath = (Resolve-Path -LiteralPath $Path -ErrorAction Stop).ProviderPath
+    }
+    catch {
+        throw "Unable to resolve custom script '$Path': $($_.Exception.Message)"
+    }
+
+    if ([System.IO.Path]::GetExtension($resolvedPath) -ine '.ps1') {
+        throw 'Only .ps1 PowerShell script files can be uploaded.'
+    }
+
+    try {
+        $scriptContent = [System.IO.File]::ReadAllText($resolvedPath)
+    }
+    catch {
+        throw "Unable to read custom script '$resolvedPath': $($_.Exception.Message)"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($scriptContent)) {
+        throw 'The selected PowerShell script is empty.'
+    }
+
+    $tokens = $null
+    $parseErrors = $null
+    [void][System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$tokens, [ref]$parseErrors)
+    if ($parseErrors.Count -gt 0) {
+        $errorDetails = ($parseErrors | ForEach-Object {
+                "Line $($_.Extent.StartLineNumber): $($_.Message)"
+            }) -join ' '
+        throw "PowerShell syntax validation failed. $errorDetails"
+    }
+
+    return $scriptContent
+}
+
+function New-ETTCustomFunctionMetadata {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ScriptPath
+    )
+
+    $scriptFileName = [System.IO.Path]::GetFileName($ScriptPath)
+    return [PSCustomObject]@{
+        displayName = [System.IO.Path]::GetFileNameWithoutExtension($scriptFileName)
+        description = "Imported from $scriptFileName"
+        requireAdmin = $false
+    }
+}
+
+function Show-ETTCustomScriptMetadataDialog {
+    param(
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject]$Defaults,
+
+        [string[]]$ExistingDisplayNames = @()
+    )
+
+    Add-Type -AssemblyName System.Windows.Forms
+
+    $metadataForm = New-Object System.Windows.Forms.Form
+    $metadataForm.Text = 'Custom Script Details'
+    $metadataForm.Size = New-Object System.Drawing.Size(470, 265)
+    $metadataForm.StartPosition = 'CenterScreen'
+    $metadataForm.FormBorderStyle = 'FixedDialog'
+    $metadataForm.MaximizeBox = $false
+    $metadataForm.MinimizeBox = $false
+    $metadataForm.ShowInTaskbar = $false
+    $metadataForm.TopMost = $true
+    $metadataForm.ShowIcon = $false
+
+    $displayNameLabel = New-Object System.Windows.Forms.Label
+    $displayNameLabel.Location = New-Object System.Drawing.Point(15, 18)
+    $displayNameLabel.Size = New-Object System.Drawing.Size(120, 20)
+    $displayNameLabel.Text = 'Display Name:'
+    $metadataForm.Controls.Add($displayNameLabel)
+
+    $displayNameTextBox = New-Object System.Windows.Forms.TextBox
+    $displayNameTextBox.Location = New-Object System.Drawing.Point(140, 16)
+    $displayNameTextBox.Size = New-Object System.Drawing.Size(300, 22)
+    $displayNameTextBox.Text = $Defaults.displayName
+    $metadataForm.Controls.Add($displayNameTextBox)
+
+    $descriptionLabel = New-Object System.Windows.Forms.Label
+    $descriptionLabel.Location = New-Object System.Drawing.Point(15, 52)
+    $descriptionLabel.Size = New-Object System.Drawing.Size(120, 20)
+    $descriptionLabel.Text = 'Description:'
+    $metadataForm.Controls.Add($descriptionLabel)
+
+    $descriptionTextBox = New-Object System.Windows.Forms.TextBox
+    $descriptionTextBox.Location = New-Object System.Drawing.Point(140, 50)
+    $descriptionTextBox.Size = New-Object System.Drawing.Size(300, 22)
+    $descriptionTextBox.Text = $Defaults.description
+    $metadataForm.Controls.Add($descriptionTextBox)
+
+    $requireAdminCheckBox = New-Object System.Windows.Forms.CheckBox
+    $requireAdminCheckBox.Location = New-Object System.Drawing.Point(140, 84)
+    $requireAdminCheckBox.Size = New-Object System.Drawing.Size(220, 22)
+    $requireAdminCheckBox.Text = 'Requires Administrator'
+    $requireAdminCheckBox.Checked = [bool]$Defaults.requireAdmin
+    $metadataForm.Controls.Add($requireAdminCheckBox)
+
+    $securityLabel = New-Object System.Windows.Forms.Label
+    $securityLabel.Location = New-Object System.Drawing.Point(15, 116)
+    $securityLabel.Size = New-Object System.Drawing.Size(425, 38)
+    $securityLabel.Text = 'The script is not executed during upload. Review the file contents and only import scripts you trust.'
+    $metadataForm.Controls.Add($securityLabel)
+
+    $importButton = New-Object System.Windows.Forms.Button
+    $importButton.Location = New-Object System.Drawing.Point(245, 180)
+    $importButton.Size = New-Object System.Drawing.Size(95, 30)
+    $importButton.Text = 'Import'
+    $importButton.Add_Click({
+            $displayName = $displayNameTextBox.Text.Trim()
+            if ([string]::IsNullOrWhiteSpace($displayName)) {
+                [System.Windows.Forms.MessageBox]::Show('Display Name is required.', 'Invalid Script Details', [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+                return
+            }
+
+            if ($ExistingDisplayNames -contains $displayName) {
+                [System.Windows.Forms.MessageBox]::Show("A custom script named '$displayName' already exists.", 'Duplicate Script Name', [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+                return
+            }
+
+            $metadataForm.Tag = [PSCustomObject]@{
+                displayName = $displayName
+                description = $descriptionTextBox.Text.Trim()
+                requireAdmin = $requireAdminCheckBox.Checked
+            }
+            $metadataForm.DialogResult = [System.Windows.Forms.DialogResult]::OK
+            $metadataForm.Close()
+        })
+    $metadataForm.Controls.Add($importButton)
+    $metadataForm.AcceptButton = $importButton
+
+    $cancelButton = New-Object System.Windows.Forms.Button
+    $cancelButton.Location = New-Object System.Drawing.Point(350, 180)
+    $cancelButton.Size = New-Object System.Drawing.Size(90, 30)
+    $cancelButton.Text = 'Cancel'
+    $cancelButton.Add_Click({
+            $metadataForm.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+            $metadataForm.Close()
+        })
+    $metadataForm.Controls.Add($cancelButton)
+    $metadataForm.CancelButton = $cancelButton
+
+    $dialogResult = $metadataForm.ShowDialog()
+    $result = $null
+    if ($dialogResult -eq [System.Windows.Forms.DialogResult]::OK) {
+        $result = $metadataForm.Tag
+    }
+    $metadataForm.Dispose()
+    return $result
+}
+
+function Save-ETTConfigAtomically {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath,
+
+        [Parameter(Mandatory = $true)]
+        $Config
+    )
+
+    try {
+        $resolvedConfigPath = (Resolve-Path -LiteralPath $ConfigPath -ErrorAction Stop).ProviderPath
+    }
+    catch {
+        throw "Unable to load ETT configuration: $($_.Exception.Message)"
+    }
+
+    $configDirectory = Split-Path -Parent -Path $resolvedConfigPath
+    $temporaryPath = Join-Path -Path $configDirectory -ChildPath ('.ETTConfig.' + [guid]::NewGuid().ToString() + '.tmp')
+    $backupPath = Join-Path -Path $configDirectory -ChildPath ('.ETTConfig.' + [guid]::NewGuid().ToString() + '.bak')
+    $replacementSucceeded = $false
+
+    try {
+        $serializedConfig = $Config | ConvertTo-Json -Depth 10 -ErrorAction Stop
+        [System.IO.File]::WriteAllText($temporaryPath, $serializedConfig, (New-Object System.Text.UTF8Encoding($false)))
+        [System.IO.File]::Replace($temporaryPath, $resolvedConfigPath, $backupPath)
+        $replacementSucceeded = $true
+    }
+    catch {
+        throw "Unable to save ETT configuration: $($_.Exception.Message)"
+    }
+    finally {
+        if (Test-Path -LiteralPath $temporaryPath) {
+            Remove-Item -LiteralPath $temporaryPath -Force
+        }
+        if ($replacementSucceeded -and (Test-Path -LiteralPath $backupPath)) {
+            try {
+                Remove-Item -LiteralPath $backupPath -Force -ErrorAction Stop
+            }
+            catch {
+                Write-Warning "ETT configuration was saved, but the replacement backup could not be deleted: $($_.Exception.Message)"
+            }
+        }
+    }
+}
+
+function Add-ETTCustomFunction {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$CodeBlock,
+
+        [Parameter(Mandatory = $true)]
+        [string]$DisplayName,
+
+        [AllowEmptyString()]
+        [string]$Description = '',
+
+        [bool]$RequireAdmin = $false,
+
+        [Parameter(Mandatory = $true)]
+        [bool]$AdminMode,
+
+        [Parameter(Mandatory = $true)]
+        [bool]$EnableCustomScriptUpload
+    )
+
+    if (-not $AdminMode) {
+        throw 'Admin elevation is required to upload custom scripts.'
+    }
+    if (-not $EnableCustomScriptUpload) {
+        throw 'Custom script upload is disabled in Settings.'
+    }
+
+    $cleanDisplayName = $DisplayName.Trim()
+    if ([string]::IsNullOrWhiteSpace($cleanDisplayName)) {
+        throw 'Display Name is required.'
+    }
+
+    try {
+        $resolvedConfigPath = (Resolve-Path -LiteralPath $ConfigPath -ErrorAction Stop).ProviderPath
+        $config = Get-Content -LiteralPath $resolvedConfigPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+    }
+    catch {
+        throw "Unable to load ETT configuration: $($_.Exception.Message)"
+    }
+
+    $existingNames = @()
+    $hasCustomFunctionsProperty = $config.PSObject.Properties.Name -contains 'CustomFunctions'
+    if ($hasCustomFunctionsProperty -and $null -ne $config.CustomFunctions) {
+        $existingFunctions = @($config.CustomFunctions)
+        $existingNames = @($existingFunctions | ForEach-Object { [string]$_.displayName })
+    }
+    else {
+        $existingFunctions = @()
+    }
+
+    if ($existingNames -contains $cleanDisplayName) {
+        throw "A custom script named '$cleanDisplayName' already exists."
+    }
+
+    $customFunction = [PSCustomObject]@{
+        displayName = $cleanDisplayName
+        description = $Description
+        tab         = 'Custom'
+        requireAdmin = $RequireAdmin
+        codeBlock   = $CodeBlock
+    }
+    if ($hasCustomFunctionsProperty) {
+        $config.CustomFunctions = @($existingFunctions) + $customFunction
+    }
+    else {
+        $config | Add-Member -MemberType NoteProperty -Name 'CustomFunctions' -Value @($customFunction)
+    }
+
+    if ($config.PSObject.Properties.Name -contains 'EnableCustomScriptUpload') {
+        $config.EnableCustomScriptUpload = $true
+    }
+    else {
+        $config | Add-Member -MemberType NoteProperty -Name 'EnableCustomScriptUpload' -Value $true
+    }
+
+    Save-ETTConfigAtomically -ConfigPath $resolvedConfigPath -Config $config
+}
+
 function Open-SettingsMenu {
 
     #Grab content from the settings file - ".\ETTConfig.json"
@@ -9,7 +295,7 @@ function Open-SettingsMenu {
 
         #Assign the values to variables
         $AutoUpdateCheckerEnabled = $settings.AutoUpdateCheckerEnabled
-        $AdminMode = $settings.AdminMode
+        $ConfiguredAdminMode = $settings.AdminMode
         $BrandColor = $settings.BrandColor
         $LogoLocation = $settings.LogoLocation
         $BackgroundImagePath = $settings.BackgroundImagePath
@@ -19,6 +305,10 @@ function Open-SettingsMenu {
         $ApplicationTimeoutEnabled = $settings.ApplicationTimeoutEnabled
         $ApplicationTimeoutLength = $settings.ApplicationTimeoutLength
         $EnableCustomTools = $settings.EnableCustomTools
+        $EnableCustomScriptUpload = $false
+        if ($settings.PSObject.Properties.Name -contains 'EnableCustomScriptUpload') {
+            $EnableCustomScriptUpload = [bool]$settings.EnableCustomScriptUpload
+        }
         $RAMCheckActive = $settings.RAMCheckActive
         $RAMCheckMinimum = $settings.RAMCheckMinimum
         $DriveSpaceCheckActive = $settings.DriveSpaceCheckActive
@@ -280,7 +570,7 @@ function Open-SettingsMenu {
         $adminModeCheckBox = New-Object System.Windows.Forms.CheckBox
         $adminModeCheckBox.Location = New-Object System.Drawing.Size(225, 50)
         $adminModeCheckBox.Size = New-Object System.Drawing.Size(20, 20)
-        $adminModeCheckBox.Checked = $AdminMode
+        $adminModeCheckBox.Checked = $ConfiguredAdminMode
         $runtimeFrame.Controls.Add($adminModeCheckBox)
 
         #Create a label for the application timeout enabled
@@ -366,6 +656,79 @@ function Open-SettingsMenu {
         $enableCustomToolsCheckBox.Size = New-Object System.Drawing.Size(20, 20)
         $enableCustomToolsCheckBox.Checked = $EnableCustomTools
         $runtimeFrame.Controls.Add($enableCustomToolsCheckBox)
+
+        #Custom script upload settings
+        $enableCustomScriptUploadLabel = New-Object System.Windows.Forms.Label
+        $enableCustomScriptUploadLabel.Location = New-Object System.Drawing.Size(10, 168)
+        $enableCustomScriptUploadLabel.Size = New-Object System.Drawing.Size(210, 20)
+        $enableCustomScriptUploadLabel.Text = 'Allow Custom Script Uploads:'
+        $enableCustomScriptUploadLabel.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+        $enableCustomScriptUploadLabel.ForeColor = $TextColor
+        $runtimeFrame.Controls.Add($enableCustomScriptUploadLabel)
+
+        $enableCustomScriptUploadCheckBox = New-Object System.Windows.Forms.CheckBox
+        $enableCustomScriptUploadCheckBox.Location = New-Object System.Drawing.Size(225, 166)
+        $enableCustomScriptUploadCheckBox.Size = New-Object System.Drawing.Size(20, 20)
+        $enableCustomScriptUploadCheckBox.Checked = $EnableCustomScriptUpload
+        $enableCustomScriptUploadCheckBox.Enabled = $adminmode
+        $runtimeFrame.Controls.Add($enableCustomScriptUploadCheckBox)
+
+        $uploadCustomScriptButton = New-Object System.Windows.Forms.Button
+        $uploadCustomScriptButton.Location = New-Object System.Drawing.Size(9, 190)
+        $uploadCustomScriptButton.Size = New-Object System.Drawing.Size(348, 28)
+        $uploadCustomScriptButton.Text = 'Upload Custom Script'
+        $uploadCustomScriptButton.Font = New-Object System.Drawing.Font('Segoe UI', 9, [System.Drawing.FontStyle]::Bold)
+        $uploadCustomScriptButton.BackColor = $BoxColor
+        $uploadCustomScriptButton.ForeColor = $ButtonTextColor
+        $uploadCustomScriptButton.Enabled = $adminmode -and $enableCustomScriptUploadCheckBox.Checked
+        $enableCustomScriptUploadCheckBox.Add_CheckedChanged({
+                $uploadCustomScriptButton.Enabled = $adminmode -and $enableCustomScriptUploadCheckBox.Checked
+            })
+        $uploadCustomScriptButton.Add_Click({
+                if (-not $adminmode) {
+                    [System.Windows.Forms.MessageBox]::Show('Admin elevation is required to upload custom scripts.', 'Admin Required', [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+                    return
+                }
+                if (-not $enableCustomScriptUploadCheckBox.Checked) {
+                    [System.Windows.Forms.MessageBox]::Show('Custom script upload is disabled in Settings.', 'Upload Disabled', [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+                    return
+                }
+
+                $openScriptDialog = New-Object System.Windows.Forms.OpenFileDialog
+                $openScriptDialog.Title = 'Upload Custom Script'
+                $openScriptDialog.Filter = 'PowerShell Scripts (*.ps1)|*.ps1'
+                $openScriptDialog.Multiselect = $false
+                $openScriptDialog.CheckFileExists = $true
+                $fileSelection = $openScriptDialog.ShowDialog()
+                $selectedScriptPath = $openScriptDialog.FileName
+                $openScriptDialog.Dispose()
+
+                if ($fileSelection -ne [System.Windows.Forms.DialogResult]::OK) {
+                    return
+                }
+
+                try {
+                    $scriptContent = Read-ETTCustomScript -Path $selectedScriptPath
+                    $metadataDefaults = New-ETTCustomFunctionMetadata -ScriptPath $selectedScriptPath
+                    $currentSettings = Get-Content -Path '.\ETTConfig.json' -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+                    $existingDisplayNames = @()
+                    if ($currentSettings.PSObject.Properties.Name -contains 'CustomFunctions' -and $null -ne $currentSettings.CustomFunctions) {
+                        $existingDisplayNames = @($currentSettings.CustomFunctions | ForEach-Object { [string]$_.displayName })
+                    }
+
+                    $scriptMetadata = Show-ETTCustomScriptMetadataDialog -Defaults $metadataDefaults -ExistingDisplayNames $existingDisplayNames
+                    if ($null -eq $scriptMetadata) {
+                        return
+                    }
+
+                    Add-ETTCustomFunction -ConfigPath '.\ETTConfig.json' -CodeBlock $scriptContent -DisplayName $scriptMetadata.displayName -Description $scriptMetadata.description -RequireAdmin $scriptMetadata.requireAdmin -AdminMode $adminmode -EnableCustomScriptUpload $enableCustomScriptUploadCheckBox.Checked
+                    [System.Windows.Forms.MessageBox]::Show('Script imported. Restart ETT to refresh the Custom tab.', 'Script Imported', [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+                }
+                catch {
+                    [System.Windows.Forms.MessageBox]::Show("Unable to import custom script: $($_.Exception.Message)", 'Custom Script Import Failed', [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+                }
+            })
+        $runtimeFrame.Controls.Add($uploadCustomScriptButton)
 
         #COMPLIANCE SETTINGS
         #Compliance Settings include the following: RAM check active, RAM check minimum, drive space check active, drive space check minimum, Windows version check active, Windows version target
@@ -551,7 +914,7 @@ function Open-SettingsMenu {
         $defenderEnrollCheckActiveCheckBox = New-Object System.Windows.Forms.CheckBox
         $defenderEnrollCheckActiveCheckBox.Location = New-Object System.Drawing.Size(225, 198)
         $defenderEnrollCheckActiveCheckBox.Size = New-Object System.Drawing.Size(20, 20)
-        $defenderEnrollCheckActiveCheckBox.Checked = $DefenderEnrollCheckActive
+        $defenderEnrollCheckActiveCheckBox.Checked = $DefenderEnrollCheck
         $complianceFrame.Controls.Add($defenderEnrollCheckActiveCheckBox)
 
         #QUERY SETTINGS
@@ -626,33 +989,46 @@ function Open-SettingsMenu {
                 }else{
                     $logolocationresult = $logoLocationTextBox.Text
                 }
-                #Load the settings file
-                $settings = Get-Content -Path ".\ETTConfig.json" | ConvertFrom-Json
-                #Update the settings file with the new values - if blank, set to null
-                $settings.AutoUpdateCheckerEnabled = $autoUpdateCheckerEnabledCheckBox.Checked
-                $settings.AdminMode = $adminModeCheckBox.Checked
-                $settings.BrandColor = $brandColorTextBox.Text
-                $settings.LogoLocation = $logolocationresult
-                $settings.BackgroundImagePath = $backgroundImagePathTextBox.Text
-                $settings.ETTApplicationTitle = $ETTApplicationTitleTextBox.Text
-                $settings.ETTHeaderText = $ETTHeaderTextTextBox.Text
-                $settings.ETTHeaderTextColor = $ETTHeaderTextColorTextBox.Text
-                $settings.ApplicationTimeoutEnabled = $applicationTimeoutEnabledCheckBox.Checked
-                $settings.ApplicationTimeoutLength = [int]$applicationTimeoutLengthTextBox.Text
-                $settings.EnableCustomTools = $enableCustomToolsCheckBox.Checked
-                $settings.RAMCheckActive = $RAMCheckActiveCheckBox.Checked
-                $settings.RAMCheckMinimum = [int]$RAMCheckMinimumTextBox.Text
-                $settings.DriveSpaceCheckActive = $DriveSpaceCheckActiveCheckBox.Checked
-                $settings.DriveSpaceCheckMinimum = [double]$DriveSpaceCheckMinimumTextBox.Text
-                $settings.WinVersionCheckActive = $WinVersionCheckActiveCheckBox.Checked
-                $settings.WinVersionTarget = $WinVersionTargetTextBox.Text
-                $settings.AzureADTenantId = $AzureADTenantIdTextBox.Text
-                $settings.LAPSAppClientId = $LAPSAppClientIdTextBox.Text
-                $settings.BitLockerAppClientId = $BitLockerAppClientIdTextBox.Text
-                $settings.AnimeMode = $animeModeCheckBox.Checked
-                $settings.DefenderEnrollCheckActive = $defenderEnrollCheckActiveCheckBox.Checked
-                #Save the settings file
-                $settings | ConvertTo-Json | Set-Content -Path ".\ETTConfig.json"
+                try {
+                    #Load the latest settings so fields outside this form are preserved.
+                    $settings = Get-Content -LiteralPath ".\ETTConfig.json" -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+                    #Update the settings file with the new values - if blank, set to null
+                    $settings.AutoUpdateCheckerEnabled = $autoUpdateCheckerEnabledCheckBox.Checked
+                    $settings.AdminMode = $adminModeCheckBox.Checked
+                    $settings.BrandColor = $brandColorTextBox.Text
+                    $settings.LogoLocation = $logolocationresult
+                    $settings.BackgroundImagePath = $backgroundImagePathTextBox.Text
+                    $settings.ETTApplicationTitle = $ETTApplicationTitleTextBox.Text
+                    $settings.ETTHeaderText = $ETTHeaderTextTextBox.Text
+                    $settings.ETTHeaderTextColor = $ETTHeaderTextColorTextBox.Text
+                    $settings.ApplicationTimeoutEnabled = $applicationTimeoutEnabledCheckBox.Checked
+                    $settings.ApplicationTimeoutLength = [int]$applicationTimeoutLengthTextBox.Text
+                    $settings.EnableCustomTools = $enableCustomToolsCheckBox.Checked
+                    if ($adminmode -eq $true) {
+                        if ($settings.PSObject.Properties.Name -contains 'EnableCustomScriptUpload') {
+                            $settings.EnableCustomScriptUpload = $enableCustomScriptUploadCheckBox.Checked
+                        }
+                        else {
+                            $settings | Add-Member -MemberType NoteProperty -Name 'EnableCustomScriptUpload' -Value $enableCustomScriptUploadCheckBox.Checked
+                        }
+                    }
+                    $settings.RAMCheckActive = $RAMCheckActiveCheckBox.Checked
+                    $settings.RAMCheckMinimum = [int]$RAMCheckMinimumTextBox.Text
+                    $settings.DriveSpaceCheckActive = $DriveSpaceCheckActiveCheckBox.Checked
+                    $settings.DriveSpaceCheckMinimum = [double]$DriveSpaceCheckMinimumTextBox.Text
+                    $settings.WinVersionCheckActive = $WinVersionCheckActiveCheckBox.Checked
+                    $settings.WinVersionTarget = $WinVersionTargetTextBox.Text
+                    $settings.AzureADTenantId = $AzureADTenantIdTextBox.Text
+                    $settings.LAPSAppClientId = $LAPSAppClientIdTextBox.Text
+                    $settings.BitLockerAppClientId = $BitLockerAppClientIdTextBox.Text
+                    $settings.AnimeMode = $animeModeCheckBox.Checked
+                    $settings.DefenderEnrollCheckActive = $defenderEnrollCheckActiveCheckBox.Checked
+                    Save-ETTConfigAtomically -ConfigPath ".\ETTConfig.json" -Config $settings
+                }
+                catch {
+                    [System.Windows.Forms.MessageBox]::Show("Settings could not be saved: $($_.Exception.Message)", "Settings Save Failed", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+                    return
+                }
                 #Show popup that settings have been saved
                 [System.Windows.Forms.MessageBox]::Show("Settings have been saved! Restart ETT for updates to reflect.", "Settings Saved", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
                 #Close form
@@ -691,7 +1067,7 @@ function Open-SettingsMenu {
         #Show the form
         $settingsForm.ShowDialog()
     }
-    elseif ($SettingsMenuEnabled -eq $false) {
+    elseif ($settings.ETTSettingsGUI -eq $false) {
        #ELSE - show popup that this has been by configuration file.
         [System.Windows.Forms.MessageBox]::Show("Settings have been disabled by config.", "Settings Disabled", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
     }else{

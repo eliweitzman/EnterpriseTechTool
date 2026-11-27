@@ -15,7 +15,7 @@
 .AUTHOR
     Eli Weitzman
 .NOTES
-    Version:        1.3.1
+    Version:        1.3.2
     Creation Date:  12-26-22
 
 .LICENSE
@@ -89,13 +89,13 @@ Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 #Build Variables
-$ETTVersion = "1.3.1"
-$AutoUpdateCheckerEnabled = (?: { $jsonConfig.AutoUpdateCheckerEnabled -ne $null -and $jsonConfig.AutoUpdateCheckerEnabled -ne "" } { $jsonConfig.AutoUpdateCheckerEnabled } { $true })
+$ETTVersion = "1.3.2"
+$AutoUpdateCheckerEnabled = (?: { $null -ne $jsonConfig.AutoUpdateCheckerEnabled } { $jsonConfig.AutoUpdateCheckerEnabled } { $true })
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
 #Admin mode - if auto-elevate is enabled, this will be set to $true. If in EXE mode, this is automatically handled by Windows.
-$adminmode = (?: { $jsonConfig.AdminMode -ne $null -and $jsonConfig.AdminMode -ne "" } { $jsonConfig.AdminMode } { $false })
+$ConfiguredAdminMode = (?: { $jsonConfig.AdminMode -ne $null -and $jsonConfig.AdminMode -ne "" } { [bool]$jsonConfig.AdminMode } { $false })
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
 $BrandColor = (?: { $jsonConfig.BrandColor -ne $null -and $jsonConfig.BrandColor -ne "" } { $jsonConfig.BrandColor } { '#023a24' }) #Set the color of the form, currently populated with a hex value.
@@ -110,7 +110,7 @@ $timeout = (?: { $jsonConfig.ApplicationTimeoutEnabled -ne $null -and $jsonConfi
 $timeoutLength = (?: { $jsonConfig.ApplicationTimeoutLength -ne $null -and $jsonConfig.ApplicationTimeoutLength -ne "" } { $jsonConfig.ApplicationTimeoutLength } { 300 }) #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
 
 #Custom Toolbox - CHANGE THIS TO MATCH YOUR PREFERENCE
-$customTools = (?: { $jsonConfig.EnableCustomTools -ne $null -and $jsonConfig.EnableCustomTools -ne "" } { $jsonConfig.EnableCustomTools } { $true }) #Set this to $true to enable custom functions. Otherwise, set to $false
+$customTools = (?: { $null -ne $jsonConfig.EnableCustomTools } { $jsonConfig.EnableCustomTools } { $true }) #Set this to $true to enable custom functions. Otherwise, set to $false
 
 <#Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -188,7 +188,8 @@ $emailTo = $null
 ## END INITIAL FLAGS
 
 #Check Execution Path
-if ($MyInvocation.MyCommand.CommandType -eq "ExternalScript") {
+$runningFromScript = $MyInvocation.MyCommand.CommandType -eq "ExternalScript"
+if ($runningFromScript) {
     # Powershell script
     $ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
 }
@@ -356,7 +357,17 @@ $model = Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -Expand
 $LoadingProgressBar.Value = 50
 
 $LoadingLabel.Text = "Checking Hosts File..."
-$hostsHash = (Get-FileHash "C:\Windows\System32\Drivers\etc\hosts").Hash
+$hostsPath = "C:\Windows\System32\Drivers\etc\hosts"
+$hostsStream = [System.IO.File]::OpenRead($hostsPath)
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+try {
+    $hostsHashBytes = $sha256.ComputeHash($hostsStream)
+    $hostsHash = ([System.BitConverter]::ToString($hostsHashBytes)).Replace("-", "")
+}
+finally {
+    $hostsStream.Dispose()
+    $sha256.Dispose()
+}
 $hostsCompliant = $true
 $hostsText = "Host File Integrity: Unmodified"
 if ($hostsHash -ne "2D6BDFB341BE3A6234B24742377F93AA7C7CFB0D9FD64EFA9282C87852E57085") {
@@ -370,8 +381,15 @@ $domain = (Get-CIMInstance -ClassName Win32_ComputerSystem).Domain
 $LoadingProgressBar.Value = 60
 
 $LoadingLabel.Text = "Getting Drive Info..."
-$drivespace = Get-CimInstance -ClassName win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output " $($_.caption) $('{0:N2}' -f ($_.Size/1gb)) GB total, $('{0:N2}' -f ($_.FreeSpace/1gb)) GB free " }
-$freedrivespace = Get-CimInstance -ClassName win32_logicaldisk | Where-Object caption -eq "C:" | foreach-object { Write-Output $('{0:N2}' -f ($_.FreeSpace / 1gb)) }
+$systemDrive = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DeviceID = 'C:'"
+if ($null -ne $systemDrive) {
+    $freeDriveSpaceGB = [double]($systemDrive.FreeSpace / 1gb)
+    $drivespace = " $($systemDrive.caption) $('{0:N2}' -f ($systemDrive.Size / 1gb)) GB total, $('{0:N2}' -f $freeDriveSpaceGB) GB free "
+}
+else {
+    $freeDriveSpaceGB = $null
+    $drivespace = " C: drive information unavailable "
+}
 $LoadingProgressBar.Value = 70
 
 $LoadingLabel.Text = "Getting RAM Info..."
@@ -435,82 +453,46 @@ $drivetype = (Get-PhysicalDisk | Where-Object DeviceID -eq 0).MediaType
 $complianceFlag = $false#>
 
 
-#MiniTools Dot Sourcing - For development purpose only. DOT Sourcing doesn't work correctly with ps2exe.
-$Dependencies = "MiniClients\ADLookup.ps1", "MiniClients\LAPSToolV2.ps1", "MiniClients\BitlockerToolV2.ps1", "PSAssets\ToolboxFunctions.ps1", "PSAssets\GenericToolWindow.ps1", ".\MiniClients\SettingsMenu.ps1"
-$Dependencies | ForEach-Object {
-    try {
-        $psFile = ".\$($_)"
-        . $psFile
+if ($runningFromScript) {
+    $Dependencies = "MiniClients\ADLookup.ps1", "MiniClients\LAPSToolV2.ps1", "MiniClients\BitlockerToolV2.ps1", "PSAssets\ToolboxFunctions.ps1", "PSAssets\GenericToolWindow.ps1", "MiniClients\SettingsMenu.ps1"
+    foreach ($dependency in $Dependencies) {
+        $psFile = Join-Path $PSScriptRoot $dependency
+        try {
+            . $psFile
+        }
+        catch {
+            throw "Could not load helper '$psFile': $_"
+        }
     }
-    catch {
-        # Do Nothing Here. We will always land here in a compiled version of ETT.
-    }
+}
+
+#Relaunch as administrator only when the saved setting requests elevation.
+$ettScriptPath = $null
+if ($runningFromScript) {
+    $ettScriptPath = $MyInvocation.MyCommand.Path
+}
+$ettExecutablePath = [Environment]::GetCommandLineArgs()[0]
+if (Start-ETTElevated `
+    -ConfiguredAdminMode $ConfiguredAdminMode `
+    -CurrentlyElevated $adminmode `
+    -ScriptPath $ettScriptPath `
+    -ExecutablePath $ettExecutablePath `
+    -WorkingDirectory $PSScriptRoot) {
+    exit
 }
 
 #Device Compliance Checks
-#RAM Check
-if ($ramCheckActive -eq $true) {
-    if ($ramCheck -ge $ramMinimum) {
-        $complianceStatus = 'Compliant'
-        $ramCompliant = $true
-    }
-    else {
-        $complianceStatus = 'Non-Compliant'
-        $ramCompliant = $false
-        $complianceFlag = $true
-    }
-}
-else {
-    $ramCompliant = $true
-}
-
-#Drivespace Check
-if ($drivespaceCheckActive -eq $true) {
-    if ($freedrivespace -ge $drivespaceMinimum) {
-        $complianceStatus = 'Compliant'
-        $drivespaceCompliant = $true
-    }
-    else {
-        $complianceStatus = 'Non-Compliant'
-        $drivespaceCompliant = $false
-        $complianceFlag = $true
-    }
-}
-else {
-    $drivespaceCompliant = $true
-}
-
-#Windows Version Check
-if ($winverCheckActive -eq $true) {
-    if ($winver -eq $winverTarget) {
-        $complianceStatus = 'Compliant'
-        $winverCompliant = $true
-    }
-    else {
-        $complianceStatus = 'Non-Compliant'
-        $winverCompliant = $false
-        $complianceFlag = $true
-    }
-}
-else {
-    $winverCompliant = $true
-}
-
-#Defender Enrollment Check
-if ($defenderEnrollCheckActive -eq $true) {
-    if ($defenderEnrollStatus -eq $true) {
-        $complianceStatus = 'Compliant'
-        $defenderEnrollCompliant = $true
-    }
-    else {
-        $complianceStatus = 'Non-Compliant'
-        $defenderEnrollCompliant = $false
-        $complianceFlag = $true
-    }
-}
-else {
-    $defenderEnrollCompliant = $true
-}
+$complianceResult = Get-ETTComplianceState `
+    -RAMCheckActive $ramCheckActive -RAMCheck $ramCheck -RAMMinimum $ramMinimum `
+    -DriveSpaceCheckActive $drivespaceCheckActive -FreeDriveSpaceGB $freeDriveSpaceGB -DriveSpaceMinimum $drivespaceMinimum `
+    -WinVersionCheckActive $winverCheckActive -WinVersion $winver -WinVersionTarget $winverTarget `
+    -DefenderEnrollCheckActive $defenderEnrollCheckActive -DefenderEnrollStatus $defenderEnrollStatus
+$complianceStatus = $complianceResult.Status
+$complianceFlag = $complianceResult.Flag
+$ramCompliant = $complianceResult.RAMCompliant
+$drivespaceCompliant = $complianceResult.DriveSpaceCompliant
+$winverCompliant = $complianceResult.WinVersionCompliant
+$defenderEnrollCompliant = $complianceResult.DefenderEnrollCompliant
 
 #Device Type conversion
 #A switch statement to convert the devicetype variable to a human readable format in a new systemType variable
@@ -725,6 +707,7 @@ function Create-ToolboxTabPage {
     $tmpTab.Controls.Add($tmpList)
     $tmpList.DataSource = $ToolboxItemsArray
     $tmpList.DisplayMember = "displayName"
+    $tmpList.FormattingEnabled = $true
     if ($ToolboxItemsArray -and $ToolboxItemsArray[0].PSObject.Properties.Match("codeBlock")) {
         $tmpList.ValueMember = "codeBlock"
     }
@@ -789,7 +772,7 @@ Create-ToastNotification -Icon "Info" -Title $ettApplicationTitle -Message "Welc
 
 #IF Compliance Flag is true, add a flyout notification
 if ($complianceFlag -eq $true) {
-    Create-ToastNotification -Icon [System.Windows.Forms.ToolTipIcon]::Error -Title $ettApplicationTitle -Message "This device is non-compliant!" -Duration 5000
+    Create-ToastNotification -Icon "Error" -Title $ettApplicationTitle -Message "This device is non-compliant!" -Duration 5000
 }
 
 #Create App Buttons
@@ -832,8 +815,8 @@ $ActionsTabArray = New-Object System.Collections.ArrayList
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Battery Diagnostics" -RequireAdmin $true -ScriptBlock { Start-BatteryDiagnostics -adminmode $adminmode }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Quick Reboot" -ScriptBlock { QuickReboot }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Repair Outlook PST File" -RequireAdmin $true -ScriptBlock { Repair-OutlookPST -adminmode $adminmode }))
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -Displayname "Restore to Outlook (classic)" -RequireAdmin $true -ScriptBlock {Restore-OldOutlook -adminmode $adminmode }))
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Block Automatic New Outlook Migration" -RequireAdmin $true -ScriptBlock { Disable-AutomaticNewOutlookMigration -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -Displayname "Restore to Outlook (classic)" -ScriptBlock { Restore-OldOutlook }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Block Automatic New Outlook Migration" -ScriptBlock { Disable-AutomaticNewOutlookMigration }))
 $ActionsTab = Create-ToolboxTabPage -PageName "Actions" -ToolboxItemsArray $ActionsTabArray
 $ActionsTab.Add_Click({
         $runThis = [ScriptBlock]::Create($ActionsTab.SelectedValue)
@@ -922,7 +905,7 @@ if ($customTools -eq $true) {
     if ($jsonConfig.CustomFunctions -ne $null) {
         ForEach ($customFunction in $jsonConfig.CustomFunctions) {
             $customFunctionDisplayName = "$toolboxIcon $($customFunction.displayName)"
-            $tmpObject = Create-ToolboxListItem -DisplayName $customFunctionDisplayName -Description $customFunction.description -Tab $customFunction.tab -RequireAdmin $customFunction.requireAdmin -ScriptBlock $customFunction.codeBlock
+            $tmpObject = Create-ToolboxListItem -DisplayName $customFunctionDisplayName -Description $customFunction.description -Tab "Custom" -RequireAdmin $customFunction.requireAdmin -ScriptBlock $customFunction.codeBlock
             [void]$CustomTabArray.Add($tmpObject)
         }
     }
@@ -930,7 +913,14 @@ if ($customTools -eq $true) {
     #Create the Custom Tab GUI
     $CustomTab = Create-ToolboxTabPage -PageName "Custom" -ToolboxItemsArray $CustomTabArray
     $CustomTab.Add_Click({
-            $runThis = [ScriptBlock]::Create($CustomTab.SelectedValue)
+            if ($null -eq $CustomTab.SelectedItem) {
+                return
+            }
+            if ([bool]$CustomTab.SelectedItem.requireAdmin -and -not $adminmode) {
+                [System.Windows.Forms.MessageBox]::Show("This custom tool requires administrator privileges.", "Admin Required", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+                return
+            }
+            $runThis = [ScriptBlock]::Create([string]$CustomTab.SelectedItem.codeBlock)
             &$runThis
         })
 }
@@ -1008,10 +998,10 @@ $deviceInfoClipboard.ShortcutKeyDisplayString = "CTRL + C"
 $menuInfo.Text = "Info"
 [void]$menu.Items.Add($menuInfo)
 #Set tab color to red if compliance is not met
-if ($compliance -eq "Compliant") {
+if ($complianceStatus -eq "Compliant") {
     $menuInfo.BackColor = $BGcolor
 }
-elseif ($compliance -eq "Non-Compliant") {
+elseif ($complianceStatus -eq "Non-Compliant") {
     $menuInfo.BackColor = 'Red'
 }
 
@@ -1196,7 +1186,7 @@ $defenderInfo.Add_Click({
         $wshell.Popup("Defender Status copied to clipboard", 0, "Defender Status Copied", 64)
     })
 #Set color to red if Defender ATP is not enrolled and compliance check is enabled
-if ($defenderStatus -eq "Not Enrolled" -and $complianceFlag -eq $true) {
+if ($defenderEnrollCompliant -eq $false) {
     $defenderInfo.BackColor = 'Red'
     $defenderInfo.ForeColor = 'White'
 }
@@ -1361,6 +1351,7 @@ $menuSettings.Add_Click({
                     "ApplicationTimeoutEnabled" : false,
                     "ApplicationTimeoutLength" : 300,
                     "EnableCustomTools" : true,
+                    "EnableCustomScriptUpload" : false,
                     "RAMCheckActive": false,
                     "RAMCheckMinimum" : 8,
                     "DriveSpaceCheckActive" : false,

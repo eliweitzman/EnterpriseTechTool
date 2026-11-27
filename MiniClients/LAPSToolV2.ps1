@@ -6,9 +6,9 @@ function Open-LAPSToolWindow
             try{
                 if($UseProxyAppCheckBox.Checked)
                 {
-                    if(($lapsAppClientId -ne "" -and $tenantID -ne ""))
+                    if(-not [string]::IsNullOrWhiteSpace($lapsAppClientId) -and -not [string]::IsNullOrWhiteSpace($azureADTenantId))
                     {
-                        Connect-MgGraph -TenantId $tenantID -ClientId $lapsAppClientId -Scopes Device.Read.All, DeviceLocalCredential.Read.All
+                        Connect-MgGraph -TenantId $azureADTenantId -ClientId $lapsAppClientId -Scopes Device.Read.All, DeviceLocalCredential.Read.All
                     }
                     else {
                         $wshell = New-Object -ComObject wscript.shell
@@ -32,12 +32,11 @@ function Open-LAPSToolWindow
                 if ($ADUserNameTextBox.Text -ne "$($domain + "\" + $env:USERNAME)")
                 {
                     $alternateCredential = Get-Credential $ADUserNameTextBox.Text
-                    $lapsResult = Get-LapsADPassword $ADHostNameTextBox.Text -Credential $alternateCredential -DecryptionCredential $alternateCredential -Domain $ADDomainNameTextBox.Text -AsPlainText
+                    $lapsResult = (Get-LapsADPassword $ADHostNameTextBox.Text -Credential $alternateCredential -DecryptionCredential $alternateCredential -Domain $ADDomainNameTextBox.Text -AsPlainText).Password
                 }
                 else {
                     $lapsResult = (Get-LapsADPassword $ADHostNameTextBox.Text -Domain $ADDomainNameTextBox.Text -AsPlainText).Password
                 }
-                $recoveryPassword = $bitlockerObj | Select-Object -ExpandProperty msFVE-RecoveryPassword
             }
             catch {
                 $wshell = New-Object -ComObject wscript.shell

@@ -1,3 +1,90 @@
+function Start-ETTElevated {
+    param(
+        [bool]$ConfiguredAdminMode,
+        [bool]$CurrentlyElevated,
+        [AllowNull()][string]$ScriptPath,
+        [AllowNull()][string]$ExecutablePath,
+        [AllowNull()][string]$WorkingDirectory
+    )
+
+    if (-not $ConfiguredAdminMode -or $CurrentlyElevated) {
+        return $false
+    }
+
+    $commandPath = $ScriptPath
+    if ([string]::IsNullOrWhiteSpace($commandPath)) {
+        $commandPath = $ExecutablePath
+    }
+    if ([string]::IsNullOrWhiteSpace($commandPath)) {
+        Write-Warning 'ETT could not determine how to relaunch for administrator mode.'
+        return $false
+    }
+
+    try {
+        $startOptions = @{
+            FilePath = $commandPath
+            Verb = 'RunAs'
+            WorkingDirectory = $WorkingDirectory
+        }
+
+        if ([IO.Path]::GetExtension($commandPath).Equals('.ps1', [StringComparison]::OrdinalIgnoreCase)) {
+            $startOptions.FilePath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
+            $startOptions.ArgumentList = @(
+                '-NoProfile',
+                '-ExecutionPolicy', 'Bypass',
+                '-File', ('"{0}"' -f $commandPath)
+            )
+        }
+
+        Start-Process @startOptions
+        return $true
+    }
+    catch {
+        Write-Warning "ETT could not relaunch with administrator privileges: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+function Get-ETTComplianceState {
+    param(
+        [bool]$RAMCheckActive,
+        [AllowNull()][Nullable[double]]$RAMCheck,
+        [AllowNull()][Nullable[double]]$RAMMinimum,
+        [bool]$DriveSpaceCheckActive,
+        [AllowNull()][Nullable[double]]$FreeDriveSpaceGB,
+        [AllowNull()][Nullable[double]]$DriveSpaceMinimum,
+        [bool]$WinVersionCheckActive,
+        [AllowNull()][string]$WinVersion,
+        [AllowNull()][string]$WinVersionTarget,
+        [bool]$DefenderEnrollCheckActive,
+        [bool]$DefenderEnrollStatus
+    )
+
+    $ramCompliant = -not $RAMCheckActive -or $RAMCheck -ge $RAMMinimum
+    $drivespaceCompliant = -not $DriveSpaceCheckActive -or (
+        $null -ne $FreeDriveSpaceGB -and $FreeDriveSpaceGB -ge $DriveSpaceMinimum
+    )
+    $winverCompliant = -not $WinVersionCheckActive -or $WinVersion -eq $WinVersionTarget
+    $defenderEnrollCompliant = -not $DefenderEnrollCheckActive -or $DefenderEnrollStatus
+    if ($DriveSpaceCheckActive -and $null -eq $FreeDriveSpaceGB) {
+        Write-Warning 'C: drive free-space information is unavailable; the device fails the enabled disk compliance check.'
+    }
+
+    $anyCheckActive = $RAMCheckActive -or $DriveSpaceCheckActive -or $WinVersionCheckActive -or $DefenderEnrollCheckActive
+    $flag = $anyCheckActive -and -not (
+        $ramCompliant -and $drivespaceCompliant -and $winverCompliant -and $defenderEnrollCompliant
+    )
+
+    [PSCustomObject]@{
+        Status = if (-not $anyCheckActive) { $null } elseif ($flag) { 'Non-Compliant' } else { 'Compliant' }
+        Flag = $flag
+        RAMCompliant = $ramCompliant
+        DriveSpaceCompliant = $drivespaceCompliant
+        WinVersionCompliant = $winverCompliant
+        DefenderEnrollCompliant = $defenderEnrollCompliant
+    }
+}
+
 function CheckForWindowsUpdates {
     param(
         [string]$windowTitle,
@@ -144,25 +231,33 @@ function Show-HostsFileIntegrityPopup {
 
 #>
 function Get-WindowsActivationType {
-    slmgr.vbs /dli
+    $wshell = New-Object -ComObject Wscript.Shell
+    try {
+        $statusNames = @{ 0 = 'Unlicensed'; 1 = 'Licensed'; 2 = 'Out-of-Box Grace'; 3 = 'Out-of-Tolerance Grace'; 4 = 'Non-Genuine Grace'; 5 = 'Notification'; 6 = 'Extended Grace' }
+        $products = @(Get-CimInstance -ClassName SoftwareLicensingProduct -ErrorAction Stop |
+            Where-Object { $_.ApplicationId -eq '55c92734-d682-4d71-983e-d6ec3f16059f' -and $_.PartialProductKey })
+        if ($products.Count -eq 0) {
+            $message = 'No activated Windows license found.'
+        }
+        else {
+            $message = ($products | ForEach-Object {
+                "Name: $($_.Name)`nDescription: $($_.Description)`nPartial Product Key: $($_.PartialProductKey)`nLicense Status: $($statusNames[[int]$_.LicenseStatus])"
+            }) -join "`n`n"
+        }
+        $wshell.Popup($message, 0, "Windows Activation Type", 64) | Out-Null
+    }
+    catch {
+        $wshell.Popup("Error retrieving activation info: $($_.Exception.Message)", 0, "Windows Activation Type", 16) | Out-Null
+    }
 }
 
 function Start-WingetAppUpdates {
-    #Upgrade applications on the machine
+    if ($null -eq (Get-Command -Name winget.exe -CommandType Application -ErrorAction SilentlyContinue)) {
+        $wshell = New-Object -ComObject Wscript.Shell
+        $wshell.Popup("Windows Package Manager (winget) is not installed. Install or repair App Installer from Microsoft Store, then try again.", 0, "Winget Issue", 32)
+        return
+    }
 
-    #Main try-catch test to verify newest version of WPM (winget) is installed
-    try {
-        winget.exe
-    }
-    catch {
-        #IF winget is not installed, open the store and close the script
-        { 1: $wshell = New-Object -ComObject Wscript.Shell
-            $wshell.Popup("Error: Winget not Installed.", 0, "Winget Issue", 32)
-            Start-Process ms-windows-store:
-            Exit-PSSession }
-    }
-    
-    #If winget is installed, run an upgrade on all apps in new administator powershell window.
     Start-Process powershell.exe -ArgumentList "-command winget upgrade --all"
 }
 
@@ -272,50 +367,46 @@ function Start-BatteryDiagnostics {
         [Parameter(Position = 0, mandatory = $true)]
         $adminmode
     )
-    #Test Battery, first check if device is a laptop
-    if ($systemType -eq "Mobile" -or $systemType -eq "Appliance PC" -or $systemType -eq "Slate") {
-        #Device is a laptop, now check if adminmode is enabled
-        if ($adminmode -eq $true) {
-            #Open a save dialog to save the battery report
-            $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-            $saveFileDialog.Filter = "HTML files (*.html)|*.html"
-            $saveFileDialog.Title = "Save Battery Report"
-            $saveFileDialog.InitialDirectory = "C:\Temp"
-            $saveFileDialog.FileName = "Battery.html"
-
-            if ($saveFileDialog.ShowDialog() -eq "OK") {
-                #Get the file path and run the battery report
-                $batteryReportPath = $saveFileDialog.FileName
-                Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output $batteryReportPath" -PassThru -Wait
-                Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
-            }
-        }
-        else {
-            #Adminmode is not enabled, so run the battery report in a sub-process shell, but catch if UAC is not accepted and do nothing
-            try {
-                #Open a save dialog to save the battery report
-                $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
-                $saveFileDialog.Filter = "HTML files (*.html)|*.html"
-                $saveFileDialog.Title = "Save Battery Report"
-                $saveFileDialog.InitialDirectory = "C:\Temp"
-                $saveFileDialog.FileName = "Battery.html"
-
-                if ($saveFileDialog.ShowDialog() -eq "OK") {
-                #Get the file path and run the battery report
-                $batteryReportPath = $saveFileDialog.FileName
-                Start-Process powershell.exe -ArgumentList "-command powercfg /batteryreport /output $batteryReportPath" -PassThru -Verb RunAs -Wait
-                Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ArgumentList "C:\Temp\Battery.html" -WindowStyle maximized
-                }
-            }
-            catch {
-                #Do nothing...
-            }
-        }
-    }
-    else {
-        #Device is not a laptop, so display a popup
+    if ($systemType -notin @("Mobile", "Appliance PC", "Slate")) {
         $wshell = New-Object -ComObject Wscript.Shell
         $wshell.Popup("This device is not a laptop. No battery report available.", 0, "Battery Diagnostic", 64)
+        return
+    }
+
+    $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+    $saveFileDialog.Filter = "HTML files (*.html)|*.html"
+    $saveFileDialog.Title = "Save Battery Report"
+    $saveFileDialog.InitialDirectory = "C:\Temp"
+    $saveFileDialog.FileName = "Battery.html"
+    if ($saveFileDialog.ShowDialog() -ne "OK") {
+        return
+    }
+
+    $batteryReportPath = $saveFileDialog.FileName
+    $processOptions = @{
+        FilePath = 'powercfg.exe'
+        ArgumentList = '/batteryreport /output "{0}"' -f $batteryReportPath
+        PassThru = $true
+        Wait = $true
+        ErrorAction = 'Stop'
+    }
+    if (-not $adminmode) {
+        $processOptions.Verb = 'RunAs'
+    }
+
+    try {
+        $batteryReportProcess = Start-Process @processOptions
+        if ($batteryReportProcess.ExitCode -ne 0) {
+            throw "powercfg exited with code $($batteryReportProcess.ExitCode)."
+        }
+        if (-not (Test-Path -LiteralPath $batteryReportPath -PathType Leaf)) {
+            throw "powercfg did not create the selected report."
+        }
+        Invoke-Item -LiteralPath $batteryReportPath -ErrorAction Stop
+    }
+    catch {
+        $wshell = New-Object -ComObject Wscript.Shell
+        $wshell.Popup("Unable to create the battery report: $($_.Exception.Message)", 0, "Battery Diagnostic", 16)
     }
 }
 
@@ -348,6 +439,7 @@ function Start-DISMScan {
 }
 
 function Start-DefenderFullScan {
+    $wshell = New-Object -ComObject Wscript.Shell
     if ($wshell.Popup("Are you sure you want to run a Defender Full Scan?", 0, "Defender Full Scan", 4 + 32) -eq 6) {
         try {
             Start-MpScan -ScanType FullScan -ErrorAction Stop
@@ -359,6 +451,7 @@ function Start-DefenderFullScan {
 }
 
 function Start-DefenderQuickScan {
+    $wshell = New-Object -ComObject Wscript.Shell
     if ($wshell.Popup("Are you sure you want to run a Defender Quick Scan?", 0, "Defender Quick Scan", 4 + 32) -eq 6) {
         try {
             Start-MpScan -ScanType QuickScan -ErrorAction Stop
@@ -382,29 +475,50 @@ function Clear-GroupPolicyCache {
     $wshell = New-Object -ComObject Wscript.Shell
     if ($adminmode -eq $true) {
         if ($wshell.Popup("Are you sure you want to clear the Group Policy Cache?", 0, "Group Policy Cache", 4 + 32) -eq 6) {
-            try{
-                # Stop the Group Policy Client service
+            $cleanupError = $null
+            $restartError = $null
+            try {
                 Stop-Service -Name gpsvc -Force -ErrorAction Stop
-
-                # Delete the Group Policy cache folders
-                $gpCacheFolders = @(
-                    "C:\Windows\System32\GroupPolicy",
-                    "C:\Windows\System32\GroupPolicyUsers"
-                )
-
-                foreach ($folder in $gpCacheFolders) {
-                    if (Test-Path -Path $folder) {
-                        Remove-Item -Path $folder -Recurse -Force
+                try {
+                    $gpCacheFolders = @(
+                        "C:\Windows\System32\GroupPolicy",
+                        "C:\Windows\System32\GroupPolicyUsers"
+                    )
+                    foreach ($folder in $gpCacheFolders) {
+                        if (Test-Path -Path $folder) {
+                            Remove-Item -Path $folder -Recurse -Force -ErrorAction Stop
+                        }
                     }
                 }
-
-                # Start the Group Policy Client service
-                Start-Service -Name gpsvc -ErrorAction Stop
-                $wshell.Popup("Group Policy Cache has been deleted.", 0, "Group Policy Cache", 0 + 64)
+                catch {
+                    $cleanupError = $_
+                }
+                finally {
+                    try {
+                        Start-Service -Name gpsvc -ErrorAction Stop
+                    }
+                    catch {
+                        $restartError = $_
+                    }
+                }
             }
             catch {
-                $wshell.Popup("There was an error deleting the GPO Cache. Please make sure this machine is joined to a domain and try again.", 0, "Group Policy Cache", 0 + 16)
+                $cleanupError = $_
             }
+
+            if ($null -eq $cleanupError -and $null -eq $restartError) {
+                $wshell.Popup("Group Policy Cache has been deleted.", 0, "Group Policy Cache", 0 + 64)
+                return
+            }
+
+            $errorDetails = @()
+            if ($null -ne $cleanupError) {
+                $errorDetails += "Cache cleanup failed: $($cleanupError.Exception.Message)"
+            }
+            if ($null -ne $restartError) {
+                $errorDetails += "The Group Policy Client service could not be restarted: $($restartError.Exception.Message)"
+            }
+            $wshell.Popup(($errorDetails -join "`n"), 0, "Group Policy Cache Error", 0 + 16)
         }
     }
     else {
@@ -430,35 +544,37 @@ function Repair-OutlookPST {
     }
 }
 
+function Confirm-ETTUserProfile {
+    param($Shell)
+
+    return (-not $adminmode -or $Shell.Popup("ETT is elevated. This changes the current process's user profile, which may differ from your normal Windows profile under Administrator Protection. Continue?", 0, "User Profile Warning", 4 + 32) -eq 6)
+}
+
 function Restore-OldOutlook {
     #Using registry key to rollback Outlook
     $wshell = New-Object -ComObject Wscript.Shell
-    if ($adminmode -eq $true) {
-        try {
-            New-ItemProperty -Path 'HKCU:\Software\Microsoft\Office\16.0\Outlook\Preferences' -Name UseNewOutlook -Value "0" -Force
-            $wshell.Popup("Outlook has been reverted back to Outlook (classic).", 0, "Rollback Outlook", 0 + 64)
-        }
-        catch {
-            Create-ToastNotification -Icon Error -Title "Outlook Rollback" -Message "There was an error rolling back Outlook. Please make sure legacy Outlook is installed and try again." -Duration 5000
-        }
+    if (-not (Confirm-ETTUserProfile -Shell $wshell)) {
+        return
     }
-    else {
-        #Show a toast notification to run in admin mode
-        Create-ToastNotification -Icon Error -Title "Administrator Required" -Message "Please run the Restore Old Outlook function as an administrator by restarting ETT in Admin Mode!" -Duration 5000
+    try {
+        New-ItemProperty -Path 'HKCU:\Software\Microsoft\Office\16.0\Outlook\Preferences' -Name UseNewOutlook -Value "0" -Force -ErrorAction Stop
+        $wshell.Popup("Outlook has been reverted back to Outlook (classic).", 0, "Rollback Outlook", 0 + 64)
+    }
+    catch {
+        Create-ToastNotification -Icon Error -Title "Outlook Rollback" -Message "There was an error rolling back Outlook. Please make sure legacy Outlook is installed and try again." -Duration 5000
     }
 }
 
 function Disable-AutomaticNewOutlookMigration {
     $wshell = New-Object -ComObject Wscript.Shell
-    if ($adminmode -eq $true) {
-        try {
-            New-ItemProperty -Path 'HKCU:\Software\Policies\Microsoft\office\16.0\outlook\preferences' -Name NewOutlookMigrationUserSetting -Value "0" -Force
-            $wshell.Popup("Automatic Outlook Migration has been disabled.", 0, "Outlook Migration", 0 + 64)
-        }
-        catch {
-            Create-ToastNotification -Icon Error -Title "Issue with Outlook Rollback Blocker" -Message "There was an error modifying the registry keys. Please make sure legacy Outlook is installed and try again." -Duration 5000
-        }
-    } else {
-        Create-ToastNotification -Icon Error -Title "Administrator Required" -Message "Please run the Disable Automatic New Outlook Migration function as an administrator by restarting ETT in Admin Mode!" -Duration 5000
+    if (-not (Confirm-ETTUserProfile -Shell $wshell)) {
+        return
+    }
+    try {
+        New-ItemProperty -Path 'HKCU:\Software\Policies\Microsoft\office\16.0\outlook\preferences' -Name NewOutlookMigrationUserSetting -Value "0" -Force -ErrorAction Stop
+        $wshell.Popup("Automatic Outlook Migration has been disabled.", 0, "Outlook Migration", 0 + 64)
+    }
+    catch {
+        Create-ToastNotification -Icon Error -Title "Issue with Outlook Rollback Blocker" -Message "There was an error modifying the registry keys. Please make sure legacy Outlook is installed and try again." -Duration 5000
     }
 }
