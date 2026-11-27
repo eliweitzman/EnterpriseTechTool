@@ -92,6 +92,8 @@ Beginning with release 1.2.1, ETT will now be able to automatically check for, a
 
 The application is designed to run as a PowerShell Script, but as well is compiled into an executable, using the awesome module [PS2EXE](https://github.com/MScholtes/PS2EXE), made by MScholtes, based on code by [Ingo Karstein](https://github.com/ikarstein/ps2exe). This is currently designed to run in an Enterprise environment, however it is tweakable to be run as a personal tool as well (although LAPS, policy updates, and a few other tools certainly aren't necessary).
 
+Run ETT without elevation where possible. With Windows Administrator Protection, elevated processes use a separate user profile, so user settings, files, and sign-ins may differ. The Outlook user-settings actions warn before changing the elevated profile; run them unelevated to target the normal user's profile. Administrator Protection compatibility has not yet been verified.
+
 ## Customizing for your Deployment
 
 Starting with ETT 1.3, ETT now supports the implementation of custom config files! The ETTConfig.json file contains all settings that support the various business needs surrounding customization and enhancement. Additionally, ETT now features a graphical settings UI, which will allow for simpler configuration management. Set `"ETTSettingsGUI": false` in `ETTConfig.json` to disable the Settings GUI.

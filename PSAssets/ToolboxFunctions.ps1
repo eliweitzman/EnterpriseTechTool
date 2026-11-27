@@ -1,3 +1,50 @@
+function Start-ETTElevated {
+    param(
+        [bool]$ConfiguredAdminMode,
+        [bool]$CurrentlyElevated,
+        [AllowNull()][string]$ScriptPath,
+        [AllowNull()][string]$ExecutablePath,
+        [AllowNull()][string]$WorkingDirectory
+    )
+
+    if (-not $ConfiguredAdminMode -or $CurrentlyElevated) {
+        return $false
+    }
+
+    $commandPath = $ScriptPath
+    if ([string]::IsNullOrWhiteSpace($commandPath)) {
+        $commandPath = $ExecutablePath
+    }
+    if ([string]::IsNullOrWhiteSpace($commandPath)) {
+        Write-Warning 'ETT could not determine how to relaunch for administrator mode.'
+        return $false
+    }
+
+    try {
+        $startOptions = @{
+            FilePath = $commandPath
+            Verb = 'RunAs'
+            WorkingDirectory = $WorkingDirectory
+        }
+
+        if ([IO.Path]::GetExtension($commandPath).Equals('.ps1', [StringComparison]::OrdinalIgnoreCase)) {
+            $startOptions.FilePath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
+            $startOptions.ArgumentList = @(
+                '-NoProfile',
+                '-ExecutionPolicy', 'Bypass',
+                '-File', ('"{0}"' -f $commandPath)
+            )
+        }
+
+        Start-Process @startOptions
+        return $true
+    }
+    catch {
+        Write-Warning "ETT could not relaunch with administrator privileges: $($_.Exception.Message)"
+        return $false
+    }
+}
+
 function Get-ETTComplianceState {
     param(
         [bool]$RAMCheckActive,
@@ -497,35 +544,37 @@ function Repair-OutlookPST {
     }
 }
 
+function Confirm-ETTUserProfile {
+    param($Shell)
+
+    return (-not $adminmode -or $Shell.Popup("ETT is elevated. This changes the current process's user profile, which may differ from your normal Windows profile under Administrator Protection. Continue?", 0, "User Profile Warning", 4 + 32) -eq 6)
+}
+
 function Restore-OldOutlook {
     #Using registry key to rollback Outlook
     $wshell = New-Object -ComObject Wscript.Shell
-    if ($adminmode -eq $true) {
-        try {
-            New-ItemProperty -Path 'HKCU:\Software\Microsoft\Office\16.0\Outlook\Preferences' -Name UseNewOutlook -Value "0" -Force
-            $wshell.Popup("Outlook has been reverted back to Outlook (classic).", 0, "Rollback Outlook", 0 + 64)
-        }
-        catch {
-            Create-ToastNotification -Icon Error -Title "Outlook Rollback" -Message "There was an error rolling back Outlook. Please make sure legacy Outlook is installed and try again." -Duration 5000
-        }
+    if (-not (Confirm-ETTUserProfile -Shell $wshell)) {
+        return
     }
-    else {
-        #Show a toast notification to run in admin mode
-        Create-ToastNotification -Icon Error -Title "Administrator Required" -Message "Please run the Restore Old Outlook function as an administrator by restarting ETT in Admin Mode!" -Duration 5000
+    try {
+        New-ItemProperty -Path 'HKCU:\Software\Microsoft\Office\16.0\Outlook\Preferences' -Name UseNewOutlook -Value "0" -Force -ErrorAction Stop
+        $wshell.Popup("Outlook has been reverted back to Outlook (classic).", 0, "Rollback Outlook", 0 + 64)
+    }
+    catch {
+        Create-ToastNotification -Icon Error -Title "Outlook Rollback" -Message "There was an error rolling back Outlook. Please make sure legacy Outlook is installed and try again." -Duration 5000
     }
 }
 
 function Disable-AutomaticNewOutlookMigration {
     $wshell = New-Object -ComObject Wscript.Shell
-    if ($adminmode -eq $true) {
-        try {
-            New-ItemProperty -Path 'HKCU:\Software\Policies\Microsoft\office\16.0\outlook\preferences' -Name NewOutlookMigrationUserSetting -Value "0" -Force
-            $wshell.Popup("Automatic Outlook Migration has been disabled.", 0, "Outlook Migration", 0 + 64)
-        }
-        catch {
-            Create-ToastNotification -Icon Error -Title "Issue with Outlook Rollback Blocker" -Message "There was an error modifying the registry keys. Please make sure legacy Outlook is installed and try again." -Duration 5000
-        }
-    } else {
-        Create-ToastNotification -Icon Error -Title "Administrator Required" -Message "Please run the Disable Automatic New Outlook Migration function as an administrator by restarting ETT in Admin Mode!" -Duration 5000
+    if (-not (Confirm-ETTUserProfile -Shell $wshell)) {
+        return
+    }
+    try {
+        New-ItemProperty -Path 'HKCU:\Software\Policies\Microsoft\office\16.0\outlook\preferences' -Name NewOutlookMigrationUserSetting -Value "0" -Force -ErrorAction Stop
+        $wshell.Popup("Automatic Outlook Migration has been disabled.", 0, "Outlook Migration", 0 + 64)
+    }
+    catch {
+        Create-ToastNotification -Icon Error -Title "Issue with Outlook Rollback Blocker" -Message "There was an error modifying the registry keys. Please make sure legacy Outlook is installed and try again." -Duration 5000
     }
 }

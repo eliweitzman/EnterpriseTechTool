@@ -52,6 +52,9 @@ $script:wingetAvailable = $false
 $script:startedProcesses = @()
 $script:scans = @()
 $script:openedPaths = @()
+$script:registryWrites = @()
+$script:registryWriteFails = $false
+$script:toastMessages = @()
 $script:batteryDialogPath = "C:\My Reports\Joe's & Team\Battery.html"
 $script:batteryDialogResult = 'OK'
 $script:batteryExitCode = 0
@@ -101,11 +104,12 @@ function Get-Command {
 }
 
 function Start-Process {
-    param($FilePath, $ArgumentList, [switch]$PassThru, [switch]$Wait, $Verb, $ErrorAction)
+    param($FilePath, $ArgumentList, [switch]$PassThru, [switch]$Wait, $Verb, $WorkingDirectory, $ErrorAction)
     $script:startedProcesses += [pscustomobject]@{
         FilePath = $FilePath
         ArgumentList = $ArgumentList
         Verb = $Verb
+        WorkingDirectory = $WorkingDirectory
     }
     if ($PassThru) {
         return [pscustomobject]@{ ExitCode = $script:batteryExitCode }
@@ -125,6 +129,32 @@ function Test-Path {
 function Start-MpScan {
     param($ScanType, $ErrorAction)
     $script:scans += $ScanType
+}
+
+function New-ItemProperty {
+    param($Path, $Name, $Value, [switch]$Force, $ErrorAction)
+    if ($script:registryWriteFails) {
+        throw 'registry failure'
+    }
+    $script:registryWrites += [pscustomobject]@{ Path = $Path; Name = $Name; Value = $Value }
+}
+
+# Admin-mode elevation helper
+$script:startedProcesses = @()
+$started = Start-ETTElevated -ConfiguredAdminMode $true -CurrentlyElevated $false -ScriptPath 'C:\Tools\ETT.ps1' -ExecutablePath $null -WorkingDirectory 'C:\Tools'
+Assert-True -Condition $started -Message 'Configured admin mode did not request relaunch.'
+Assert-True -Condition ($script:startedProcesses.Count -eq 1) -Message 'Configured admin mode did not start exactly one elevated process.'
+Assert-Equal -Expected 'RunAs' -Actual ([string]$script:startedProcesses[0].Verb) -Message 'ETT relaunch did not use RunAs.'
+Assert-Equal -Expected "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Actual ([string]$script:startedProcesses[0].FilePath) -Message 'Script relaunch did not use Windows PowerShell.'
+
+$script:startedProcesses = @()
+$started = Start-ETTElevated -ConfiguredAdminMode $true -CurrentlyElevated $true -ScriptPath 'C:\Tools\ETT.ps1' -ExecutablePath $null -WorkingDirectory 'C:\Tools'
+Assert-Equal -Expected $false -Actual $started -Message 'An elevated process was incorrectly relaunch-requested.'
+Assert-Equal -Expected 0 -Actual $script:startedProcesses.Count -Message 'An elevated process started another elevated process.'
+
+function Create-ToastNotification {
+    param($Icon, $Title, $Message, $Duration)
+    $script:toastMessages += "$Title|$Message"
 }
 
 function Stop-Service {
@@ -174,6 +204,37 @@ $openedBeforeFailure = $script:openedPaths.Count
 Start-BatteryDiagnostics -adminmode $true
 Assert-Equal -Expected $openedBeforeFailure -Actual $script:openedPaths.Count -Message 'A failed battery report opened an old or stale file.'
 $script:batteryExitCode = 0
+
+foreach ($action in @(
+    @{ Name = 'Restore-OldOutlook'; Property = 'UseNewOutlook' }
+    @{ Name = 'Disable-AutomaticNewOutlookMigration'; Property = 'NewOutlookMigrationUserSetting' }
+)) {
+    $adminmode = $false
+    $script:popupResponse = 7
+    $before = $script:registryWrites.Count
+    $popupCount = $script:popupMessages.Count
+    & $action.Name | Out-Null
+    Assert-Equal -Expected ($before + 1) -Actual $script:registryWrites.Count -Message "$($action.Name) did not run unelevated."
+    Assert-Equal -Expected ($popupCount + 1) -Actual $script:popupMessages.Count -Message "$($action.Name) showed a profile warning unelevated."
+    Assert-Equal -Expected $action.Property -Actual $script:registryWrites[-1].Name -Message "$($action.Name) wrote the wrong setting."
+    Assert-True -Condition ($script:registryWrites[-1].Path -like 'HKCU:\*') -Message "$($action.Name) did not target the current profile."
+
+    $adminmode = $true
+    $before = $script:registryWrites.Count
+    & $action.Name | Out-Null
+    Assert-Equal -Expected $before -Actual $script:registryWrites.Count -Message "$($action.Name) wrote after the profile warning was declined."
+    Assert-True -Condition ($script:popupMessages[-1] -match 'profile.*Administrator Protection') -Message "$($action.Name) did not warn about the elevated profile."
+
+    $script:popupResponse = 6
+    & $action.Name | Out-Null
+    Assert-Equal -Expected ($before + 1) -Actual $script:registryWrites.Count -Message "$($action.Name) did not run after confirmation."
+
+    $script:registryWriteFails = $true
+    $toastCount = $script:toastMessages.Count
+    & $action.Name | Out-Null
+    Assert-Equal -Expected ($toastCount + 1) -Actual $script:toastMessages.Count -Message "$($action.Name) did not report a registry failure."
+    $script:registryWriteFails = $false
+}
 
 $script:popupResponse = 7
 $scanCount = $script:scans.Count

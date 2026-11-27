@@ -95,7 +95,7 @@ $AutoUpdateCheckerEnabled = (?: { $null -ne $jsonConfig.AutoUpdateCheckerEnabled
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
 #Admin mode - if auto-elevate is enabled, this will be set to $true. If in EXE mode, this is automatically handled by Windows.
-$adminmode = (?: { $jsonConfig.AdminMode -ne $null -and $jsonConfig.AdminMode -ne "" } { $jsonConfig.AdminMode } { $false })
+$ConfiguredAdminMode = (?: { $jsonConfig.AdminMode -ne $null -and $jsonConfig.AdminMode -ne "" } { [bool]$jsonConfig.AdminMode } { $false })
 
 #Set Branding - CHANGE THIS TO MATCH YOUR PREFERENCE
 $BrandColor = (?: { $jsonConfig.BrandColor -ne $null -and $jsonConfig.BrandColor -ne "" } { $jsonConfig.BrandColor } { '#023a24' }) #Set the color of the form, currently populated with a hex value.
@@ -466,6 +466,21 @@ if ($runningFromScript) {
     }
 }
 
+#Relaunch as administrator only when the saved setting requests elevation.
+$ettScriptPath = $null
+if ($runningFromScript) {
+    $ettScriptPath = $MyInvocation.MyCommand.Path
+}
+$ettExecutablePath = [Environment]::GetCommandLineArgs()[0]
+if (Start-ETTElevated `
+    -ConfiguredAdminMode $ConfiguredAdminMode `
+    -CurrentlyElevated $adminmode `
+    -ScriptPath $ettScriptPath `
+    -ExecutablePath $ettExecutablePath `
+    -WorkingDirectory $PSScriptRoot) {
+    exit
+}
+
 #Device Compliance Checks
 $complianceResult = Get-ETTComplianceState `
     -RAMCheckActive $ramCheckActive -RAMCheck $ramCheck -RAMMinimum $ramMinimum `
@@ -800,8 +815,8 @@ $ActionsTabArray = New-Object System.Collections.ArrayList
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Battery Diagnostics" -RequireAdmin $true -ScriptBlock { Start-BatteryDiagnostics -adminmode $adminmode }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Quick Reboot" -ScriptBlock { QuickReboot }))
 [void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Repair Outlook PST File" -RequireAdmin $true -ScriptBlock { Repair-OutlookPST -adminmode $adminmode }))
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -Displayname "Restore to Outlook (classic)" -RequireAdmin $true -ScriptBlock {Restore-OldOutlook -adminmode $adminmode }))
-[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Block Automatic New Outlook Migration" -RequireAdmin $true -ScriptBlock { Disable-AutomaticNewOutlookMigration -adminmode $adminmode }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -Displayname "Restore to Outlook (classic)" -ScriptBlock { Restore-OldOutlook }))
+[void]$ActionsTabArray.Add((Create-ToolboxListItem -DisplayName "Block Automatic New Outlook Migration" -ScriptBlock { Disable-AutomaticNewOutlookMigration }))
 $ActionsTab = Create-ToolboxTabPage -PageName "Actions" -ToolboxItemsArray $ActionsTabArray
 $ActionsTab.Add_Click({
         $runThis = [ScriptBlock]::Create($ActionsTab.SelectedValue)
