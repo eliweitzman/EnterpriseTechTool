@@ -60,13 +60,19 @@ jobs:
           ETT_VERSION: ${{ steps.metadata.outputs.version }}
         shell: powershell
         run: |
-          git show-ref --verify --quiet "refs/tags/$env:ETT_VERSION"
-          if ($LASTEXITCODE -eq 0) {
+          $tags = @(git tag --list $env:ETT_VERSION)
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Could not list release tags.'
+          }
+          if ($tags -contains $env:ETT_VERSION) {
             throw "Release tag '$env:ETT_VERSION' already exists. Bump ETTVersion before merging."
           }
 
-          gh release view $env:ETT_VERSION --repo $env:GITHUB_REPOSITORY *> $null
-          if ($LASTEXITCODE -eq 0) {
+          $releases = @(gh api --paginate "repos/$env:GITHUB_REPOSITORY/releases" --jq '.[].tag_name')
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Could not list releases.'
+          }
+          if ($releases -contains $env:ETT_VERSION) {
             throw "Release '$env:ETT_VERSION' already exists. Bump ETTVersion before merging."
           }
 

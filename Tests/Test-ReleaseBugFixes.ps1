@@ -222,4 +222,26 @@ Assert-Equal -Expected 0 -Actual @(Get-ChildItem -LiteralPath (Join-Path -Path $
 $entryPoint = Get-Content -LiteralPath (Join-Path -Path $repositoryRoot -ChildPath 'ETT.ps1') -Raw
 Assert-True -Condition ($entryPoint -notmatch 'Create-ToastNotification -Icon \[System\.Windows\.Forms\.ToolTipIcon\]::Error') -Message 'The PS2EXE compliance toast still passes an enum expression as an argument.'
 
+# Evaluate the startup assignments without starting the GUI.
+$ast = [System.Management.Automation.Language.Parser]::ParseInput($entryPoint, [ref]$null, [ref]$null)
+$ternary = $ast.Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Invoke-Ternary' }, $false)
+. ([scriptblock]::Create($ternary.Extent.Text))
+Set-Alias '?:' Invoke-Ternary
+$flags = $ast.FindAll({ param($n)
+    $n -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+    $n.Left.Extent.Text -in '$AutoUpdateCheckerEnabled', '$customTools'
+}, $false)
+Assert-Equal 2 $flags.Count 'Expected both startup assignments.'
+foreach ($case in @(
+    @{ Json = '{}'; Update = $true; Tools = $true }
+    @{ Json = '{"AutoUpdateCheckerEnabled":null,"EnableCustomTools":null}'; Update = $true; Tools = $true }
+    @{ Json = '{"AutoUpdateCheckerEnabled":false,"EnableCustomTools":true}'; Update = $false; Tools = $true }
+    @{ Json = '{"AutoUpdateCheckerEnabled":true,"EnableCustomTools":false}'; Update = $true; Tools = $false }
+)) {
+    $jsonConfig = ConvertFrom-Json $case.Json
+    foreach ($flag in $flags) { . ([scriptblock]::Create($flag.Extent.Text)) }
+    Assert-Equal $case.Update $AutoUpdateCheckerEnabled "Update flag for $($case.Json)."
+    Assert-Equal $case.Tools $customTools "Custom tools flag for $($case.Json)."
+}
+
 Write-Output 'All release bug regression assertions passed.'

@@ -90,7 +90,7 @@ Add-Type -AssemblyName System.Windows.Forms
 
 #Build Variables
 $ETTVersion = "1.3.2"
-$AutoUpdateCheckerEnabled = (?: { $jsonConfig.AutoUpdateCheckerEnabled -ne $null -and $jsonConfig.AutoUpdateCheckerEnabled -ne "" } { $jsonConfig.AutoUpdateCheckerEnabled } { $true })
+$AutoUpdateCheckerEnabled = (?: { $null -ne $jsonConfig.AutoUpdateCheckerEnabled } { $jsonConfig.AutoUpdateCheckerEnabled } { $true })
 
 ## BEGIN INITIAL FLAGS - CHANGE THESE TO MATCH YOUR PREFERENCES
 
@@ -110,7 +110,7 @@ $timeout = (?: { $jsonConfig.ApplicationTimeoutEnabled -ne $null -and $jsonConfi
 $timeoutLength = (?: { $jsonConfig.ApplicationTimeoutLength -ne $null -and $jsonConfig.ApplicationTimeoutLength -ne "" } { $jsonConfig.ApplicationTimeoutLength } { 300 }) #Set the length of the timeout in seconds. Default is 300 seconds (5 minutes)
 
 #Custom Toolbox - CHANGE THIS TO MATCH YOUR PREFERENCE
-$customTools = (?: { $jsonConfig.EnableCustomTools -ne $null -and $jsonConfig.EnableCustomTools -ne "" } { $jsonConfig.EnableCustomTools } { $true }) #Set this to $true to enable custom functions. Otherwise, set to $false
+$customTools = (?: { $null -ne $jsonConfig.EnableCustomTools } { $jsonConfig.EnableCustomTools } { $true }) #Set this to $true to enable custom functions. Otherwise, set to $false
 
 <#Compliance Thresholds - CHANGE THESE TO MATCH YOUR COMPLIANCE REQUIREMENTS
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -188,7 +188,8 @@ $emailTo = $null
 ## END INITIAL FLAGS
 
 #Check Execution Path
-if ($MyInvocation.MyCommand.CommandType -eq "ExternalScript") {
+$runningFromScript = $MyInvocation.MyCommand.CommandType -eq "ExternalScript"
+if ($runningFromScript) {
     # Powershell script
     $ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
 }
@@ -452,15 +453,16 @@ $drivetype = (Get-PhysicalDisk | Where-Object DeviceID -eq 0).MediaType
 $complianceFlag = $false#>
 
 
-#MiniTools Dot Sourcing - For development purpose only. DOT Sourcing doesn't work correctly with ps2exe.
-$Dependencies = "MiniClients\ADLookup.ps1", "MiniClients\LAPSToolV2.ps1", "MiniClients\BitlockerToolV2.ps1", "PSAssets\ToolboxFunctions.ps1", "PSAssets\GenericToolWindow.ps1", ".\MiniClients\SettingsMenu.ps1"
-$Dependencies | ForEach-Object {
-    try {
-        $psFile = ".\$($_)"
-        . $psFile
-    }
-    catch {
-        # Do Nothing Here. We will always land here in a compiled version of ETT.
+if ($runningFromScript) {
+    $Dependencies = "MiniClients\ADLookup.ps1", "MiniClients\LAPSToolV2.ps1", "MiniClients\BitlockerToolV2.ps1", "PSAssets\ToolboxFunctions.ps1", "PSAssets\GenericToolWindow.ps1", "MiniClients\SettingsMenu.ps1"
+    foreach ($dependency in $Dependencies) {
+        $psFile = Join-Path $PSScriptRoot $dependency
+        try {
+            . $psFile
+        }
+        catch {
+            throw "Could not load helper '$psFile': $_"
+        }
     }
 }
 

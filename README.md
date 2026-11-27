@@ -58,6 +58,8 @@ ETT can run in a few different ways, depending on preference, and on your own pe
 | Modified PS Script | Downloading the PS1 file, and adjusting the feature flags (indicated below). |
 | Modified EXE | Modifying the flags, and compiling it as an EXE for use. Able to bypass execution policy.|
 
+The script loads its six runtime helpers relative to `ETT.ps1`, regardless of the working directory. The portable EXE uses only its embedded copies of those helpers. This does not change where ETT looks for `ETTConfig.json`.
+
 ## Install Methods
 
 1. Using the Windows Package Manager (Machine-wide only... [info](https://github.com/eliweitzman/EnterpriseTechTool/wiki/Compiling-and-Runtime-How%E2%80%90To))
